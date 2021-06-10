@@ -7,10 +7,18 @@ use bytecode::interpreter::Interpreter;
 fn main() {
     let mut generator = Generator::new();
 
-    generator.emit(&LoadImmediate::new(100));
+    generator.emit(LoadImmediate::new_boxed(100));
 
     let dest = generator.next_free_register();
-    generator.emit(&Store::new(dest));
+    generator.emit(Store::new_boxed(dest));
 
-    let mut interpreter = Interpreter::new();
+    generator.emit(LoadImmediate::new_boxed(50));
+    generator.emit(Add::new_boxed(dest));
+
+    let dest = generator.next_free_register();
+    generator.emit(Store::new_boxed(dest));
+
+    let mut interpreter = Interpreter::new(generator.get_block());
+
+    Interpreter::run(&mut interpreter);
 }
