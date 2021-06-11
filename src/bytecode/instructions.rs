@@ -63,36 +63,39 @@ impl Subtract {
 }
 
 pub struct Jump {
-    target: Label,
+    target: Option<Label>,
 }
 
 #[allow(dead_code)]
 impl Jump {
-    pub fn new_boxed(target: Label) -> Box<Jump> {
+    pub fn new_boxed(target: Option<Label>) -> Box<Jump> {
         Box::new(Jump { target })
     }
+    pub fn set_target(&mut self, target: Label) { self.target = Some(target) }
 }
 
 pub struct JumpNotZero {
-    target: Label,
+    target: Option<Label>,
 }
 
 #[allow(dead_code)]
 impl JumpNotZero {
-    pub fn new_boxed(target: Label) -> Box<JumpNotZero> {
+    pub fn new_boxed(target: Option<Label>) -> Box<JumpNotZero> {
         Box::new(JumpNotZero { target })
     }
+    pub fn set_target(&mut self, target: Label) { self.target = Some(target) }
 }
 
 pub struct JumpZero {
-    target: Label,
+    target: Option<Label>,
 }
 
 #[allow(dead_code)]
 impl JumpZero {
-    pub fn new_boxed(target: Label) -> Box<JumpZero> {
+    pub fn new_boxed(target: Option<Label>) -> Box<JumpZero> {
         Box::new(JumpZero { target })
     }
+    pub fn set_target(&mut self, target: Label) { self.target = Some(target) }
 }
 
 pub struct CompareEq {
@@ -139,6 +142,26 @@ impl CompareLessThan {
     }
 }
 
+
+pub struct Call {
+    block_id: usize, // FIXME: probably should not directly use usize?
+}
+
+impl Call {
+    pub fn new_boxed(block_id: usize) -> Box<Call> {
+        Box::new(Call { block_id })
+    }
+}
+
+pub struct Return {}
+
+impl Return {
+    pub fn new_boxed() -> Box<Return> {
+        Box::new(Return {})
+    }
+}
+
+
 // Instruction implementations
 
 impl Instruction for LoadImmediate {
@@ -164,7 +187,6 @@ impl Instruction for LoadRegister {
 impl Instruction for Store {
     fn execute(&self, context: &mut ExecutionContext) {
         context.set_register(&self.register, context.get_accumulator());
-        context.set_accumulator(0);
     }
 
     fn to_string(&self) -> String {
@@ -198,30 +220,30 @@ impl Instruction for Subtract {
 
 impl Instruction for Jump {
     fn execute(&self, context: &mut ExecutionContext) {
-        context.set_jump_target(&self.target)
+        context.set_jump_target(&self.target.unwrap())
     }
 
-    fn to_string(&self) -> String { format!("Jump {}", self.target) }
+    fn to_string(&self) -> String { format!("Jump {}", self.target.unwrap()) }
 }
 
 impl Instruction for JumpNotZero {
     fn execute(&self, context: &mut ExecutionContext) {
         if context.get_accumulator() != 0 {
-            context.set_jump_target(&self.target)
+            context.set_jump_target(&self.target.unwrap())
         }
     }
 
-    fn to_string(&self) -> String { format!("JumpNotZero {}", self.target) }
+    fn to_string(&self) -> String { format!("JumpNotZero {}", self.target.unwrap()) }
 }
 
 impl Instruction for JumpZero {
     fn execute(&self, context: &mut ExecutionContext) {
         if context.get_accumulator() == 0 {
-            context.set_jump_target(&self.target)
+            context.set_jump_target(&self.target.unwrap())
         }
     }
 
-    fn to_string(&self) -> String { format!("JumpZero {}", self.target) }
+    fn to_string(&self) -> String { format!("JumpZero {}", self.target.unwrap()) }
 }
 
 impl Instruction for CompareEq {
@@ -268,10 +290,18 @@ impl Instruction for CompareLessThan {
     fn to_string(&self) -> String { format!("CompareLessThan {}", self.register) }
 }
 
+impl Instruction for Call {
+    fn execute(&self, context: &mut ExecutionContext) {
+        context.set_call(self.block_id);
+    }
 
+    fn to_string(&self) -> String { format!("Call {}", self.block_id) }
+}
 
+impl Instruction for Return {
+    fn execute(&self, context: &mut ExecutionContext) {
+        context.set_return();
+    }
 
-
-
-
-
+    fn to_string(&self) -> String { format!("Return") }
+}
