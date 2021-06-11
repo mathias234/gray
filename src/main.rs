@@ -9,7 +9,7 @@ fn main() {
     let mut generator = Generator::new();
 
     let iterator_register = generator.next_free_register();
-    generator.emit(LoadImmediate::new_boxed(100000000));
+    generator.emit(LoadImmediate::new_boxed(100000));
     generator.emit(Store::new_boxed(iterator_register));
 
     let decrement_register = generator.next_free_register();
