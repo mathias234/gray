@@ -1,5 +1,6 @@
 use super::{instructions::Instruction, register::Register};
 use crate::bytecode::code_block::CodeBlock;
+use crate::bytecode::label::Label;
 
 pub struct Generator {
     register_index: usize,
@@ -24,8 +25,12 @@ impl Generator {
         result
     }
 
+    pub fn make_label(&self) -> Label {
+        let pos = self.block.get_instructions().len();
+        Label::new(pos)
+    }
+
     pub fn emit(&mut self, instruction: Box<dyn Instruction>) {
-        println!("{}", instruction.to_string());
         self.block.add_instruction(instruction);
     }
 }
