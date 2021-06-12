@@ -3,6 +3,9 @@ mod bytecode;
 use bytecode::generator::Generator;
 use bytecode::instructions::*;
 use bytecode::interpreter::Interpreter;
+use crate::value::Value;
+
+pub mod value;
 
 fn main() {
     let mut blocks = Vec::new();
@@ -24,7 +27,7 @@ fn main() {
 
 fn code_block_0(generator: &mut Generator) {
     let arg1_register = generator.next_free_register();
-    generator.emit(LoadImmediate::new_boxed(0));
+    generator.emit(LoadImmediate::new_boxed(Value::from_i32(0)));
     generator.emit(Store::new_boxed(arg1_register));
 
     generator.emit(Call::new_boxed(1, Some(vec![arg1_register])));
@@ -38,13 +41,13 @@ fn code_block_1(generator: &mut Generator) {
 
     generator.emit(Store::new_boxed(argument_register));
 
-    generator.emit(LoadImmediate::new_boxed(100_000));
+    generator.emit(LoadImmediate::new_boxed(Value::from_i32(100_000)));
 
     generator.emit(CompareEq::new_boxed(argument_register));
 
     let jump_placeholder = generator.make_label();
 
-    generator.emit(LoadImmediate::new_boxed(1));
+    generator.emit(LoadImmediate::new_boxed(Value::from_i32(1)));
 
     generator.emit(Add::new_boxed(argument_register));
 

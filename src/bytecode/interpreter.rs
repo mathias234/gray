@@ -2,12 +2,13 @@ use super::register::Register;
 use crate::bytecode::code_block::CodeBlock;
 use crate::bytecode::label::Label;
 use std::time::Instant;
+use crate::value::Value;
 
 #[derive(Clone)]
 pub struct ExecutionContext {
-    accumulator: i64,
-    registers: Vec<i64>,
-    block_arguments: Vec<i64>,
+    accumulator: Value,
+    registers: Vec<Value>,
+    block_arguments: Vec<Value>,
     jump_target: Option<Label>,
 
     call_block_id: Option<usize>,
@@ -19,7 +20,7 @@ pub struct ExecutionContext {
 impl ExecutionContext {
     pub fn new() -> ExecutionContext {
         ExecutionContext {
-            accumulator: 0,
+            accumulator: Value::from_i32(0),
             registers: Vec::new(),
             block_arguments: Vec::new(),
             jump_target: None,
@@ -29,25 +30,25 @@ impl ExecutionContext {
         }
     }
 
-    pub fn set_accumulator(&mut self, value: i64) {
+    pub fn set_accumulator(&mut self, value: Value) {
         self.accumulator = value;
     }
-    pub fn get_accumulator(&self) -> i64 {
+    pub fn get_accumulator(&self) -> Value {
         self.accumulator
     }
 
-    pub fn set_register(&mut self, register: &Register, value: i64) {
+    pub fn set_register(&mut self, register: &Register, value: Value) {
         while register.index >= self.registers.len() {
-            self.registers.push(0);
+            self.registers.push(Value::from_i32(0));
         }
         self.registers[register.index] = value;
     }
 
-    pub fn get_register(&self, register: &Register) -> i64 {
+    pub fn get_register(&self, register: &Register) -> Value {
         self.registers[register.index]
     }
 
-    pub fn get_argument(&self, arg: usize) -> i64 { self.block_arguments[arg] }
+    pub fn get_argument(&self, arg: usize) -> Value { self.block_arguments[arg] }
 
     pub fn set_jump_target(&mut self, label: &Label) {
         self.jump_target = Some(*label);
@@ -176,8 +177,6 @@ impl Interpreter<'_> {
             }
         }
 
-        self.dump();
-
         println! {"Execution took {}ms", now.elapsed().as_millis()}
     }
 
@@ -186,13 +185,13 @@ impl Interpreter<'_> {
         println!("\tBlock Arguments");
         let mut idx = 0;
         for reg in &self.execution_context.block_arguments {
-            println!("\t\t[{:04}] {}", idx, reg);
+            println!("\t\t[{:04}] {}", idx, *reg);
             idx += 1;
         }
         println!("\tRegisters");
         let mut idx = 0;
         for reg in &self.execution_context.registers {
-            println!("\t\t[{:04}] {}", idx, reg);
+            println!("\t\t[{:04}] {}", idx, *reg);
             idx += 1;
         }
 

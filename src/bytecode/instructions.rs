@@ -1,6 +1,7 @@
 use super::register::Register;
 use crate::bytecode::interpreter::ExecutionContext;
 use crate::bytecode::label::Label;
+use crate::value::Value;
 
 pub trait Instruction {
     fn execute(&self, context: &mut ExecutionContext);
@@ -8,12 +9,12 @@ pub trait Instruction {
 }
 
 pub struct LoadImmediate {
-    value: i64,
+    value: Value,
 }
 
 #[allow(dead_code)]
 impl LoadImmediate {
-    pub fn new_boxed(value: i64) -> Box<LoadImmediate> {
+    pub fn new_boxed(value: Value) -> Box<LoadImmediate> {
         Box::new(LoadImmediate { value })
     }
 }
@@ -254,7 +255,7 @@ impl Instruction for Jump {
 
 impl Instruction for JumpNotZero {
     fn execute(&self, context: &mut ExecutionContext) {
-        if context.get_accumulator() != 0 {
+        if context.get_accumulator() != Value::from_i32(0) {
             context.set_jump_target(&self.target)
         }
     }
@@ -264,7 +265,7 @@ impl Instruction for JumpNotZero {
 
 impl Instruction for JumpZero {
     fn execute(&self, context: &mut ExecutionContext) {
-        if context.get_accumulator() == 0 {
+        if context.get_accumulator() == Value::from_i32(0) {
             context.set_jump_target(&self.target)
         }
     }
@@ -277,7 +278,7 @@ impl Instruction for CompareEq {
         let lhs = context.get_accumulator();
         let rhs = context.get_register(&self.register);
 
-        context.set_accumulator((lhs == rhs) as i64);
+        context.set_accumulator(Value::from_i32((lhs == rhs) as i32));
     }
 
     fn to_string(&self) -> String { format!("CompareEq {}", self.register) }
@@ -288,7 +289,7 @@ impl Instruction for CompareNotEq {
         let lhs = context.get_accumulator();
         let rhs = context.get_register(&self.register);
 
-        context.set_accumulator((lhs != rhs) as i64);
+        context.set_accumulator(Value::from_i32((lhs != rhs) as i32));
     }
 
     fn to_string(&self) -> String { format!("CompareNotEq {}", self.register) }
@@ -299,7 +300,7 @@ impl Instruction for CompareGreaterThan {
         let lhs = context.get_accumulator();
         let rhs = context.get_register(&self.register);
 
-        context.set_accumulator((lhs > rhs) as i64);
+        context.set_accumulator(Value::from_i32((lhs > rhs) as i32));
     }
 
     fn to_string(&self) -> String { format!("CompareGreaterThan {}", self.register) }
@@ -310,7 +311,7 @@ impl Instruction for CompareLessThan {
         let lhs = context.get_accumulator();
         let rhs = context.get_register(&self.register);
 
-        context.set_accumulator((lhs < rhs) as i64);
+        context.set_accumulator(Value::from_i32((lhs < rhs) as i32));
     }
 
     fn to_string(&self) -> String { format!("CompareLessThan {}", self.register) }
