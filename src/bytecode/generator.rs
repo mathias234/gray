@@ -30,7 +30,11 @@ impl Generator {
         Label::new(pos)
     }
 
-    pub fn emit(&mut self, instruction: Box<dyn Instruction>) {
+    pub fn emit(&mut self, instruction: Box<dyn Instruction>)  {
         self.block.add_instruction(instruction);
+    }
+
+    pub fn emit_at(&mut self, instruction: Box<dyn Instruction>, label: &Label) {
+        self.block.add_instruction_at(instruction, label);
     }
 }

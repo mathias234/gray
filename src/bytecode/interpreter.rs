@@ -6,9 +6,11 @@ use crate::bytecode::label::Label;
 pub struct ExecutionContext {
     accumulator: i64,
     registers: Vec<i64>,
+    block_arguments: Vec<i64>,
     jump_target: Option<Label>,
 
     call_block_id: Option<usize>,
+    call_arguments: Option<Vec<Register>>,
     call_return: bool,
 }
 
@@ -18,8 +20,10 @@ impl ExecutionContext {
         ExecutionContext {
             accumulator: 0,
             registers: Vec::new(),
+            block_arguments: Vec::new(),
             jump_target: None,
             call_block_id: None,
+            call_arguments: None,
             call_return: false,
         }
     }
@@ -42,6 +46,8 @@ impl ExecutionContext {
         self.registers[register.index]
     }
 
+    pub fn get_argument(&self, arg: usize) -> i64 { self.block_arguments[arg] }
+
     pub fn set_jump_target(&mut self, label: &Label) {
         self.jump_target = Some(*label);
     }
@@ -49,6 +55,7 @@ impl ExecutionContext {
     pub fn set_call(&mut self, block_id: usize) {
         self.call_block_id = Some(block_id)
     }
+    pub fn set_call_arguments(&mut self, args: Option<Vec<Register>>) { self.call_arguments = args; }
     pub fn set_return(&mut self) {
         self.call_return = true;
     }
@@ -96,6 +103,7 @@ impl Interpreter<'_> {
             println!();
         }
 
+        println!("Starting execution");
 
         let active_block = &self.blocks[self.active_block];
 
@@ -106,6 +114,7 @@ impl Interpreter<'_> {
             let ins = &instructions[self.pc];
             //println!("Executing [{}]{}", self.active_block, ins.to_string());
             ins.execute(&mut self.execution_context);
+            //self.dump();
 
             if self.execution_context.jump_target.is_some() {
                 self.pc = self.execution_context.jump_target.unwrap().position;
@@ -124,9 +133,20 @@ impl Interpreter<'_> {
                 self.call_stack.push(current_frame);
 
                 self.active_block = call_block_id;
-                self.execution_context = ExecutionContext::new();
-                self.pc = 0;
 
+                let call_args = self.execution_context.call_arguments.clone();
+                let mut block_args = Vec::new();
+
+                if call_args.is_some() {
+                    for call_arg in &call_args.unwrap() {
+                        block_args.push(self.execution_context.get_register(call_arg));
+                    }
+                }
+
+                self.execution_context = ExecutionContext::new();
+
+                self.execution_context.block_arguments = block_args;
+                self.pc = 0;
             } else if self.execution_context.call_return {
                 self.execution_context.call_return = false;
 
@@ -145,7 +165,6 @@ impl Interpreter<'_> {
                 self.active_block = last_frame.active_block;
                 self.execution_context = last_frame.execution_context;
                 self.pc = last_frame.pc + 1;
-
             } else {
                 self.pc += 1;
             }
@@ -156,12 +175,20 @@ impl Interpreter<'_> {
     }
 
     pub fn dump(&self) {
-        println!("Dump of block {}'s registers", self.active_block);
+        println!("Dump of block {}'s Execution Context", self.active_block);
+        println!("\tBlock Arguments");
         let mut idx = 0;
-        for reg in &self.execution_context.registers {
-            println!("[{:04}] {}", idx, reg);
+        for reg in &self.execution_context.block_arguments {
+            println!("\t\t[{:04}] {}", idx, reg);
             idx += 1;
         }
-        println!("[ACCU] {}", self.execution_context.accumulator)
+        println!("\tRegisters");
+        let mut idx = 0;
+        for reg in &self.execution_context.registers {
+            println!("\t\t[{:04}] {}", idx, reg);
+            idx += 1;
+        }
+
+        println!("\t[ACCU] {}", self.execution_context.accumulator)
     }
 }

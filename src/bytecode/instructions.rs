@@ -29,6 +29,19 @@ impl LoadRegister {
     }
 }
 
+pub struct LoadArgument {
+    argument: usize,
+}
+
+#[allow(dead_code)]
+impl LoadArgument {
+    pub fn new_boxed(argument: usize) -> Box<LoadArgument> {
+        Box::new(LoadArgument {
+            argument
+        })
+    }
+}
+
 pub struct Store {
     register: Register,
 }
@@ -63,39 +76,36 @@ impl Subtract {
 }
 
 pub struct Jump {
-    target: Option<Label>,
+    target: Label,
 }
 
 #[allow(dead_code)]
 impl Jump {
-    pub fn new_boxed(target: Option<Label>) -> Box<Jump> {
+    pub fn new_boxed(target: Label) -> Box<Jump> {
         Box::new(Jump { target })
     }
-    pub fn set_target(&mut self, target: Label) { self.target = Some(target) }
 }
 
 pub struct JumpNotZero {
-    target: Option<Label>,
+    target: Label,
 }
 
 #[allow(dead_code)]
 impl JumpNotZero {
-    pub fn new_boxed(target: Option<Label>) -> Box<JumpNotZero> {
+    pub fn new_boxed(target: Label) -> Box<JumpNotZero> {
         Box::new(JumpNotZero { target })
     }
-    pub fn set_target(&mut self, target: Label) { self.target = Some(target) }
 }
 
 pub struct JumpZero {
-    target: Option<Label>,
+    target: Label,
 }
 
 #[allow(dead_code)]
 impl JumpZero {
-    pub fn new_boxed(target: Option<Label>) -> Box<JumpZero> {
+    pub fn new_boxed(target: Label) -> Box<JumpZero> {
         Box::new(JumpZero { target })
     }
-    pub fn set_target(&mut self, target: Label) { self.target = Some(target) }
 }
 
 pub struct CompareEq {
@@ -144,12 +154,18 @@ impl CompareLessThan {
 
 
 pub struct Call {
-    block_id: usize, // FIXME: probably should not directly use usize?
+    // FIXME: probably should not directly use usize?
+    block_id: usize,
+    arguments: Vec<Register>,
 }
 
 impl Call {
-    pub fn new_boxed(block_id: usize) -> Box<Call> {
-        Box::new(Call { block_id })
+    pub fn new_boxed(block_id: usize, args: Option<Vec<Register>>) -> Box<Call> {
+        if args.is_some() {
+            return Box::new(Call { block_id, arguments: args.unwrap() });
+        }
+
+        Box::new(Call { block_id, arguments: Vec::new() })
     }
 }
 
@@ -181,6 +197,16 @@ impl Instruction for LoadRegister {
 
     fn to_string(&self) -> String {
         format!("LoadRegister value: {}", self.register)
+    }
+}
+
+impl Instruction for LoadArgument {
+    fn execute(&self, context: &mut ExecutionContext) {
+        context.set_accumulator(context.get_argument(self.argument));
+    }
+
+    fn to_string(&self) -> String {
+        format!("LoadArgument argument: {}", self.argument)
     }
 }
 
@@ -220,30 +246,30 @@ impl Instruction for Subtract {
 
 impl Instruction for Jump {
     fn execute(&self, context: &mut ExecutionContext) {
-        context.set_jump_target(&self.target.unwrap())
+        context.set_jump_target(&self.target)
     }
 
-    fn to_string(&self) -> String { format!("Jump {}", self.target.unwrap()) }
+    fn to_string(&self) -> String { format!("Jump {}", self.target) }
 }
 
 impl Instruction for JumpNotZero {
     fn execute(&self, context: &mut ExecutionContext) {
         if context.get_accumulator() != 0 {
-            context.set_jump_target(&self.target.unwrap())
+            context.set_jump_target(&self.target)
         }
     }
 
-    fn to_string(&self) -> String { format!("JumpNotZero {}", self.target.unwrap()) }
+    fn to_string(&self) -> String { format!("JumpNotZero {}", self.target) }
 }
 
 impl Instruction for JumpZero {
     fn execute(&self, context: &mut ExecutionContext) {
         if context.get_accumulator() == 0 {
-            context.set_jump_target(&self.target.unwrap())
+            context.set_jump_target(&self.target)
         }
     }
 
-    fn to_string(&self) -> String { format!("JumpZero {}", self.target.unwrap()) }
+    fn to_string(&self) -> String { format!("JumpZero {}", self.target) }
 }
 
 impl Instruction for CompareEq {
@@ -292,10 +318,18 @@ impl Instruction for CompareLessThan {
 
 impl Instruction for Call {
     fn execute(&self, context: &mut ExecutionContext) {
+        context.set_call_arguments(Some(self.arguments.clone()));
         context.set_call(self.block_id);
     }
 
-    fn to_string(&self) -> String { format!("Call {}", self.block_id) }
+    fn to_string(&self) -> String {
+        let mut call = format!("Call {}", self.block_id);
+        for a in &self.arguments {
+            call = call + &*format!(" {}", a);
+        }
+
+        call
+    }
 }
 
 impl Instruction for Return {
