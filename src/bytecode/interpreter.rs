@@ -1,6 +1,7 @@
 use super::register::Register;
 use crate::bytecode::code_block::CodeBlock;
 use crate::bytecode::label::Label;
+use std::time::Instant;
 
 #[derive(Clone)]
 pub struct ExecutionContext {
@@ -105,10 +106,13 @@ impl Interpreter<'_> {
 
         println!("Starting execution");
 
-        let active_block = &self.blocks[self.active_block];
+        let mut len = self.blocks[self.active_block].get_instructions().len();
 
-        while self.pc <= active_block.get_instructions().len() {
+        let now = Instant::now();
+
+        while self.pc <= len {
             let active_block = &self.blocks[self.active_block];
+            len = active_block.get_instructions().len();
 
             let instructions = active_block.get_instructions();
             let ins = &instructions[self.pc];
@@ -117,13 +121,14 @@ impl Interpreter<'_> {
             //self.dump();
 
             if self.execution_context.jump_target.is_some() {
+                //println!("Jumping to {}", self.execution_context.jump_target.unwrap().position);
                 self.pc = self.execution_context.jump_target.unwrap().position;
                 self.execution_context.jump_target = None;
             } else if self.execution_context.call_block_id.is_some() {
                 let call_block_id = self.execution_context.call_block_id.unwrap();
                 self.execution_context.call_block_id = None;
 
-                println!("Calling block {}", call_block_id);
+                //println!("Calling block {}", call_block_id);
                 let current_frame = StackFrame {
                     pc: self.pc,
                     execution_context: self.execution_context.clone(),
@@ -158,20 +163,22 @@ impl Interpreter<'_> {
 
                 let last_frame = last_frame.unwrap();
 
-                println!("Returning from block {} to block {}", self.active_block, last_frame.active_block);
+                //println!("Returning from block {} to block {}", self.active_block, last_frame.active_block);
 
-                self.dump();
+                //self.dump();
 
                 self.active_block = last_frame.active_block;
                 self.execution_context = last_frame.execution_context;
                 self.pc = last_frame.pc + 1;
             } else {
+                //println!("Continue");
                 self.pc += 1;
             }
         }
 
-        println!("Ran out of code to execute. Finished.");
         self.dump();
+
+        println! {"Execution took {}ms", now.elapsed().as_millis()}
     }
 
     pub fn dump(&self) {
