@@ -13,6 +13,6 @@ impl Register {
 
 impl fmt::Display for Register {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "r{}", self.index)
+        write!(f, "(r: {})", self.index)
     }
 }

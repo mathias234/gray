@@ -1,11 +1,10 @@
-mod bytecode;
+pub mod bytecode;
+pub mod interpreter;
 
 use bytecode::generator::Generator;
 use bytecode::instructions::*;
-use bytecode::interpreter::Interpreter;
-use crate::value::Value;
-
-pub mod value;
+use interpreter::interpreter::Value;
+use interpreter::interpreter::Interpreter;
 
 fn main() {
     let mut blocks = Vec::new();

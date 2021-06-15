@@ -1,7 +1,9 @@
-use super::register::Register;
-use crate::bytecode::interpreter::ExecutionContext;
-use crate::bytecode::label::Label;
-use crate::value::Value;
+use std::fmt::Write as FmtWrite;
+use crate::{
+    bytecode::{register::Register, label::Label},
+    interpreter::{interpreter::ExecutionContext, value::Value},
+};
+
 
 pub trait Instruction {
     fn execute(&self, context: &mut ExecutionContext);
@@ -324,12 +326,22 @@ impl Instruction for Call {
     }
 
     fn to_string(&self) -> String {
-        let mut call = format!("Call {}", self.block_id);
+        let mut writer = String::new();
+        write!(&mut writer, "Call block {} Args: (", self.block_id).unwrap();
+        let mut idx = 0;
         for a in &self.arguments {
-            call = call + &*format!(" {}", a);
+            write!(&mut writer, "{}", a).unwrap();
+
+            if idx < self.arguments.len() - 1 {
+                write!(&mut writer, ", ").unwrap();
+            }
+
+            idx += 1;
         }
 
-        call
+        write!(&mut writer, ")").unwrap();
+
+        writer
     }
 }
 

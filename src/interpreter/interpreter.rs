@@ -1,8 +1,13 @@
-use super::register::Register;
-use crate::bytecode::code_block::CodeBlock;
-use crate::bytecode::label::Label;
+pub use crate::{
+    bytecode::{
+        register::Register,
+        label::Label,
+        code_block::CodeBlock,
+    },
+    interpreter::{value::Value},
+};
+
 use std::time::Instant;
-use crate::value::Value;
 
 #[derive(Clone)]
 pub struct ExecutionContext {
