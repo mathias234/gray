@@ -1,12 +1,21 @@
 pub mod bytecode;
 pub mod interpreter;
+pub mod parser;
 
 use bytecode::generator::Generator;
 use bytecode::instructions::*;
 use interpreter::interpreter::Value;
 use interpreter::interpreter::Interpreter;
+use parser::lexer::Lexer;
 
 fn main() {
+    let token_stream = Lexer::lex_file("./test.gray");
+
+    for token in token_stream.expect("").tokens {
+        println!("{:#?}", token);
+    }
+
+    return;
     let mut blocks = Vec::new();
 
     let mut generator = Generator::new();
