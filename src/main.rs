@@ -11,7 +11,14 @@ use parser::lexer::Lexer;
 fn main() {
     let token_stream = Lexer::lex_file("./test.gray");
 
-    for token in token_stream.expect("").tokens {
+    let token_stream = match token_stream {
+        Ok(t) => t,
+        Err(e) => match e {
+            _ => panic!("Lexer failed with error: {:#?}", e),
+        },
+    };
+
+    for token in token_stream.tokens {
         println!("{:#?}", token);
     }
 

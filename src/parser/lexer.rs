@@ -24,6 +24,8 @@ pub enum Delimiter {
 #[derive(PartialEq, Debug)]
 pub enum Token {
     Identifier(String),
+    Integer(i128),
+    Float(f64),
     Delimiter(Delimiter),
     EndOfFile,
 }
@@ -43,6 +45,8 @@ impl TokenStream {
 #[derive(Debug)]
 pub enum LexerError {
     FileNotFound,
+    UnexpectedTokenWhileParsingFloat(Token),
+    UnknownErrorParsingFloat,
     UnknownError,
 }
 
@@ -56,14 +60,19 @@ impl Lexer {
         let file_result = File::open(file);
         let mut file = String::new();
 
-        if file_result.is_err() {
-            return match file_result.unwrap_err().kind() {
+        match file_result {
+            Err(e) => return match e.kind() {
                 ErrorKind::NotFound => Err(LexerError::FileNotFound),
                 _ => Err(LexerError::UnknownError),
-            };
-        } else if file_result.is_ok() {
-            file_result.expect("").read_to_string(&mut file);
-        }
+            },
+            Ok(mut f) => match f.read_to_string(&mut file) {
+                Ok(_) => {}
+                Err(e) => return match e.kind() {
+                    _ => Err(LexerError::UnknownError),
+                },
+            },
+        };
+
 
         let mut lexer = Lexer {
             file,
@@ -73,7 +82,7 @@ impl Lexer {
         let mut token_stream = TokenStream::new();
 
         loop {
-            let token = lexer.pop_token();
+            let token = lexer.pop_token()?;
 
             if token == Token::EndOfFile {
                 return Ok(token_stream);
@@ -83,30 +92,43 @@ impl Lexer {
         }
     }
 
-    pub fn pop_token(&mut self) -> Token {
+    pub fn pop_token(&mut self) -> Result<Token, LexerError> {
         let mut word = String::new();
-        let mut chars = &mut self.file[self.position..self.file.len()].chars();
+        let chars = &mut self.file[self.position..self.file.len()].chars();
 
         loop {
             let char = chars.next();
 
             if char.is_none() {
-                return Token::EndOfFile;
+                return Ok(Token::EndOfFile);
             }
 
             let char = char.unwrap();
 
             let delimiter = Lexer::char_to_delimiter(char);
             if delimiter.is_some() {
-                // We have started a word, so we just break without incrementing
-                // This assures that we get the delimiter on the next pop_token call
-                // without adding it to the current word
-                if word.len() > 0 {
-                    break;
-                }
-                else {
+                let delimiter = delimiter.unwrap();
+                if delimiter == Delimiter::Dot && Lexer::word_to_integer(&word).is_some() {
+                    // Seems like a float, as we have a full integer before then a dot
+                    // Lets try and pop another token to get the fractional portion
+
                     self.position += char.len_utf8();
-                    return Token::Delimiter(delimiter.unwrap());
+
+                    let integer = Lexer::word_to_integer(&word).unwrap();
+                    let fractional = self.pop_token()?;
+
+                    return match fractional {
+                        Token::Integer(i) => {
+                            let result = Lexer::integer_and_fractional_to_float(integer, i)?;
+                            Ok(Token::Float(result))
+                        }
+                        _ => Err(LexerError::UnexpectedTokenWhileParsingFloat(fractional))
+                    };
+                } else if word.len() > 0 {
+                    break;
+                } else {
+                    self.position += char.len_utf8();
+                    return Ok(Token::Delimiter(delimiter));
                 }
             }
 
@@ -115,7 +137,36 @@ impl Lexer {
             word += &String::from(char);
         }
 
-        return Token::Identifier(word);
+        match Lexer::word_to_integer(&word) {
+            Some(value) => return Ok(Token::Integer(value)),
+            None => {}
+        };
+
+
+        return Ok(Token::Identifier(word));
+    }
+
+    fn word_to_integer(word: &str) -> Option<i128> {
+        // TODO: Parse as hex
+        if word.starts_with("0x") {}
+
+        let value: i128 = match word.parse() {
+            Ok(v) => v,
+            Err(_) => return None,
+        };
+
+        Some(value)
+    }
+
+    fn integer_and_fractional_to_float(integer: i128, fractional: i128) -> Result<f64, LexerError> {
+        // FIXME: This do be hacky
+        let float_as_string = format!("{}.{}", integer, fractional);
+
+        let result = float_as_string.parse::<f64>();
+        match result {
+            Ok(v) => Ok(v),
+            Err(_) => Err(LexerError::UnknownErrorParsingFloat),
+        }
     }
 
 
