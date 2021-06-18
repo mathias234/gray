@@ -4,7 +4,7 @@ use crate::bytecode::label::Label;
 
 pub struct Generator {
     register_index: usize,
-    block: CodeBlock,
+    pub block: CodeBlock,
 }
 
 impl Generator {
@@ -13,10 +13,6 @@ impl Generator {
             register_index: 0,
             block: CodeBlock::new(),
         }
-    }
-
-    pub fn get_block(&mut self) -> &mut CodeBlock {
-        &mut self.block
     }
 
     pub fn next_free_register(&mut self) -> Register {

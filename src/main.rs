@@ -1,6 +1,7 @@
 pub mod bytecode;
 pub mod interpreter;
 pub mod parser;
+pub mod compiler;
 
 use bytecode::generator::Generator;
 use bytecode::instructions::*;
@@ -9,6 +10,7 @@ use interpreter::interpreter::Interpreter;
 use parser::lexer::Lexer;
 use crate::parser::parser::{Parser, ParserError};
 use crate::parser::lexer::LexerError;
+use crate::compiler::compiler::Compiler;
 
 #[derive(Debug)]
 enum GrayError {
@@ -31,13 +33,13 @@ impl From<ParserError> for GrayError {
 fn main() -> Result<(), GrayError> {
     let mut token_stream = Lexer::lex_file("./test.gray")?;
 
-
+    println!("\nLexer token stream");
     loop {
         let token = token_stream.next();
         if token.is_none() {
             break;
         }
-        println!("{:#?}", token.unwrap());
+        println!("{:?}", token.unwrap());
     }
 
     token_stream.reset();
@@ -48,22 +50,14 @@ fn main() -> Result<(), GrayError> {
 
     root_ast_node.dump(0);
 
+    let blocks = Compiler::compile(root_ast_node);
     return Ok({});
-    let mut blocks = Vec::new();
-
-    let mut generator = Generator::new();
-    code_block_0(&mut generator);
-
-    blocks.push(generator.get_block());
-
-    let mut generator = Generator::new();
-    code_block_1(&mut generator);
-
-    blocks.push(generator.get_block());
 
     let mut interpreter = Interpreter::new(blocks);
 
     interpreter.run();
+
+    return Ok({});
 }
 
 fn code_block_0(generator: &mut Generator) {

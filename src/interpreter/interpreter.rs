@@ -74,17 +74,17 @@ pub struct StackFrame {
     active_block: usize,
 }
 
-pub struct Interpreter<'a> {
+pub struct Interpreter {
     active_block: usize,
     execution_context: ExecutionContext,
     pc: usize,
-    blocks: Vec<&'a mut CodeBlock>,
+    blocks: Vec<CodeBlock>,
 
     call_stack: Vec<StackFrame>,
 }
 
-impl Interpreter<'_> {
-    pub fn new(blocks: Vec<&mut CodeBlock>) -> Interpreter {
+impl Interpreter {
+    pub fn new(blocks: Vec<CodeBlock>) -> Interpreter {
         Interpreter {
             active_block: 0,
             execution_context: ExecutionContext::new(),
