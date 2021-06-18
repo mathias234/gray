@@ -7,22 +7,48 @@ use bytecode::instructions::*;
 use interpreter::interpreter::Value;
 use interpreter::interpreter::Interpreter;
 use parser::lexer::Lexer;
+use crate::parser::parser::{Parser, ParserError};
+use crate::parser::lexer::LexerError;
 
-fn main() {
-    let token_stream = Lexer::lex_file("./test.gray");
+#[derive(Debug)]
+enum GrayError {
+    ParserError(ParserError),
+    LexerError(LexerError),
+}
 
-    let token_stream = match token_stream {
-        Ok(t) => t,
-        Err(e) => match e {
-            _ => panic!("Lexer failed with error: {:#?}", e),
-        },
-    };
+impl From<LexerError> for GrayError {
+    fn from(error: LexerError) -> Self {
+        GrayError::LexerError(error)
+    }
+}
 
-    for token in token_stream.tokens {
-        println!("{:#?}", token);
+impl From<ParserError> for GrayError {
+    fn from(error: ParserError) -> Self {
+        GrayError::ParserError(error)
+    }
+}
+
+fn main() -> Result<(), GrayError> {
+    let mut token_stream = Lexer::lex_file("./test.gray")?;
+
+
+    loop {
+        let token = token_stream.next();
+        if token.is_none() {
+            break;
+        }
+        println!("{:#?}", token.unwrap());
     }
 
-    return;
+    token_stream.reset();
+
+    let root_ast_node = Parser::parse(token_stream)?;
+
+    println!("\nParser AST Tree");
+
+    root_ast_node.dump(0);
+
+    return Ok({});
     let mut blocks = Vec::new();
 
     let mut generator = Generator::new();

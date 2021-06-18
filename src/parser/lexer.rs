@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::{Read, ErrorKind};
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum Delimiter {
     Space,
     OpenBracket,
@@ -21,7 +21,7 @@ pub enum Delimiter {
     CarriageReturn,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum Keyword {
     Public,
     Private,
@@ -31,7 +31,7 @@ pub enum Keyword {
     VariableDeclaration,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum Token {
     Identifier(String),
     Integer(i128),
@@ -42,16 +42,33 @@ pub enum Token {
 }
 
 pub struct TokenStream {
-    pub tokens: Vec<Token>,
+    tokens: Vec<Token>,
+    position: usize,
 }
 
 impl TokenStream {
     pub fn new() -> TokenStream {
         TokenStream {
             tokens: Vec::new(),
+            position: 0,
         }
     }
+
+    pub fn reset(&mut self) {
+        self.position = 0;
+    }
+
+    pub fn next(&mut self) -> Option<&Token> {
+        if self.position >= self.tokens.len() {
+            return None;
+        }
+
+        let result = Some(&self.tokens[self.position]);
+        self.position += 1;
+        return result;
+    }
 }
+
 
 #[derive(Debug)]
 pub enum LexerError {

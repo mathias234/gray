@@ -1,0 +1,26 @@
+trait TestTrait {
+    fn trait_func();
+}
+
+trait TestTrait2 {
+    fn trait_func2();
+}
+
+struct Test : TestTrait, TestTrait2 {
+    let i = 12.12;
+    let b = 50;
+
+private:
+    fn asd() {
+
+    }
+
+public:
+    fn trait_func() {
+
+    }
+
+    fn trait_func2() {
+
+    }
+}
