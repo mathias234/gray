@@ -2,12 +2,12 @@ use crate::parser::lexer::{TokenStream, Token, Keyword};
 use crate::parser::lexer::Delimiter;
 
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum ASTType {
     ProgramRoot,
     Scope,
-    Structure,
     Function(String),
+    Structure(String),
     Trait(String),
 }
 
@@ -19,7 +19,7 @@ pub enum ParserError {
     UnexpectedTokenInStream(Token),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ASTNode {
     pub ast_type: ASTType,
     pub children: Vec<ASTNode>,
@@ -55,8 +55,9 @@ impl Parser {
     pub fn parse(token_stream: TokenStream) -> Result<ASTNode, ParserError> {
         let mut parser = Parser { token_stream };
 
-        let mut root = ASTNode::new(ASTType::ProgramRoot);
-        root.children.push(parser.parse_scope()?);
+        let mut root = parser.parse_scope()?;
+        // Change it from Scope to ProgramRoot to be more explicit
+        root.ast_type = ASTType::ProgramRoot;
 
         return Ok(root);
     }
@@ -128,7 +129,33 @@ impl Parser {
     }
 
     fn parse_structure(&mut self) -> Result<ASTNode, ParserError> {
-        Ok(ASTNode::new(ASTType::Structure))
+        let mut struct_name = String::new();
+        let name_token = self.get_next_token()?;
+
+        match name_token {
+            Token::Identifier(name) => struct_name = String::from(name),
+            _ => return Err(ParserError::UnexpectedTokenInStream(name_token.clone())),
+        }
+
+        let mut node = ASTNode::new(ASTType::Structure(struct_name));
+
+        Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenCurlyBracket)?;
+
+        // Parse body
+        loop {
+            let token = self.get_next_token()?;
+            if Parser::token_is_delimiter(token, Delimiter::CloseCurlyBracket) {
+                break;
+            }
+
+            node.children.push(match token {
+                Token::Keyword(keyword) => self.parse_function(),
+                _ => Err(ParserError::UnexpectedTokenInStream(token.clone())),
+            }?);
+        }
+
+
+        Ok(node)
     }
 
     fn parse_function(&mut self) -> Result<ASTNode, ParserError> {

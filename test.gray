@@ -1,3 +1,4 @@
-trait TestTrait {
-    fn test();
+struct TestStruct {
+    fn test() {}
+    fn test2() {}
 }

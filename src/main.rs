@@ -7,15 +7,15 @@ use bytecode::generator::Generator;
 use bytecode::instructions::*;
 use interpreter::interpreter::Value;
 use interpreter::interpreter::Interpreter;
-use parser::lexer::Lexer;
 use crate::parser::parser::{Parser, ParserError};
-use crate::parser::lexer::LexerError;
-use crate::compiler::compiler::Compiler;
+use crate::parser::lexer::{Lexer, LexerError};
+use crate::compiler::compiler::{Compiler, CompilerError};
 
 #[derive(Debug)]
 enum GrayError {
     ParserError(ParserError),
     LexerError(LexerError),
+    CompilerError(CompilerError),
 }
 
 impl From<LexerError> for GrayError {
@@ -27,6 +27,12 @@ impl From<LexerError> for GrayError {
 impl From<ParserError> for GrayError {
     fn from(error: ParserError) -> Self {
         GrayError::ParserError(error)
+    }
+}
+
+impl From<CompilerError> for GrayError {
+    fn from(error: CompilerError) -> Self {
+        GrayError::CompilerError(error)
     }
 }
 
@@ -50,8 +56,7 @@ fn main() -> Result<(), GrayError> {
 
     root_ast_node.dump(0);
 
-    let blocks = Compiler::compile(root_ast_node);
-    return Ok({});
+    let blocks = Compiler::compile(root_ast_node)?;
 
     let mut interpreter = Interpreter::new(blocks);
 
