@@ -1,5 +1,6 @@
 use crate::parser::lexer::{TokenStream, Token, Keyword};
 use crate::parser::lexer::Delimiter;
+use crate::parser::parser::ParserError::UnimplementedFeature;
 
 
 #[derive(PartialEq, Debug, Clone)]
@@ -8,6 +9,7 @@ pub enum ASTType {
     Scope,
     Function(String),
     Structure(String),
+    FunctionCall(String),
     Trait(String),
 }
 
@@ -17,6 +19,8 @@ pub enum ParserError {
     UnexpectedKeywordInStream(Keyword),
     UnexpectedDelimiterInStream(Delimiter),
     UnexpectedTokenInStream(Token),
+
+    UnimplementedFeature(&'static str),
 }
 
 #[derive(Debug, Clone)]
@@ -82,8 +86,13 @@ impl Parser {
                     match keyword {
                         Keyword::Trait => self.parse_trait(),
                         Keyword::Structure => self.parse_structure(),
+                        Keyword::Function => self.parse_function(),
                         _ => Err(ParserError::UnexpectedKeywordInStream(keyword.clone())),
                     }
+                }
+                Token::Identifier(identifier) => {
+                    let identifier = identifier.clone();
+                    self.parse_identifier(identifier)
                 }
                 Token::Delimiter(d) => {
                     match d {
@@ -96,6 +105,50 @@ impl Parser {
 
             scope.children.push(child?);
         }
+    }
+
+    fn parse_identifier(&mut self, identifier: String) -> Result<ASTNode, ParserError> {
+        let mut built_identifier = String::from(identifier);
+
+        let mut delimiter;
+        loop {
+            delimiter = self.get_next_token()?;
+
+            if Parser::token_is_delimiter(delimiter, Delimiter::Dot) {
+                // Member get
+                return Err(ParserError::UnimplementedFeature("Member Get"));
+            }
+
+            if !Parser::token_is_delimiter(delimiter, Delimiter::Colon) { break; }
+
+            let delimiter2 = self.get_next_token()?;
+            if !Parser::token_is_delimiter(delimiter2, Delimiter::Colon) {
+                return Err(ParserError::UnexpectedTokenInStream(delimiter2.clone()));
+            }
+
+            let identifier2 = self.get_next_token()?;
+            let identifier2 = match identifier2 {
+                Token::Identifier(identifier) => identifier,
+                _ => return Err(ParserError::UnexpectedTokenInStream(identifier2.clone())),
+            };
+
+
+            built_identifier += &*format!("::{}", identifier2);
+        }
+
+        if Parser::token_is_delimiter(delimiter, Delimiter::OpenParen) {
+            // Function Call
+
+            let delimiter = self.get_next_token()?;
+            Parser::validate_token_is_delimiter(delimiter, Delimiter::CloseParen);
+            let delimiter = self.get_next_token()?;
+            Parser::validate_token_is_delimiter(delimiter, Delimiter::Semicolon);
+
+            return Ok(ASTNode::new(ASTType::FunctionCall(built_identifier)));
+        }
+
+
+        Err(ParserError::UnimplementedFeature("parse_identifier Unknown"))
     }
 
     fn parse_trait(&mut self) -> Result<ASTNode, ParserError> {

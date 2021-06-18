@@ -1,7 +1,10 @@
 struct TestStruct {
-    fn test() {}
+    fn test() {
+        TestStruct::test2();
+    }
     fn test2() {}
 }
 
 fn entry() {
+    TestStruct::test();
 }
