@@ -8,6 +8,7 @@ pub use crate::{
 };
 
 use std::time::Instant;
+use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct ExecutionContext {
@@ -16,7 +17,7 @@ pub struct ExecutionContext {
     block_arguments: Vec<Value>,
     jump_target: Option<Label>,
 
-    call_block_id: Option<usize>,
+    call_block_id: Option<String>,
     call_arguments: Option<Vec<Register>>,
     call_return: bool,
 }
@@ -59,8 +60,8 @@ impl ExecutionContext {
         self.jump_target = Some(*label);
     }
 
-    pub fn set_call(&mut self, block_id: usize) {
-        self.call_block_id = Some(block_id)
+    pub fn set_call(&mut self, block_id: &str) {
+        self.call_block_id = Some(String::from(block_id))
     }
     pub fn set_call_arguments(&mut self, args: Option<Vec<Register>>) { self.call_arguments = args; }
     pub fn set_return(&mut self) {
@@ -71,22 +72,22 @@ impl ExecutionContext {
 pub struct StackFrame {
     pc: usize,
     execution_context: ExecutionContext,
-    active_block: usize,
+    active_block: String,
 }
 
 pub struct Interpreter {
-    active_block: usize,
+    active_block: String,
     execution_context: ExecutionContext,
     pc: usize,
-    blocks: Vec<CodeBlock>,
+    blocks: HashMap<String, CodeBlock>,
 
     call_stack: Vec<StackFrame>,
 }
 
 impl Interpreter {
-    pub fn new(blocks: Vec<CodeBlock>) -> Interpreter {
+    pub fn new(blocks: HashMap<String, CodeBlock>) -> Interpreter {
         Interpreter {
-            active_block: 0,
+            active_block: String::from("entry"),
             execution_context: ExecutionContext::new(),
             pc: 0,
             blocks,
@@ -96,9 +97,8 @@ impl Interpreter {
 
     pub fn run(&mut self) {
         println!("Compiled code");
-        let mut block_idx = 0;
-        for block in &self.blocks {
-            println!("\tBlock {}", block_idx);
+        for (name, block) in &self.blocks {
+            println!("\tBlock {}", name);
             let mut idx = 0;
 
             for ins in block.get_instructions() {
@@ -106,18 +106,17 @@ impl Interpreter {
                 idx += 1;
             }
 
-            block_idx += 1;
             println!();
         }
 
         println!("Starting execution");
 
-        let mut len = self.blocks[self.active_block].get_instructions().len();
+        let mut len = self.blocks[&self.active_block].get_instructions().len();
 
         let now = Instant::now();
 
         while self.pc <= len {
-            let active_block = &self.blocks[self.active_block];
+            let active_block = &self.blocks[&self.active_block];
             len = active_block.get_instructions().len();
 
             let instructions = active_block.get_instructions();
@@ -131,14 +130,15 @@ impl Interpreter {
                 self.pc = self.execution_context.jump_target.unwrap().position;
                 self.execution_context.jump_target = None;
             } else if self.execution_context.call_block_id.is_some() {
-                let call_block_id = self.execution_context.call_block_id.unwrap();
+                let call_block_id= self.execution_context.call_block_id.clone().unwrap();
                 self.execution_context.call_block_id = None;
 
                 //println!("Calling block {}", call_block_id);
+
                 let current_frame = StackFrame {
                     pc: self.pc,
                     execution_context: self.execution_context.clone(),
-                    active_block: self.active_block,
+                    active_block: self.active_block.clone()
                 };
 
                 self.call_stack.push(current_frame);

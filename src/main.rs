@@ -70,7 +70,7 @@ fn code_block_0(generator: &mut Generator) {
     generator.emit(LoadImmediate::new_boxed(Value::from_i32(0)));
     generator.emit(Store::new_boxed(arg1_register));
 
-    generator.emit(Call::new_boxed(1, Some(vec![arg1_register])));
+    generator.emit(Call::new_boxed("block1", Some(vec![arg1_register])));
 
     generator.emit(Return::new_boxed());
 }
@@ -94,7 +94,7 @@ fn code_block_1(generator: &mut Generator) {
     let result_register = generator.next_free_register();
     generator.emit(Store::new_boxed(result_register));
 
-    generator.emit(Call::new_boxed(1, Some(vec![result_register])));
+    generator.emit(Call::new_boxed("block1", Some(vec![result_register])));
 
     let mut exit_label = generator.make_label();
     exit_label.position += 1;

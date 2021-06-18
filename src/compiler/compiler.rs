@@ -9,45 +9,20 @@ pub enum CompilerError {
     UnexpectedASTNode(ASTNode)
 }
 
-struct CompilerBlock {
-    block_index: usize,
-    code_block: CodeBlock,
-}
-
-impl CompilerBlock {
-    pub fn new(compiler: &mut Compiler, block: CodeBlock) -> CompilerBlock {
-        let compiler_block = CompilerBlock {
-            block_index: compiler.last_block_index,
-            code_block: block,
-        };
-
-        compiler.last_block_index += 1;
-
-        return compiler_block;
-    }
-}
-
 pub struct Compiler {
-    blocks: HashMap<String, CompilerBlock>,
-    last_block_index: usize,
+    blocks: HashMap<String, CodeBlock>,
 }
 
 impl Compiler {
-    pub fn compile(root_node: ASTNode) -> Result<Vec<CodeBlock>, CompilerError> {
+    pub fn compile(root_node: ASTNode) -> Result<HashMap<String, CodeBlock>, CompilerError> {
         let mut compiler = Compiler {
             blocks: HashMap::new(),
-            last_block_index: 0,
         };
 
         compiler.compile_program_root(&root_node)?;
 
-        let mut blocks = Vec::with_capacity(compiler.blocks.len());
 
-        for (block_name, compiler_block) in compiler.blocks {
-            blocks.insert(compiler_block.block_index, compiler_block.code_block);
-        }
-
-        Ok(blocks)
+        Ok(compiler.blocks)
     }
 
     fn compile_program_root(&mut self, root: &ASTNode) -> Result<(), CompilerError> {
@@ -81,8 +56,7 @@ impl Compiler {
 
         generator.emit(Return::new_boxed());
 
-        let compiler_block = CompilerBlock::new(self, generator.block);
-        self.blocks.insert(String::from(name), compiler_block);
+        self.blocks.insert(String::from(name), generator.block);
         Ok({})
     }
 }

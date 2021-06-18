@@ -2,3 +2,6 @@ struct TestStruct {
     fn test() {}
     fn test2() {}
 }
+
+fn entry() {
+}

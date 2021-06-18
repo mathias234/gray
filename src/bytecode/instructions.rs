@@ -3,6 +3,7 @@ use crate::{
     bytecode::{register::Register, label::Label},
     interpreter::{interpreter::ExecutionContext, value::Value},
 };
+use std::rc::Rc;
 
 
 pub trait Instruction {
@@ -157,18 +158,17 @@ impl CompareLessThan {
 
 
 pub struct Call {
-    // FIXME: probably should not directly use usize?
-    block_id: usize,
+    block_id: Rc<str>,
     arguments: Vec<Register>,
 }
 
 impl Call {
-    pub fn new_boxed(block_id: usize, args: Option<Vec<Register>>) -> Box<Call> {
+    pub fn new_boxed(block_id: &str, args: Option<Vec<Register>>) -> Box<Call> {
         if args.is_some() {
-            return Box::new(Call { block_id, arguments: args.unwrap() });
+            return Box::new(Call { block_id: Rc::from(block_id), arguments: args.unwrap() });
         }
 
-        Box::new(Call { block_id, arguments: Vec::new() })
+        Box::new(Call { block_id: Rc::from(block_id), arguments: Vec::new() })
     }
 }
 
@@ -322,7 +322,7 @@ impl Instruction for CompareLessThan {
 impl Instruction for Call {
     fn execute(&self, context: &mut ExecutionContext) {
         context.set_call_arguments(Some(self.arguments.clone()));
-        context.set_call(self.block_id);
+        context.set_call(&self.block_id);
     }
 
     fn to_string(&self) -> String {
