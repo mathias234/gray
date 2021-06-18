@@ -22,11 +22,22 @@ pub enum Delimiter {
 }
 
 #[derive(PartialEq, Debug)]
+pub enum Keyword {
+    Public,
+    Private,
+    Function,
+    Structure,
+    Trait,
+    VariableDeclaration,
+}
+
+#[derive(PartialEq, Debug)]
 pub enum Token {
     Identifier(String),
     Integer(i128),
     Float(f64),
     Delimiter(Delimiter),
+    Keyword(Keyword),
     EndOfFile,
 }
 
@@ -128,6 +139,15 @@ impl Lexer {
                     break;
                 } else {
                     self.position += char.len_utf8();
+
+                    // Space and new line is ignored
+                    match delimiter {
+                        Delimiter::Space => return self.pop_token(),
+                        Delimiter::LineFeed => return self.pop_token(),
+                        Delimiter::CarriageReturn => return self.pop_token(),
+                        _ => {}
+                    }
+
                     return Ok(Token::Delimiter(delimiter));
                 }
             }
@@ -141,6 +161,12 @@ impl Lexer {
             Some(value) => return Ok(Token::Integer(value)),
             None => {}
         };
+
+
+        match Lexer::word_to_keyword(&word) {
+            Some(keyword) => return Ok(Token::Keyword(keyword)),
+            None => {}
+        }
 
 
         return Ok(Token::Identifier(word));
@@ -169,6 +195,17 @@ impl Lexer {
         }
     }
 
+    fn word_to_keyword(word: &str) -> Option<Keyword> {
+        match word {
+            "public" => Some(Keyword::Public),
+            "private" => Some(Keyword::Private),
+            "fn" => Some(Keyword::Function),
+            "trait" => Some(Keyword::Trait),
+            "struct" => Some(Keyword::Structure),
+            "let" => Some(Keyword::VariableDeclaration),
+            _ => None,
+        }
+    }
 
     fn char_to_delimiter(token_char: char) -> Option<Delimiter> {
         match token_char {

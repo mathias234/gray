@@ -1,3 +1,14 @@
-if(1.23 == 34043) {
+struct Test {
+    let i = 100;
+    let b = 50;
 
+private:
+    fn asd() {
+
+    }
+
+public:
+    fn asd() {
+
+    }
 }
