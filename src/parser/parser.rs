@@ -1,15 +1,16 @@
 use crate::parser::lexer::{TokenStream, Token, Keyword};
 use crate::parser::lexer::Delimiter;
-use crate::parser::parser::ParserError::UnimplementedFeature;
 
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum ASTType {
     ProgramRoot,
     Scope,
+    Expression,
     Function(String),
     Structure(String),
     FunctionCall(String),
+    VariableDeclaration(String),
     Trait(String),
 }
 
@@ -87,6 +88,7 @@ impl Parser {
                         Keyword::Trait => self.parse_trait(),
                         Keyword::Structure => self.parse_structure(),
                         Keyword::Function => self.parse_function(),
+                        Keyword::VariableDeclaration => self.parse_variable_declaration(),
                         _ => Err(ParserError::UnexpectedKeywordInStream(keyword.clone())),
                     }
                 }
@@ -140,9 +142,9 @@ impl Parser {
             // Function Call
 
             let delimiter = self.get_next_token()?;
-            Parser::validate_token_is_delimiter(delimiter, Delimiter::CloseParen);
+            Parser::validate_token_is_delimiter(delimiter, Delimiter::CloseParen)?;
             let delimiter = self.get_next_token()?;
-            Parser::validate_token_is_delimiter(delimiter, Delimiter::Semicolon);
+            Parser::validate_token_is_delimiter(delimiter, Delimiter::Semicolon)?;
 
             return Ok(ASTNode::new(ASTType::FunctionCall(built_identifier)));
         }
@@ -152,7 +154,7 @@ impl Parser {
     }
 
     fn parse_trait(&mut self) -> Result<ASTNode, ParserError> {
-        let mut trait_name = String::new();
+        let trait_name;
         let name_token = self.get_next_token()?;
 
         match name_token {
@@ -172,7 +174,10 @@ impl Parser {
             }
 
             node.children.push(match token {
-                Token::Keyword(keyword) => self.parse_function(),
+                Token::Keyword(keyword) => match keyword {
+                    Keyword::Function => self.parse_function(),
+                    _ => Err(ParserError::UnexpectedKeywordInStream(keyword.clone()))
+                },
                 _ => Err(ParserError::UnexpectedTokenInStream(token.clone())),
             }?);
         }
@@ -182,7 +187,7 @@ impl Parser {
     }
 
     fn parse_structure(&mut self) -> Result<ASTNode, ParserError> {
-        let mut struct_name = String::new();
+        let struct_name;
         let name_token = self.get_next_token()?;
 
         match name_token {
@@ -202,7 +207,10 @@ impl Parser {
             }
 
             node.children.push(match token {
-                Token::Keyword(keyword) => self.parse_function(),
+                Token::Keyword(keyword) => match keyword {
+                    Keyword::Function => self.parse_function(),
+                    _ => Err(ParserError::UnexpectedKeywordInStream(keyword.clone()))
+                },
                 _ => Err(ParserError::UnexpectedTokenInStream(token.clone())),
             }?);
         }
@@ -212,7 +220,7 @@ impl Parser {
     }
 
     fn parse_function(&mut self) -> Result<ASTNode, ParserError> {
-        let mut func_name = String::new();
+        let func_name;
         let name_token = self.get_next_token()?;
 
         match name_token {
@@ -239,9 +247,35 @@ impl Parser {
         } else {
             return Err(ParserError::UnexpectedTokenInStream(token.clone()));
         }
+    }
+
+    fn parse_variable_declaration(&mut self) -> Result<ASTNode, ParserError> {
+        let variable_name;
+        let name_token = self.get_next_token()?;
+
+        match name_token {
+            Token::Identifier(name) => variable_name = String::from(name),
+            _ => return Err(ParserError::UnexpectedTokenInStream(name_token.clone())),
+        }
+
+        let mut node = ASTNode::new(ASTType::VariableDeclaration(variable_name));
+
+
+        let delimiter = self.get_next_token()?;
+        Parser::validate_token_is_delimiter(delimiter, Delimiter::Equal)?;
+
+        let assignment_expression = self.parse_expression()?;
+        node.children.push(assignment_expression);
+
 
         Ok(node)
     }
+
+    fn parse_expression(&mut self) -> Result<ASTNode, ParserError> {
+        let node = ASTNode::new(ASTType::Expression);
+        Ok(node)
+    }
+
 
     fn get_next_token(&mut self) -> Result<&Token, ParserError> {
         let token = self.token_stream.next();

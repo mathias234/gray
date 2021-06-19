@@ -17,6 +17,7 @@ pub enum Delimiter {
     Hyphen,
     Star,
     Slash,
+    Equal,
     LineFeed,
     CarriageReturn,
 }
@@ -240,6 +241,7 @@ impl Lexer {
             '-' => Some(Delimiter::Hyphen),
             '*' => Some(Delimiter::Star),
             '/' => Some(Delimiter::Slash),
+            '=' => Some(Delimiter::Equal),
             '\n' => Some(Delimiter::LineFeed),
             '\r' => Some(Delimiter::CarriageReturn),
             _ => None,

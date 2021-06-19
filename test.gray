@@ -2,9 +2,16 @@ struct TestStruct {
     fn test() {
         TestStruct::test2();
     }
-    fn test2() {}
+    fn test2() {
+        function_test();
+    }
 }
 
 fn entry() {
+    let asda = 50;
     TestStruct::test();
+}
+
+fn function_test() {
+
 }

@@ -48,13 +48,9 @@ impl Compiler {
         Ok({})
     }
 
-    fn compile_trait(&mut self, node: &ASTNode) -> Result<(), CompilerError> {
-        Ok({})
-    }
-
     fn compile_function(&mut self, name: &str, node: &ASTNode) -> Result<(), CompilerError> {
         if node.children.len() > 0 {
-            self.compile_scope(name, &node.children[0]);
+            self.compile_scope(name, &node.children[0])?;
         }
         Ok({})
     }
