@@ -11,6 +11,9 @@ pub enum ASTType {
     Structure(String),
     FunctionCall(String),
     VariableDeclaration(String),
+    FloatValue(f64),
+    IntegerValue(i128),
+    Identifier(String),
     Trait(String),
 }
 
@@ -272,7 +275,19 @@ impl Parser {
     }
 
     fn parse_expression(&mut self) -> Result<ASTNode, ParserError> {
-        let node = ASTNode::new(ASTType::Expression);
+        let mut node = ASTNode::new(ASTType::Expression);
+
+        let token = self.get_next_token()?.clone();
+
+        let delimiter = self.get_next_token()?;
+
+        if Parser::token_is_delimiter(delimiter, Delimiter::Semicolon) {
+            // Very simple single token expression
+            node.children.push(Parser::token_to_simple_ast_node(&token)?);
+        } else if Parser::token_is_math_delimiter(delimiter) {
+
+        }
+
         Ok(node)
     }
 
@@ -293,6 +308,36 @@ impl Parser {
                 } else {
                     false
                 };
+            }
+            _ => false
+        };
+    }
+
+    fn token_to_simple_ast_node(token: &Token) -> Result<ASTNode, ParserError> {
+        match token {
+            Token::Identifier(identifier) => {
+                Ok(ASTNode::new(ASTType::Identifier(identifier.clone())))
+            }
+            Token::Integer(value) => {
+                Ok(ASTNode::new(ASTType::IntegerValue(*value)))
+            }
+            Token::Float(value) => {
+                Ok(ASTNode::new(ASTType::FloatValue(*value)))
+            }
+            _ => Err(ParserError::UnexpectedTokenInStream(token.clone()))
+        }
+    }
+
+    fn token_is_math_delimiter(token: &Token) -> bool {
+        return match token {
+            Token::Delimiter(d) => {
+                match d {
+                    Delimiter::Star => true,
+                    Delimiter::Plus => true,
+                    Delimiter::Hyphen => true,
+                    Delimiter::Slash => true,
+                    _ => false,
+                }
             }
             _ => false
         };
