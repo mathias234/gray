@@ -19,6 +19,9 @@ pub enum Delimiter {
     Plus,
     Slash,
     Equal,
+    LessThan,
+    GreaterThan,
+    Exclamation,
     LineFeed,
     CarriageReturn,
 }
@@ -31,6 +34,7 @@ pub enum Keyword {
     Structure,
     Trait,
     VariableDeclaration,
+    IfStatement,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -231,6 +235,7 @@ impl Lexer {
             "trait" => Some(Keyword::Trait),
             "struct" => Some(Keyword::Structure),
             "let" => Some(Keyword::VariableDeclaration),
+            "if" => Some(Keyword::IfStatement),
             _ => None,
         }
     }
@@ -253,6 +258,9 @@ impl Lexer {
             '+' => Some(Delimiter::Plus),
             '/' => Some(Delimiter::Slash),
             '=' => Some(Delimiter::Equal),
+            '<' => Some(Delimiter::LessThan),
+            '>' => Some(Delimiter::GreaterThan),
+            '!' => Some(Delimiter::Exclamation),
             '\n' => Some(Delimiter::LineFeed),
             '\r' => Some(Delimiter::CarriageReturn),
             _ => None,

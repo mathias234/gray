@@ -1,21 +1,30 @@
-struct TestStruct {
-    fn test() {
-        TestStruct::test2();
+fn entry() {
+    let a = 5;
+
+    if a < 5 {
     }
-    fn test2() {
-        function_test();
+
+    if a > 5 {
+    }
+
+    if a <= 5 {
+    }
+
+    if a >= 5 {
+    }
+
+    if a == 5 {
+    }
+
+    if a != 5 {
     }
 }
 
-fn entry() {
-    let var1 = 1000;
+fn function_test() {
+    let var1 = 1000 * 1000;
     let var2 = 100;
     let var3 = var1 * var2;
     let var4 = var1 / var2;
     let var5 = var1 + var2;
     let var6 = var1 - var2;
-}
-
-fn function_test() {
-
 }

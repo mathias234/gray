@@ -68,7 +68,7 @@ impl Compiler {
                 ASTType::VariableDeclaration(variable) => {
                     self.compile_variable_declaration(variable, &mut generator, child)?;
                 }
-                _ => {}
+                _ => return Err(CompilerError::UnexpectedASTNode(child.clone())),
             }
         }
 
@@ -91,6 +91,7 @@ impl Compiler {
         match &child.ast_type {
             ASTType::MathExpression => self.compile_math_expression(generator, child),
             ASTType::IntegerValue(value) => self.compile_value_to_accumulator(generator, child),
+            ASTType::FloatValue(value) => self.compile_value_to_accumulator(generator, child),
             _ => Err(CompilerError::UnexpectedASTNode(child.clone())),
         }
     }
