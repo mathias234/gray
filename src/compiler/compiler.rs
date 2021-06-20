@@ -90,6 +90,7 @@ impl Compiler {
         let child = &node.children[0];
         match &child.ast_type {
             ASTType::MathExpression => self.compile_math_expression(generator, child),
+            ASTType::IntegerValue(value) => self.compile_value_to_accumulator(generator, child),
             _ => Err(CompilerError::UnexpectedASTNode(child.clone())),
         }
     }
