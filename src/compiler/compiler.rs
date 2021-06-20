@@ -4,7 +4,7 @@ use crate::bytecode::generator::Generator;
 use std::collections::HashMap;
 use crate::bytecode::register::Register;
 use crate::interpreter::value::Value;
-use crate::bytecode::instructions::other::{Return, Call, SetVariable, CompareEq, CompareNotEq, CompareLessThan, CompareGreaterThan, Store, LoadImmediate, GetVariable};
+use crate::bytecode::instructions::other::{Return, Call, SetVariable, CompareEq, CompareNotEq, CompareLessThan, CompareGreaterThan, Store, LoadImmediate, GetVariable, PushScope, PopScope};
 use crate::bytecode::instructions::jump::{JumpZero, Jump};
 use crate::bytecode::instructions::math::{Add, Subtract, Multiply, Divide};
 
@@ -66,6 +66,7 @@ impl Compiler {
     }
 
     fn compile_scope(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
+        generator.emit(PushScope::new_boxed());
         for child in &node.children {
             match &child.ast_type {
                 ASTType::FunctionCall(call) => {
@@ -84,6 +85,7 @@ impl Compiler {
             }
         }
 
+        generator.emit(PopScope::new_boxed());
         Ok({})
     }
 

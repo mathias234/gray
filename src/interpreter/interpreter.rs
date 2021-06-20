@@ -11,6 +11,19 @@ use std::time::Instant;
 use std::collections::HashMap;
 
 #[derive(Clone)]
+pub struct Scope {
+    local_variables: HashMap<String, Value>,
+}
+
+impl Scope {
+    pub fn new() -> Scope {
+        Scope {
+            local_variables: HashMap::new(),
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct ExecutionContext {
     accumulator: Value,
     registers: Vec<Value>,
@@ -21,7 +34,7 @@ pub struct ExecutionContext {
     call_arguments: Option<Vec<Register>>,
     call_return: bool,
 
-    local_variables: HashMap<String, Value>,
+    scope_stack: Vec<Scope>,
 }
 
 
@@ -35,7 +48,7 @@ impl ExecutionContext {
             call_block_id: None,
             call_arguments: None,
             call_return: false,
-            local_variables: HashMap::new()
+            scope_stack: Vec::new(),
         }
     }
 
@@ -72,10 +85,28 @@ impl ExecutionContext {
     }
 
     pub fn set_variable(&mut self, variable: &String, value: Value) {
-        self.local_variables.insert(variable.clone(), value);
+        self.scope_stack[0].local_variables.insert(variable.clone(), value);
     }
+
     pub fn get_variable(&self, variable: &String) -> Value {
-        self.local_variables[variable]
+        for scope in &self.scope_stack {
+            let variable = scope.local_variables.get(variable);
+            if variable.is_some() {
+                return *variable.unwrap();
+            }
+
+        }
+
+        panic!("get_variable failed to find {}", variable);
+    }
+
+    pub fn push_scope(&mut self) {
+        let scope = Scope::new();
+        self.scope_stack.insert(0, scope);
+    }
+
+    pub fn pop_scope(&mut self) {
+        self.scope_stack.remove(0);
     }
 }
 
@@ -140,7 +171,7 @@ impl Interpreter {
                 self.pc = self.execution_context.jump_target.unwrap().position;
                 self.execution_context.jump_target = None;
             } else if self.execution_context.call_block_id.is_some() {
-                let call_block_id= self.execution_context.call_block_id.clone().unwrap();
+                let call_block_id = self.execution_context.call_block_id.clone().unwrap();
                 self.execution_context.call_block_id = None;
 
                 //println!("Calling block {}", call_block_id);
@@ -148,7 +179,7 @@ impl Interpreter {
                 let current_frame = StackFrame {
                     pc: self.pc,
                     execution_context: self.execution_context.clone(),
-                    active_block: self.active_block.clone()
+                    active_block: self.active_block.clone(),
                 };
 
                 self.call_stack.push(current_frame);
@@ -210,13 +241,6 @@ impl Interpreter {
         let mut idx = 0;
         for reg in &self.execution_context.registers {
             println!("\t\t[{:04}] {}", idx, *reg);
-            idx += 1;
-        }
-
-        println!("\tVariables");
-        let mut idx = 0;
-        for (variable_name, value) in &self.execution_context.local_variables {
-            println!("\t\t[{:04}] {}: {}", idx, variable_name, value);
             idx += 1;
         }
 

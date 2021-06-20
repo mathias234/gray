@@ -2,7 +2,7 @@ fn entry() {
     let a = 0;
 
 
-    while a < 100000 {
+    while a < 1000 {
         function_test();
         let a = a + 1;
     }

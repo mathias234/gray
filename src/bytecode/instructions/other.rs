@@ -146,6 +146,22 @@ impl GetVariable {
     }
 }
 
+pub struct PushScope {}
+
+impl PushScope {
+    pub fn new_boxed() -> Box<PushScope> {
+        Box::new(PushScope {})
+    }
+}
+
+pub struct PopScope {}
+
+impl PopScope {
+    pub fn new_boxed() -> Box<PopScope> {
+        Box::new(PopScope {})
+    }
+}
+
 
 // Instruction implementations
 
@@ -286,5 +302,25 @@ impl Instruction for GetVariable {
 
     fn to_string(&self) -> String {
         format!("GetVariable {}", self.variable)
+    }
+}
+
+impl Instruction for PushScope {
+    fn execute(&self, context: &mut ExecutionContext) {
+        context.push_scope()
+    }
+
+    fn to_string(&self) -> String {
+        format!("PushScope")
+    }
+}
+
+impl Instruction for PopScope {
+    fn execute(&self, context: &mut ExecutionContext) {
+        context.pop_scope()
+    }
+
+    fn to_string(&self) -> String {
+        format!("PopScope")
     }
 }
