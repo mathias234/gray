@@ -23,7 +23,7 @@ impl Generator {
 
     pub fn make_label(&self) -> Label {
         let pos = self.block.get_instructions().len();
-        Label::new(pos)
+        Label::new(pos + 1)
     }
 
     pub fn emit(&mut self, instruction: Box<dyn Instruction>)  {

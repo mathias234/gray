@@ -1,22 +1,12 @@
 fn entry() {
-    let a = 5;
-
-    if a < 5 {
-    }
-
-    if a > 5 {
-    }
-
-    if a <= 5 {
-    }
-
-    if a >= 5 {
-    }
+    let a = 6;
 
     if a == 5 {
-    }
-
-    if a != 5 {
+        let b = 5 * 5;
+        let c = 5 * 5;
+        let d = 5 * 5;
+        let e = 5 * 5;
+        function_test();
     }
 }
 

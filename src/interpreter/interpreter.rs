@@ -143,7 +143,7 @@ impl Interpreter {
                 let call_block_id= self.execution_context.call_block_id.clone().unwrap();
                 self.execution_context.call_block_id = None;
 
-                //println!("Calling block {}", call_block_id);
+                println!("Calling block {}", call_block_id);
 
                 let current_frame = StackFrame {
                     pc: self.pc,

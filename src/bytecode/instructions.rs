@@ -437,6 +437,6 @@ impl Instruction for GetVariable {
     }
 
     fn to_string(&self) -> String {
-        format!("SetVariable {}", self.variable)
+        format!("GetVariable {}", self.variable)
     }
 }

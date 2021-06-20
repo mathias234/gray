@@ -1,7 +1,7 @@
-use crate::parser::parser::{ASTNode, ASTType, MathOp};
+use crate::parser::parser::{ASTNode, ASTType, MathOp, ComparisonOp};
 use crate::bytecode::code_block::CodeBlock;
 use crate::bytecode::generator::Generator;
-use crate::bytecode::instructions::{Return, Call, LoadImmediate, Store, Add, SetVariable, GetVariable, Subtract, Multiply, Divide};
+use crate::bytecode::instructions::{Return, Call, LoadImmediate, Store, Add, SetVariable, GetVariable, Subtract, Multiply, Divide, CompareEq, CompareNotEq, CompareLessThan, CompareGreaterThan, JumpNotZero, JumpZero};
 use std::collections::HashMap;
 use crate::bytecode::register::Register;
 use crate::interpreter::value::Value;
@@ -51,30 +51,33 @@ impl Compiler {
     }
 
     fn compile_function(&mut self, name: &str, node: &ASTNode) -> Result<(), CompilerError> {
+        let mut generator = Generator::new();
+
         if node.children.len() > 0 {
-            self.compile_scope(name, &node.children[0])?;
+            self.compile_scope(name, &mut generator, &node.children[0])?;
         }
+
+        generator.emit(Return::new_boxed());
+
+        self.blocks.insert(String::from(name), generator.block);
         Ok({})
     }
 
-    fn compile_scope(&mut self, name: &str, node: &ASTNode) -> Result<(), CompilerError> {
-        let mut generator = Generator::new();
-
+    fn compile_scope(&mut self, name: &str, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
         for child in &node.children {
             match &child.ast_type {
                 ASTType::FunctionCall(call) => {
                     generator.emit(Call::new_boxed(&*call, None));
                 }
                 ASTType::VariableDeclaration(variable) => {
-                    self.compile_variable_declaration(variable, &mut generator, child)?;
+                    self.compile_variable_declaration(variable, generator, child)?;
+                }
+                ASTType::IfStatement => {
+                    self.compile_if_statement(generator, child)?;
                 }
                 _ => return Err(CompilerError::UnexpectedASTNode(child.clone())),
             }
         }
-
-        generator.emit(Return::new_boxed());
-
-        self.blocks.insert(String::from(name), generator.block);
 
         Ok({})
     }
@@ -86,10 +89,25 @@ impl Compiler {
         Ok({})
     }
 
+    fn compile_if_statement(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
+        self.compile_expression(generator, &node.children[0])?;
+
+        let scope_start = generator.make_label();
+
+        self.compile_scope("unnamed", generator, &node.children[1]);
+
+        let scope_end = generator.make_label();
+
+        generator.emit_at(JumpZero::new_boxed(scope_end), &scope_start);
+
+        Ok({})
+    }
+
     fn compile_expression(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
         let child = &node.children[0];
         match &child.ast_type {
             ASTType::MathExpression => self.compile_math_expression(generator, child),
+            ASTType::ComparisonExpression => self.compile_comparison_expression(generator, child),
             ASTType::IntegerValue(value) => self.compile_value_to_accumulator(generator, child),
             ASTType::FloatValue(value) => self.compile_value_to_accumulator(generator, child),
             _ => Err(CompilerError::UnexpectedASTNode(child.clone())),
@@ -106,6 +124,26 @@ impl Compiler {
                 MathOp::Subtract => generator.emit(Subtract::new_boxed(rhs_register)),
                 MathOp::Multiply => generator.emit(Multiply::new_boxed(rhs_register)),
                 MathOp::Divide => generator.emit(Divide::new_boxed(rhs_register))
+            }
+            _ => return Err(CompilerError::UnexpectedASTNode(node.children[1].clone()))
+        }
+
+        Ok({})
+    }
+
+    fn compile_comparison_expression(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
+        println!("Dumping comp expression");
+        node.dump(0);
+        let rhs_register = self.compile_value(generator, &node.children[2])?;
+        self.compile_value_to_accumulator(generator, &node.children[0])?;
+
+        match &node.children[1].ast_type {
+            ASTType::ComparisonOp(comp_op) => match comp_op {
+                ComparisonOp::Equal => generator.emit(CompareEq::new_boxed(rhs_register)),
+                ComparisonOp::NotEqual => generator.emit(CompareNotEq::new_boxed(rhs_register)),
+                ComparisonOp::LessThan => generator.emit(CompareLessThan::new_boxed(rhs_register)),
+                ComparisonOp::GreaterThan => generator.emit(CompareGreaterThan::new_boxed(rhs_register)),
+                _ => return Err(CompilerError::UnexpectedASTNode(node.children[1].clone()))
             }
             _ => return Err(CompilerError::UnexpectedASTNode(node.children[1].clone()))
         }
