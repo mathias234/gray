@@ -8,8 +8,7 @@ struct TestStruct {
 }
 
 fn entry() {
-    let asda = 50;
-    TestStruct::test();
+    let asda = 50 * 60;
 }
 
 fn function_test() {

@@ -20,6 +20,8 @@ pub struct ExecutionContext {
     call_block_id: Option<String>,
     call_arguments: Option<Vec<Register>>,
     call_return: bool,
+
+    local_variables: HashMap<String, Value>,
 }
 
 
@@ -33,6 +35,7 @@ impl ExecutionContext {
             call_block_id: None,
             call_arguments: None,
             call_return: false,
+            local_variables: HashMap::new()
         }
     }
 
@@ -66,6 +69,10 @@ impl ExecutionContext {
     pub fn set_call_arguments(&mut self, args: Option<Vec<Register>>) { self.call_arguments = args; }
     pub fn set_return(&mut self) {
         self.call_return = true;
+    }
+
+    pub fn set_variable(&mut self, variable: &String, value: Value) {
+        self.local_variables.insert(variable.clone(), value);
     }
 }
 
@@ -169,9 +176,9 @@ impl Interpreter {
 
                 let last_frame = last_frame.unwrap();
 
-                //println!("Returning from block {} to block {}", self.active_block, last_frame.active_block);
+                println!("Returning from block {} to block {}", self.active_block, last_frame.active_block);
 
-                //self.dump();
+                self.dump();
 
                 self.active_block = last_frame.active_block;
                 self.execution_context = last_frame.execution_context;
@@ -181,6 +188,8 @@ impl Interpreter {
                 self.pc += 1;
             }
         }
+
+        self.dump();
 
         println! {"Execution took {}ms", now.elapsed().as_millis()}
     }
@@ -193,10 +202,18 @@ impl Interpreter {
             println!("\t\t[{:04}] {}", idx, *reg);
             idx += 1;
         }
+
         println!("\tRegisters");
         let mut idx = 0;
         for reg in &self.execution_context.registers {
             println!("\t\t[{:04}] {}", idx, *reg);
+            idx += 1;
+        }
+
+        println!("\tVariables");
+        let mut idx = 0;
+        for (variable_name, value) in &self.execution_context.local_variables {
+            println!("\t\t[{:04}] {}: {}", idx, variable_name, value);
             idx += 1;
         }
 

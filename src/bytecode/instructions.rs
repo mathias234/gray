@@ -180,6 +180,16 @@ impl Return {
     }
 }
 
+pub struct SetVariable {
+    variable: String,
+}
+
+impl SetVariable {
+    pub fn new_boxed(variable: String) -> Box<SetVariable> {
+        Box::new(SetVariable { variable })
+    }
+}
+
 
 // Instruction implementations
 
@@ -351,4 +361,14 @@ impl Instruction for Return {
     }
 
     fn to_string(&self) -> String { format!("Return") }
+}
+
+impl Instruction for SetVariable {
+    fn execute(&self, context: &mut ExecutionContext) {
+        context.set_variable(&self.variable, context.get_accumulator());
+    }
+
+    fn to_string(&self) -> String {
+        format!("SetVariable {}", self.variable)
+    }
 }

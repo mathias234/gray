@@ -36,7 +36,7 @@ pub enum Keyword {
 #[derive(PartialEq, Debug, Clone)]
 pub enum Token {
     Identifier(String),
-    Integer(i128),
+    Integer(i64),
     Float(f64),
     Delimiter(Delimiter),
     Keyword(Keyword),
@@ -67,6 +67,15 @@ impl TokenStream {
 
         let result = Some(&self.tokens[self.position]);
         self.position += 1;
+        return result;
+    }
+
+    pub fn peek_next(&self, offset: usize) -> Option<&Token> {
+        if self.position + offset >= self.tokens.len() {
+            return None;
+        }
+
+        let result = Some(&self.tokens[self.position + offset]);
         return result;
     }
 }
@@ -191,11 +200,11 @@ impl Lexer {
         return Ok(Token::Identifier(word));
     }
 
-    fn word_to_integer(word: &str) -> Option<i128> {
+    fn word_to_integer(word: &str) -> Option<i64> {
         // TODO: Parse as hex
         if word.starts_with("0x") {}
 
-        let value: i128 = match word.parse() {
+        let value: i64 = match word.parse() {
             Ok(v) => v,
             Err(_) => return None,
         };
@@ -203,7 +212,7 @@ impl Lexer {
         Some(value)
     }
 
-    fn integer_and_fractional_to_float(integer: i128, fractional: i128) -> Result<f64, LexerError> {
+    fn integer_and_fractional_to_float(integer: i64, fractional: i64) -> Result<f64, LexerError> {
         // FIXME: This do be hacky
         let float_as_string = format!("{}.{}", integer, fractional);
 

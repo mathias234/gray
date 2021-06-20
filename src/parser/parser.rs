@@ -1,18 +1,27 @@
 use crate::parser::lexer::{TokenStream, Token, Keyword};
 use crate::parser::lexer::Delimiter;
 
+#[derive(PartialEq, Debug, Clone)]
+pub enum MathOp {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+}
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum ASTType {
     ProgramRoot,
     Scope,
     Expression,
+    MathExpression,
+    MathOp(MathOp),
     Function(String),
     Structure(String),
     FunctionCall(String),
     VariableDeclaration(String),
     FloatValue(f64),
-    IntegerValue(i128),
+    IntegerValue(i64),
     Identifier(String),
     Trait(String),
 }
@@ -21,9 +30,9 @@ pub enum ASTType {
 pub enum ParserError {
     UnexpectedEndOfProgram,
     UnexpectedKeywordInStream(Keyword),
-    UnexpectedDelimiterInStream(Delimiter),
+    UnexpectedDelimiterInStream(Delimiter, Delimiter),
     UnexpectedTokenInStream(Token),
-
+    DelimiterIsNotMathOperation(Delimiter),
     UnimplementedFeature(&'static str),
 }
 
@@ -102,7 +111,7 @@ impl Parser {
                 Token::Delimiter(d) => {
                     match d {
                         Delimiter::CloseCurlyBracket => return Ok(scope),
-                        _ => Err(ParserError::UnexpectedDelimiterInStream(d.clone())),
+                        _ => Err(ParserError::UnexpectedDelimiterInStream(Delimiter::CloseCurlyBracket, d.clone())),
                     }
                 }
                 _ => Err(ParserError::UnexpectedTokenInStream(token.clone())),
@@ -277,16 +286,46 @@ impl Parser {
     fn parse_expression(&mut self) -> Result<ASTNode, ParserError> {
         let mut node = ASTNode::new(ASTType::Expression);
 
-        let token = self.get_next_token()?.clone();
+        self.peek_next_token(0)?;
+        let delimiter = self.peek_next_token(1)?;
 
-        let delimiter = self.get_next_token()?;
-
-        if Parser::token_is_delimiter(delimiter, Delimiter::Semicolon) {
+        if Parser::token_is_delimiter(&delimiter, Delimiter::Semicolon) {
             // Very simple single token expression
+            let token = self.get_next_token()?;
             node.children.push(Parser::token_to_simple_ast_node(&token)?);
-        } else if Parser::token_is_math_delimiter(delimiter) {
+            let semicolon = self.get_next_token()?;
+            Parser::validate_token_is_delimiter(semicolon, Delimiter::Semicolon)?;
+        } else if Parser::token_is_math_delimiter(&delimiter) {
+            node.children.push(self.parse_math_expression()?);
 
+            let semicolon = self.get_next_token()?;
+            Parser::validate_token_is_delimiter(semicolon, Delimiter::Semicolon)?;
         }
+
+        Ok(node)
+    }
+
+    fn parse_math_expression(&mut self) -> Result<ASTNode, ParserError> {
+        let mut node = ASTNode::new(ASTType::MathExpression);
+        let lhs_token = self.get_next_token()?;
+
+        node.children.push(Parser::token_to_simple_ast_node(lhs_token)?);
+
+        let math_op_token = self.get_next_token()?;
+        node.children.push(Parser::token_to_math_op_ast_node(math_op_token)?);
+
+
+        let rhs_token = self.peek_next_token(0)?;
+
+        if Parser::token_is_delimiter(rhs_token, Delimiter::OpenParen) {
+            node.children.push(self.parse_math_expression()?);
+        }
+        else {
+            let rhs_token = self.get_next_token()?;
+            node.children.push(Parser::token_to_simple_ast_node(rhs_token)?);
+        }
+
+        println!("Successfully parsed math expr {:#?}", node.dump(0));
 
         Ok(node)
     }
@@ -294,6 +333,14 @@ impl Parser {
 
     fn get_next_token(&mut self) -> Result<&Token, ParserError> {
         let token = self.token_stream.next();
+        match token {
+            Some(token) => Ok(token),
+            None => Err(ParserError::UnexpectedEndOfProgram)
+        }
+    }
+
+    fn peek_next_token(&self, offset: usize) -> Result<&Token, ParserError> {
+        let token = self.token_stream.peek_next(offset);
         match token {
             Some(token) => Ok(token),
             None => Err(ParserError::UnexpectedEndOfProgram)
@@ -328,6 +375,19 @@ impl Parser {
         }
     }
 
+    fn token_to_math_op_ast_node(token: &Token) -> Result<ASTNode, ParserError> {
+        match token {
+            Token::Delimiter(delimiter) => match delimiter {
+                Delimiter::Plus => Ok(ASTNode::new(ASTType::MathOp(MathOp::Add))),
+                Delimiter::Hyphen => Ok(ASTNode::new(ASTType::MathOp(MathOp::Subtract))),
+                Delimiter::Star => Ok(ASTNode::new(ASTType::MathOp(MathOp::Multiply))),
+                Delimiter::Slash => Ok(ASTNode::new(ASTType::MathOp(MathOp::Divide))),
+                _ => Err(ParserError::DelimiterIsNotMathOperation(delimiter.clone()))
+            }
+            _ => Err(ParserError::UnexpectedTokenInStream(token.clone()))
+        }
+    }
+
     fn token_is_math_delimiter(token: &Token) -> bool {
         return match token {
             Token::Delimiter(d) => {
@@ -344,9 +404,16 @@ impl Parser {
     }
 
     fn validate_token_is_delimiter(token: &Token, delimiter: Delimiter) -> Result<(), ParserError> {
-        return match Parser::token_is_delimiter(token, delimiter) {
+        match Parser::token_is_delimiter(token, delimiter.clone()) {
             true => Ok({}),
-            false => Err(ParserError::UnexpectedTokenInStream(token.clone())),
-        };
+            false => match token {
+                Token::Delimiter(unexpected_delimiter) => {
+                    Err(ParserError::UnexpectedDelimiterInStream(delimiter, unexpected_delimiter.clone()))
+                }
+                _ => {
+                    Err(ParserError::UnexpectedTokenInStream(token.clone()))
+                }
+            }
+        }
     }
 }
