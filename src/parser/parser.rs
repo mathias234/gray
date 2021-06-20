@@ -34,6 +34,7 @@ pub enum ASTType {
     Structure(String),
     FunctionCall(String),
     VariableDeclaration(String),
+    VariableAssignment(String),
     FloatValue(f64),
     IntegerValue(i64),
     Identifier(String),
@@ -178,6 +179,15 @@ impl Parser {
             return Ok(ASTNode::new(ASTType::FunctionCall(built_identifier)));
         }
 
+        if Parser::token_is_delimiter(delimiter, Delimiter::Equal) {
+            let mut node = ASTNode::new(ASTType::VariableAssignment(built_identifier));
+
+            node.children.push(self.parse_expression()?);
+
+            Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
+
+            return Ok(node);
+        }
 
         Err(ParserError::UnimplementedFeature("parse_identifier Unknown"))
     }

@@ -84,8 +84,24 @@ impl ExecutionContext {
         self.call_return = true;
     }
 
-    pub fn set_variable(&mut self, variable: &String, value: Value) {
+    pub fn declare_variable(&mut self, variable: &String, value: Value) {
         self.scope_stack[0].local_variables.insert(variable.clone(), value);
+    }
+
+    pub fn set_variable(&mut self, variable: &String, value: Value) {
+        let mut found_variable = false;
+        for scope in &mut self.scope_stack {
+            let variable = scope.local_variables.get_mut(variable);
+            if variable.is_some() {
+                *variable.unwrap() = value;
+                found_variable = true;
+                break;
+            }
+        }
+
+        if !found_variable {
+            panic!("set_variable failed to find `{}`", variable);
+        }
     }
 
     pub fn get_variable(&self, variable: &String) -> Value {
@@ -97,7 +113,7 @@ impl ExecutionContext {
 
         }
 
-        panic!("get_variable failed to find {}", variable);
+        panic!("get_variable failed to find `{}`", variable);
     }
 
     pub fn push_scope(&mut self) {

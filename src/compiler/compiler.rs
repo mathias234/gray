@@ -4,7 +4,7 @@ use crate::bytecode::generator::Generator;
 use std::collections::HashMap;
 use crate::bytecode::register::Register;
 use crate::interpreter::value::Value;
-use crate::bytecode::instructions::other::{Return, Call, SetVariable, CompareEq, CompareNotEq, CompareLessThan, CompareGreaterThan, Store, LoadImmediate, GetVariable, PushScope, PopScope};
+use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, CompareEq, CompareNotEq, CompareLessThan, CompareGreaterThan, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable};
 use crate::bytecode::instructions::jump::{JumpZero, Jump};
 use crate::bytecode::instructions::math::{Add, Subtract, Multiply, Divide};
 
@@ -75,6 +75,9 @@ impl Compiler {
                 ASTType::VariableDeclaration(variable) => {
                     self.compile_variable_declaration(variable, generator, child)?;
                 }
+                ASTType::VariableAssignment(variable) => {
+                    self.compile_variable_assignment(variable, generator, child)?;
+                }
                 ASTType::IfStatement => {
                     self.compile_if_statement(generator, child)?;
                 }
@@ -90,6 +93,13 @@ impl Compiler {
     }
 
     fn compile_variable_declaration(&mut self, variable: &String, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
+        self.compile_expression(generator, &node.children[0])?;
+        generator.emit(DeclareVariable::new_boxed(variable.clone()));
+
+        Ok({})
+    }
+
+    fn compile_variable_assignment(&mut self, variable: &String, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
         self.compile_expression(generator, &node.children[0])?;
         generator.emit(SetVariable::new_boxed(variable.clone()));
 

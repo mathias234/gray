@@ -1,10 +1,9 @@
 fn entry() {
     let a = 0;
 
-
     while a < 1000 {
         function_test();
-        let a = a + 1;
+        a = a + 1;
     }
 }
 

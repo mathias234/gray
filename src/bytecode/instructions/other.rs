@@ -126,6 +126,16 @@ impl Return {
     }
 }
 
+pub struct DeclareVariable {
+    variable: String,
+}
+
+impl DeclareVariable {
+    pub fn new_boxed(variable: String) -> Box<DeclareVariable> {
+        Box::new(DeclareVariable { variable })
+    }
+}
+
 pub struct SetVariable {
     variable: String,
 }
@@ -135,6 +145,7 @@ impl SetVariable {
         Box::new(SetVariable { variable })
     }
 }
+
 
 pub struct GetVariable {
     variable: String,
@@ -284,6 +295,16 @@ impl Instruction for Return {
     fn to_string(&self) -> String { format!("Return") }
 }
 
+impl Instruction for DeclareVariable {
+    fn execute(&self, context: &mut ExecutionContext) {
+        context.declare_variable(&self.variable, context.get_accumulator());
+    }
+
+    fn to_string(&self) -> String {
+        format!("DeclareVariable {}", self.variable)
+    }
+}
+
 impl Instruction for SetVariable {
     fn execute(&self, context: &mut ExecutionContext) {
         context.set_variable(&self.variable, context.get_accumulator());
@@ -293,6 +314,7 @@ impl Instruction for SetVariable {
         format!("SetVariable {}", self.variable)
     }
 }
+
 
 impl Instruction for GetVariable {
     fn execute(&self, context: &mut ExecutionContext) {
