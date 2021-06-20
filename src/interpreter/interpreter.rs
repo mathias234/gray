@@ -177,7 +177,6 @@ impl<'interp> Interpreter<'interp> {
 
         while self.pc <= len {
             let active_block = self.active_code_block.unwrap();
-            len = active_block.get_instructions().len();
 
             let instructions = active_block.get_instructions();
             let ins = &instructions[self.pc];
@@ -205,6 +204,7 @@ impl<'interp> Interpreter<'interp> {
 
                 self.active_block = call_block_id;
                 self.active_code_block = Some(&self.blocks[&self.active_block]);
+                len = self.active_code_block.unwrap().get_instructions().len();
 
                 let call_args = self.execution_context.call_arguments.clone();
                 let mut block_args = Vec::new();
@@ -236,6 +236,7 @@ impl<'interp> Interpreter<'interp> {
 
                 self.active_block = last_frame.active_block;
                 self.active_code_block = Some(&self.blocks[&self.active_block]);
+                len = self.active_code_block.unwrap().get_instructions().len();
                 self.execution_context = last_frame.execution_context;
                 self.pc = last_frame.pc + 1;
             } else {
@@ -244,7 +245,7 @@ impl<'interp> Interpreter<'interp> {
             }
         }
 
-        //self.dump();
+        self.dump();
 
         println! {"Execution took {}ms", now.elapsed().as_millis()}
     }
