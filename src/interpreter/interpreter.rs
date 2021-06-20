@@ -110,7 +110,6 @@ impl ExecutionContext {
             if variable.is_some() {
                 return *variable.unwrap();
             }
-
         }
 
         panic!("get_variable failed to find `{}`", variable);
@@ -132,8 +131,9 @@ pub struct StackFrame {
     active_block: String,
 }
 
-pub struct Interpreter {
+pub struct Interpreter<'interp> {
     active_block: String,
+    active_code_block: Option<&'interp CodeBlock>,
     execution_context: ExecutionContext,
     pc: usize,
     blocks: HashMap<String, CodeBlock>,
@@ -141,10 +141,11 @@ pub struct Interpreter {
     call_stack: Vec<StackFrame>,
 }
 
-impl Interpreter {
-    pub fn new(blocks: HashMap<String, CodeBlock>) -> Interpreter {
+impl<'interp> Interpreter<'interp> {
+    pub fn new(blocks: HashMap<String, CodeBlock>) -> Interpreter<'interp> {
         Interpreter {
             active_block: String::from("entry"),
+            active_code_block: None,
             execution_context: ExecutionContext::new(),
             pc: 0,
             blocks,
@@ -152,7 +153,7 @@ impl Interpreter {
         }
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&'interp mut self) {
         println!("Compiled code");
         for (name, block) in &self.blocks {
             println!("\tBlock {}", name);
@@ -168,12 +169,14 @@ impl Interpreter {
 
         println!("Starting execution");
 
-        let mut len = self.blocks[&self.active_block].get_instructions().len();
+        self.active_code_block = Some(&self.blocks[&self.active_block]);
+
+        let mut len = self.active_code_block.unwrap().get_instructions().len();
 
         let now = Instant::now();
 
         while self.pc <= len {
-            let active_block = &self.blocks[&self.active_block];
+            let active_block = self.active_code_block.unwrap();
             len = active_block.get_instructions().len();
 
             let instructions = active_block.get_instructions();
@@ -201,6 +204,7 @@ impl Interpreter {
                 self.call_stack.push(current_frame);
 
                 self.active_block = call_block_id;
+                self.active_code_block = Some(&self.blocks[&self.active_block]);
 
                 let call_args = self.execution_context.call_arguments.clone();
                 let mut block_args = Vec::new();
@@ -231,6 +235,7 @@ impl Interpreter {
                 //self.dump();
 
                 self.active_block = last_frame.active_block;
+                self.active_code_block = Some(&self.blocks[&self.active_block]);
                 self.execution_context = last_frame.execution_context;
                 self.pc = last_frame.pc + 1;
             } else {
