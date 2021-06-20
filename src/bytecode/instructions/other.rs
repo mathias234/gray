@@ -1,6 +1,6 @@
 use std::fmt::Write as FmtWrite;
 use crate::{
-    bytecode::{register::Register, label::Label},
+    bytecode::{register::Register},
     interpreter::{interpreter::ExecutionContext, value::Value},
 };
 use std::rc::Rc;
@@ -57,82 +57,6 @@ impl Store {
     }
 }
 
-pub struct Add {
-    register: Register,
-}
-
-#[allow(dead_code)]
-impl Add {
-    pub fn new_boxed(register: Register) -> Box<Add> {
-        Box::new(Add { register })
-    }
-}
-
-pub struct Subtract {
-    register: Register,
-}
-
-#[allow(dead_code)]
-impl Subtract {
-    pub fn new_boxed(register: Register) -> Box<Subtract> {
-        Box::new(Subtract { register })
-    }
-}
-
-pub struct Multiply {
-    register: Register,
-}
-
-#[allow(dead_code)]
-impl Multiply {
-    pub fn new_boxed(register: Register) -> Box<Multiply> {
-        Box::new(Multiply { register })
-    }
-}
-
-pub struct Divide {
-    register: Register,
-}
-
-#[allow(dead_code)]
-impl Divide {
-    pub fn new_boxed(register: Register) -> Box<Divide> {
-        Box::new(Divide { register })
-    }
-}
-
-pub struct Jump {
-    target: Label,
-}
-
-#[allow(dead_code)]
-impl Jump {
-    pub fn new_boxed(target: Label) -> Box<Jump> {
-        Box::new(Jump { target })
-    }
-}
-
-pub struct JumpNotZero {
-    target: Label,
-}
-
-#[allow(dead_code)]
-impl JumpNotZero {
-    pub fn new_boxed(target: Label) -> Box<JumpNotZero> {
-        Box::new(JumpNotZero { target })
-    }
-}
-
-pub struct JumpZero {
-    target: Label,
-}
-
-#[allow(dead_code)]
-impl JumpZero {
-    pub fn new_boxed(target: Label) -> Box<JumpZero> {
-        Box::new(JumpZero { target })
-    }
-}
 
 pub struct CompareEq {
     register: Register,
@@ -265,82 +189,6 @@ impl Instruction for Store {
     }
 }
 
-impl Instruction for Add {
-    fn execute(&self, context: &mut ExecutionContext) {
-        let value = context.get_accumulator();
-        let value2 = context.get_register(&self.register);
-        context.set_accumulator(value + value2);
-    }
-
-    fn to_string(&self) -> String {
-        format!("Add {}", self.register)
-    }
-}
-
-impl Instruction for Subtract {
-    fn execute(&self, context: &mut ExecutionContext) {
-        let value = context.get_accumulator();
-        let value2 = context.get_register(&self.register);
-        context.set_accumulator(value - value2);
-    }
-
-    fn to_string(&self) -> String {
-        format!("Subtract {}", self.register)
-    }
-}
-
-impl Instruction for Multiply {
-    fn execute(&self, context: &mut ExecutionContext) {
-        let value = context.get_accumulator();
-        let value2 = context.get_register(&self.register);
-        context.set_accumulator(value * value2);
-    }
-
-    fn to_string(&self) -> String {
-        format!("Multiply {}", self.register)
-    }
-}
-
-
-impl Instruction for Divide {
-    fn execute(&self, context: &mut ExecutionContext) {
-        let value = context.get_accumulator();
-        let value2 = context.get_register(&self.register);
-        context.set_accumulator(value / value2);
-    }
-
-    fn to_string(&self) -> String {
-        format!("Divide {}", self.register)
-    }
-}
-
-impl Instruction for Jump {
-    fn execute(&self, context: &mut ExecutionContext) {
-        context.set_jump_target(&self.target)
-    }
-
-    fn to_string(&self) -> String { format!("Jump {}", self.target) }
-}
-
-impl Instruction for JumpNotZero {
-    fn execute(&self, context: &mut ExecutionContext) {
-        if context.get_accumulator() != Value::from_i32(0) {
-            context.set_jump_target(&self.target)
-        }
-    }
-
-    fn to_string(&self) -> String { format!("JumpNotZero {}", self.target) }
-}
-
-impl Instruction for JumpZero {
-    fn execute(&self, context: &mut ExecutionContext) {
-        if context.get_accumulator() == Value::from_i32(0) {
-            context.set_jump_target(&self.target)
-        }
-    }
-
-    fn to_string(&self) -> String { format!("JumpZero {}", self.target) }
-}
 
 impl Instruction for CompareEq {
     fn execute(&self, context: &mut ExecutionContext) {

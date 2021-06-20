@@ -1,10 +1,12 @@
 use crate::parser::parser::{ASTNode, ASTType, MathOp, ComparisonOp};
 use crate::bytecode::code_block::CodeBlock;
 use crate::bytecode::generator::Generator;
-use crate::bytecode::instructions::{Return, Call, LoadImmediate, Store, Add, SetVariable, GetVariable, Subtract, Multiply, Divide, CompareEq, CompareNotEq, CompareLessThan, CompareGreaterThan, JumpNotZero, JumpZero};
 use std::collections::HashMap;
 use crate::bytecode::register::Register;
 use crate::interpreter::value::Value;
+use crate::bytecode::instructions::other::{Return, Call, SetVariable, CompareEq, CompareNotEq, CompareLessThan, CompareGreaterThan, Store, LoadImmediate, GetVariable};
+use crate::bytecode::instructions::jump::JumpZero;
+use crate::bytecode::instructions::math::{Add, Subtract, Multiply, Divide};
 
 #[derive(Debug)]
 pub enum CompilerError {
@@ -54,7 +56,7 @@ impl Compiler {
         let mut generator = Generator::new();
 
         if node.children.len() > 0 {
-            self.compile_scope(name, &mut generator, &node.children[0])?;
+            self.compile_scope(&mut generator, &node.children[0])?;
         }
 
         generator.emit(Return::new_boxed());
@@ -63,7 +65,7 @@ impl Compiler {
         Ok({})
     }
 
-    fn compile_scope(&mut self, name: &str, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
+    fn compile_scope(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
         for child in &node.children {
             match &child.ast_type {
                 ASTType::FunctionCall(call) => {
@@ -94,7 +96,7 @@ impl Compiler {
 
         let scope_start = generator.make_label();
 
-        self.compile_scope("unnamed", generator, &node.children[1]);
+        self.compile_scope(generator, &node.children[1])?;
 
         let scope_end = generator.make_label();
 
@@ -108,8 +110,8 @@ impl Compiler {
         match &child.ast_type {
             ASTType::MathExpression => self.compile_math_expression(generator, child),
             ASTType::ComparisonExpression => self.compile_comparison_expression(generator, child),
-            ASTType::IntegerValue(value) => self.compile_value_to_accumulator(generator, child),
-            ASTType::FloatValue(value) => self.compile_value_to_accumulator(generator, child),
+            ASTType::IntegerValue(_) => self.compile_value_to_accumulator(generator, child),
+            ASTType::FloatValue(_) => self.compile_value_to_accumulator(generator, child),
             _ => Err(CompilerError::UnexpectedASTNode(child.clone())),
         }
     }

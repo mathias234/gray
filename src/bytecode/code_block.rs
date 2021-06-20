@@ -1,5 +1,5 @@
-use crate::bytecode::instructions::Instruction;
 use crate::bytecode::label::Label;
+use crate::bytecode::instructions::other::Instruction;
 
 pub struct CodeBlock {
     instructions: Vec<Box<dyn Instruction>>

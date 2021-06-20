@@ -1,6 +1,7 @@
-use super::{instructions::Instruction, register::Register};
 use crate::bytecode::code_block::CodeBlock;
 use crate::bytecode::label::Label;
+use crate::bytecode::instructions::other::Instruction;
+use crate::bytecode::register::Register;
 
 pub struct Generator {
     register_index: usize,
