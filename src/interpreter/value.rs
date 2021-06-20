@@ -121,6 +121,88 @@ impl ops::Sub<Value> for Value {
     }
 }
 
+impl ops::Mul<Value> for Value {
+    type Output = Value;
+
+    fn mul(self, rhs_value: Value) -> Self::Output {
+        match self.value {
+            DataValue::I32(lhs) => {
+                match rhs_value.value {
+                    DataValue::I32(rhs) => { Value::from_i32(lhs * rhs) }
+                    DataValue::I64(rhs) => { Value::from_i64(lhs as i64 * rhs) }
+                    DataValue::F32(rhs) => { Value::from_f32(lhs as f32 * rhs) }
+                    DataValue::F64(rhs) => { Value::from_f64(lhs as f64 * rhs) }
+                }
+            }
+            DataValue::I64(lhs) => {
+                match rhs_value.value {
+                    DataValue::I32(rhs) => { Value::from_i64(lhs * rhs as i64) }
+                    DataValue::I64(rhs) => { Value::from_i64(lhs * rhs) }
+                    DataValue::F32(rhs) => { Value::from_f32(lhs as f32 * rhs) }
+                    DataValue::F64(rhs) => { Value::from_f64(lhs as f64 * rhs) }
+                }
+            }
+            DataValue::F32(lhs) => {
+                match rhs_value.value {
+                    DataValue::I32(rhs) => { Value::from_f32(lhs * rhs as f32) }
+                    DataValue::I64(rhs) => { Value::from_f64(lhs as f64 * rhs as f64) }
+                    DataValue::F32(rhs) => { Value::from_f32(lhs as f32 * rhs) }
+                    DataValue::F64(rhs) => { Value::from_f64(lhs as f64 * rhs) }
+                }
+            }
+            DataValue::F64(lhs) => {
+                match rhs_value.value {
+                    DataValue::I32(rhs) => { Value::from_f64(lhs * rhs as f64) }
+                    DataValue::I64(rhs) => { Value::from_f64(lhs * rhs as f64) }
+                    DataValue::F32(rhs) => { Value::from_f64(lhs * rhs as f64) }
+                    DataValue::F64(rhs) => { Value::from_f64(lhs * rhs) }
+                }
+            }
+        }
+    }
+}
+
+impl ops::Div<Value> for Value {
+    type Output = Value;
+
+    fn div(self, rhs_value: Value) -> Self::Output {
+        match self.value {
+            DataValue::I32(lhs) => {
+                match rhs_value.value {
+                    DataValue::I32(rhs) => { Value::from_i32(lhs / rhs) }
+                    DataValue::I64(rhs) => { Value::from_i64(lhs as i64 / rhs) }
+                    DataValue::F32(rhs) => { Value::from_f32(lhs as f32 / rhs) }
+                    DataValue::F64(rhs) => { Value::from_f64(lhs as f64 / rhs) }
+                }
+            }
+            DataValue::I64(lhs) => {
+                match rhs_value.value {
+                    DataValue::I32(rhs) => { Value::from_i64(lhs / rhs as i64) }
+                    DataValue::I64(rhs) => { Value::from_i64(lhs / rhs) }
+                    DataValue::F32(rhs) => { Value::from_f32(lhs as f32 / rhs) }
+                    DataValue::F64(rhs) => { Value::from_f64(lhs as f64 / rhs) }
+                }
+            }
+            DataValue::F32(lhs) => {
+                match rhs_value.value {
+                    DataValue::I32(rhs) => { Value::from_f32(lhs / rhs as f32) }
+                    DataValue::I64(rhs) => { Value::from_f64(lhs as f64 / rhs as f64) }
+                    DataValue::F32(rhs) => { Value::from_f32(lhs as f32 / rhs) }
+                    DataValue::F64(rhs) => { Value::from_f64(lhs as f64 / rhs) }
+                }
+            }
+            DataValue::F64(lhs) => {
+                match rhs_value.value {
+                    DataValue::I32(rhs) => { Value::from_f64(lhs / rhs as f64) }
+                    DataValue::I64(rhs) => { Value::from_f64(lhs / rhs as f64) }
+                    DataValue::F32(rhs) => { Value::from_f64(lhs / rhs as f64) }
+                    DataValue::F64(rhs) => { Value::from_f64(lhs / rhs) }
+                }
+            }
+        }
+    }
+}
+
 impl cmp::PartialEq for Value {
     fn eq(&self, rhs_value: &Self) -> bool {
         match self.value {

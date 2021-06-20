@@ -1,7 +1,7 @@
-use crate::parser::parser::{ASTNode, ASTType};
+use crate::parser::parser::{ASTNode, ASTType, MathOp};
 use crate::bytecode::code_block::CodeBlock;
 use crate::bytecode::generator::Generator;
-use crate::bytecode::instructions::{Return, Call, LoadImmediate, Store, Add, SetVariable};
+use crate::bytecode::instructions::{Return, Call, LoadImmediate, Store, Add, SetVariable, GetVariable, Subtract, Multiply, Divide};
 use std::collections::HashMap;
 use crate::bytecode::register::Register;
 use crate::interpreter::value::Value;
@@ -66,7 +66,7 @@ impl Compiler {
                     generator.emit(Call::new_boxed(&*call, None));
                 }
                 ASTType::VariableDeclaration(variable) => {
-                    self.compile_variable_declaration(variable, &mut generator, child);
+                    self.compile_variable_declaration(variable, &mut generator, child)?;
                 }
                 _ => {}
             }
@@ -98,7 +98,15 @@ impl Compiler {
         let rhs_register = self.compile_value(generator, &node.children[2])?;
         self.compile_value_to_accumulator(generator, &node.children[0])?;
 
-        generator.emit(Add::new_boxed(rhs_register));
+        match &node.children[1].ast_type {
+            ASTType::MathOp(math_op) => match math_op {
+                MathOp::Add => generator.emit(Add::new_boxed(rhs_register)),
+                MathOp::Subtract => generator.emit(Subtract::new_boxed(rhs_register)),
+                MathOp::Multiply => generator.emit(Multiply::new_boxed(rhs_register)),
+                MathOp::Divide => generator.emit(Divide::new_boxed(rhs_register))
+            }
+            _ => return Err(CompilerError::UnexpectedASTNode(node.children[1].clone()))
+        }
 
         Ok({})
     }
@@ -114,12 +122,19 @@ impl Compiler {
     }
 
     fn compile_value_to_accumulator(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
-        let value = match node.ast_type {
-            ASTType::IntegerValue(value) => Ok(Value::from_i64(value)),
-            ASTType::FloatValue(value) => Ok(Value::from_f64(value)),
+        match &node.ast_type {
+            ASTType::IntegerValue(value) => {
+                Ok(generator.emit(LoadImmediate::new_boxed(Value::from_i64(*value))))
+            }
+            ASTType::FloatValue(value) => {
+                Ok(generator.emit(LoadImmediate::new_boxed(Value::from_f64(*value))))
+            }
+            ASTType::Identifier(identifier) => {
+                Ok(generator.emit(GetVariable::new_boxed(identifier.clone())))
+            }
             _ => Err(CompilerError::UnexpectedASTNode(node.clone())),
         }?;
 
-        Ok(generator.emit(LoadImmediate::new_boxed(value)))
+        Ok({})
     }
 }

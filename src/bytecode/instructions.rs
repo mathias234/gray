@@ -79,6 +79,28 @@ impl Subtract {
     }
 }
 
+pub struct Multiply {
+    register: Register,
+}
+
+#[allow(dead_code)]
+impl Multiply {
+    pub fn new_boxed(register: Register) -> Box<Multiply> {
+        Box::new(Multiply { register })
+    }
+}
+
+pub struct Divide {
+    register: Register,
+}
+
+#[allow(dead_code)]
+impl Divide {
+    pub fn new_boxed(register: Register) -> Box<Divide> {
+        Box::new(Divide { register })
+    }
+}
+
 pub struct Jump {
     target: Label,
 }
@@ -190,6 +212,16 @@ impl SetVariable {
     }
 }
 
+pub struct GetVariable {
+    variable: String,
+}
+
+impl GetVariable {
+    pub fn new_boxed(variable: String) -> Box<GetVariable> {
+        Box::new(GetVariable { variable })
+    }
+}
+
 
 // Instruction implementations
 
@@ -254,6 +286,31 @@ impl Instruction for Subtract {
 
     fn to_string(&self) -> String {
         format!("Subtract {}", self.register)
+    }
+}
+
+impl Instruction for Multiply {
+    fn execute(&self, context: &mut ExecutionContext) {
+        let value = context.get_accumulator();
+        let value2 = context.get_register(&self.register);
+        context.set_accumulator(value * value2);
+    }
+
+    fn to_string(&self) -> String {
+        format!("Multiply {}", self.register)
+    }
+}
+
+
+impl Instruction for Divide {
+    fn execute(&self, context: &mut ExecutionContext) {
+        let value = context.get_accumulator();
+        let value2 = context.get_register(&self.register);
+        context.set_accumulator(value / value2);
+    }
+
+    fn to_string(&self) -> String {
+        format!("Divide {}", self.register)
     }
 }
 
@@ -366,6 +423,17 @@ impl Instruction for Return {
 impl Instruction for SetVariable {
     fn execute(&self, context: &mut ExecutionContext) {
         context.set_variable(&self.variable, context.get_accumulator());
+    }
+
+    fn to_string(&self) -> String {
+        format!("SetVariable {}", self.variable)
+    }
+}
+
+impl Instruction for GetVariable {
+    fn execute(&self, context: &mut ExecutionContext) {
+        let value = context.get_variable(&self.variable);
+        context.set_accumulator(value);
     }
 
     fn to_string(&self) -> String {

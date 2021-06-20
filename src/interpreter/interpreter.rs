@@ -74,6 +74,9 @@ impl ExecutionContext {
     pub fn set_variable(&mut self, variable: &String, value: Value) {
         self.local_variables.insert(variable.clone(), value);
     }
+    pub fn get_variable(&self, variable: &String) -> Value {
+        self.local_variables[variable]
+    }
 }
 
 pub struct StackFrame {
