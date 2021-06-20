@@ -143,7 +143,7 @@ impl Interpreter {
                 let call_block_id= self.execution_context.call_block_id.clone().unwrap();
                 self.execution_context.call_block_id = None;
 
-                println!("Calling block {}", call_block_id);
+                //println!("Calling block {}", call_block_id);
 
                 let current_frame = StackFrame {
                     pc: self.pc,
@@ -179,9 +179,9 @@ impl Interpreter {
 
                 let last_frame = last_frame.unwrap();
 
-                println!("Returning from block {} to block {}", self.active_block, last_frame.active_block);
+                //println!("Returning from block {} to block {}", self.active_block, last_frame.active_block);
 
-                self.dump();
+                //self.dump();
 
                 self.active_block = last_frame.active_block;
                 self.execution_context = last_frame.execution_context;
@@ -192,7 +192,7 @@ impl Interpreter {
             }
         }
 
-        self.dump();
+        //self.dump();
 
         println! {"Execution took {}ms", now.elapsed().as_millis()}
     }

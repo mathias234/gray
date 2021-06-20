@@ -27,6 +27,7 @@ pub enum ASTType {
     MathExpression,
     ComparisonExpression,
     IfStatement,
+    WhileStatement,
     ComparisonOp(ComparisonOp),
     MathOp(MathOp),
     Function(String),
@@ -116,6 +117,7 @@ impl Parser {
                         Keyword::Function => self.parse_function(),
                         Keyword::VariableDeclaration => self.parse_variable_declaration(),
                         Keyword::IfStatement => self.parse_if_statement(),
+                        Keyword::WhileStatement => self.parse_while_statement(),
                         _ => Err(ParserError::UnexpectedKeywordInStream(keyword.clone())),
                     }
                 }
@@ -303,6 +305,20 @@ impl Parser {
 
     fn parse_if_statement(&mut self) -> Result<ASTNode, ParserError> {
         let mut node = ASTNode::new(ASTType::IfStatement);
+        let condition = self.parse_expression()?;
+
+        node.children.push(condition);
+
+        let open_curly = self.get_next_token()?;
+        Parser::validate_token_is_delimiter(open_curly, Delimiter::OpenCurlyBracket)?;
+
+        node.children.push(self.parse_scope()?);
+
+        Ok(node)
+    }
+
+    fn parse_while_statement(&mut self) -> Result<ASTNode, ParserError> {
+        let mut node = ASTNode::new(ASTType::WhileStatement);
         let condition = self.parse_expression()?;
 
         node.children.push(condition);

@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use crate::bytecode::register::Register;
 use crate::interpreter::value::Value;
 use crate::bytecode::instructions::other::{Return, Call, SetVariable, CompareEq, CompareNotEq, CompareLessThan, CompareGreaterThan, Store, LoadImmediate, GetVariable};
-use crate::bytecode::instructions::jump::JumpZero;
+use crate::bytecode::instructions::jump::{JumpZero, Jump};
 use crate::bytecode::instructions::math::{Add, Subtract, Multiply, Divide};
 
 #[derive(Debug)]
@@ -77,6 +77,9 @@ impl Compiler {
                 ASTType::IfStatement => {
                     self.compile_if_statement(generator, child)?;
                 }
+                ASTType::WhileStatement => {
+                    self.compile_while_statement(generator, child)?;
+                }
                 _ => return Err(CompilerError::UnexpectedASTNode(child.clone())),
             }
         }
@@ -98,7 +101,25 @@ impl Compiler {
 
         self.compile_scope(generator, &node.children[1])?;
 
-        let scope_end = generator.make_label();
+        let mut scope_end = generator.make_label();
+        scope_end.position += 1;
+
+        generator.emit_at(JumpZero::new_boxed(scope_end), &scope_start);
+
+        Ok({})
+    }
+
+    fn compile_while_statement(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
+        let comparison_start = generator.make_label();
+        self.compile_expression(generator, &node.children[0])?;
+
+        let scope_start = generator.make_label();
+
+        self.compile_scope(generator, &node.children[1])?;
+        generator.emit(Jump::new_boxed(comparison_start));
+
+        let mut scope_end = generator.make_label();
+        scope_end.position += 1;
 
         generator.emit_at(JumpZero::new_boxed(scope_end), &scope_start);
 

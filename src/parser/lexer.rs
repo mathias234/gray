@@ -35,6 +35,7 @@ pub enum Keyword {
     Trait,
     VariableDeclaration,
     IfStatement,
+    WhileStatement
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -236,6 +237,7 @@ impl Lexer {
             "struct" => Some(Keyword::Structure),
             "let" => Some(Keyword::VariableDeclaration),
             "if" => Some(Keyword::IfStatement),
+            "while" => Some(Keyword::WhileStatement),
             _ => None,
         }
     }
