@@ -4,9 +4,9 @@ fn entry() {
 
 fn function_test(a, b, c) {
     let g = a + b;
-    function_test_2();
+    function_test_2(g);
 }
 
-fn function_test_2() {
+fn function_test_2(g) {
 
 }

@@ -175,6 +175,7 @@ impl Compiler {
             ASTType::ComparisonExpression => self.compile_comparison_expression(generator, child),
             ASTType::IntegerValue(_) => self.compile_value_to_accumulator(generator, child),
             ASTType::FloatValue(_) => self.compile_value_to_accumulator(generator, child),
+            ASTType::Identifier(_) => self.compile_value_to_accumulator(generator, child),
             _ => Err(CompilerError::UnexpectedASTNode(child.clone())),
         }
     }
