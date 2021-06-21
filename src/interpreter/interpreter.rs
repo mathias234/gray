@@ -195,12 +195,14 @@ impl<'interp> Interpreter<'interp> {
                 let call_block_id = self.execution_context.call_block_id.clone().unwrap();
                 self.execution_context.call_block_id = None;
 
-                println!("Calling block {} with arguments", call_block_id);
+                //println!("Calling block {} with arguments", call_block_id);
+                /*
                 let mut idx = 0;
                 for reg in self.execution_context.call_arguments.as_ref().unwrap() {
                     println!("\t[{:04}] {}", idx, self.execution_context.registers[reg.index]);
                     idx += 1;
                 }
+                 */
 
 
                 let current_frame = StackFrame {
@@ -212,7 +214,11 @@ impl<'interp> Interpreter<'interp> {
                 self.call_stack.push(current_frame);
 
                 self.active_block = call_block_id;
-                self.active_code_block = Some(&self.blocks[&self.active_block]);
+                self.active_code_block = self.blocks.get(&self.active_block);
+                if self.active_code_block.is_none() {
+                    panic!("Unable to find function `{}`", self.active_block);
+                }
+
                 len = self.active_code_block.unwrap().get_instructions().len();
 
                 let call_args = self.execution_context.call_arguments.clone();
@@ -244,7 +250,12 @@ impl<'interp> Interpreter<'interp> {
                 //self.dump();
 
                 self.active_block = last_frame.active_block;
-                self.active_code_block = Some(&self.blocks[&self.active_block]);
+                self.active_code_block = self.blocks.get(&self.active_block);
+                if self.active_code_block.is_none() {
+                    panic!("Error in return could not find previous function `{}`", self.active_block);
+                }
+
+
                 len = self.active_code_block.unwrap().get_instructions().len();
                 self.execution_context = last_frame.execution_context;
                 self.pc = last_frame.pc + 1;
