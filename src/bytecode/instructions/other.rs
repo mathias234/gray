@@ -127,33 +127,33 @@ impl Return {
 }
 
 pub struct DeclareVariable {
-    variable: String,
+    variable: Rc<String>,
 }
 
 impl DeclareVariable {
     pub fn new_boxed(variable: String) -> Box<DeclareVariable> {
-        Box::new(DeclareVariable { variable })
+        Box::new(DeclareVariable { variable: Rc::from(variable) })
     }
 }
 
 pub struct SetVariable {
-    variable: String,
+    variable: Rc<String>,
 }
 
 impl SetVariable {
     pub fn new_boxed(variable: String) -> Box<SetVariable> {
-        Box::new(SetVariable { variable })
+        Box::new(SetVariable { variable: Rc::from(variable) })
     }
 }
 
 
 pub struct GetVariable {
-    variable: String,
+    variable: Rc<String>,
 }
 
 impl GetVariable {
     pub fn new_boxed(variable: String) -> Box<GetVariable> {
-        Box::new(GetVariable { variable })
+        Box::new(GetVariable { variable: Rc::from(variable) })
     }
 }
 
@@ -297,7 +297,7 @@ impl Instruction for Return {
 
 impl Instruction for DeclareVariable {
     fn execute(&self, context: &mut ExecutionContext) {
-        context.declare_variable(&self.variable, context.get_accumulator());
+        context.declare_variable(self.variable.clone(), context.get_accumulator());
     }
 
     fn to_string(&self) -> String {
@@ -307,7 +307,7 @@ impl Instruction for DeclareVariable {
 
 impl Instruction for SetVariable {
     fn execute(&self, context: &mut ExecutionContext) {
-        context.set_variable(&self.variable, context.get_accumulator());
+        context.set_variable(self.variable.clone(), context.get_accumulator());
     }
 
     fn to_string(&self) -> String {
@@ -318,7 +318,7 @@ impl Instruction for SetVariable {
 
 impl Instruction for GetVariable {
     fn execute(&self, context: &mut ExecutionContext) {
-        let value = context.get_variable(&self.variable);
+        let value = context.get_variable(self.variable.clone());
         context.set_accumulator(value);
     }
 

@@ -9,16 +9,18 @@ pub use crate::{
 
 use std::time::Instant;
 use std::collections::HashMap;
+use crate::interpreter::object::Object;
+use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct Scope {
-    local_variables: HashMap<String, Value>,
+    scope_object: Object,
 }
 
 impl Scope {
     pub fn new() -> Scope {
         Scope {
-            local_variables: HashMap::new(),
+            scope_object: Object::new(),
         }
     }
 }
@@ -84,14 +86,14 @@ impl ExecutionContext {
         self.call_return = true;
     }
 
-    pub fn declare_variable(&mut self, variable: &String, value: Value) {
-        self.scope_stack[0].local_variables.insert(variable.clone(), value);
+    pub fn declare_variable(&mut self, variable: Rc<String>, value: Value) {
+        self.scope_stack[0].scope_object.set(variable, value);
     }
 
-    pub fn set_variable(&mut self, variable: &String, value: Value) {
+    pub fn set_variable(&mut self, variable: Rc<String>, value: Value) {
         let mut found_variable = false;
         for scope in &mut self.scope_stack {
-            let variable = scope.local_variables.get_mut(variable);
+            let variable = scope.scope_object.get_mut(variable.clone());
             if variable.is_some() {
                 *variable.unwrap() = value;
                 found_variable = true;
@@ -104,13 +106,14 @@ impl ExecutionContext {
         }
     }
 
-    pub fn get_variable(&self, variable: &String) -> Value {
+    pub fn get_variable(&self, variable: Rc<String>) -> Value {
         for scope in &self.scope_stack {
-            let variable = scope.local_variables.get(variable);
+            let variable = scope.scope_object.get(variable.clone());
             if variable.is_some() {
                 return *variable.unwrap();
             }
         }
+
 
         panic!("get_variable failed to find `{}`", variable);
     }
