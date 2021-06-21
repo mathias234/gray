@@ -170,13 +170,28 @@ impl Parser {
 
         if Parser::token_is_delimiter(delimiter, Delimiter::OpenParen) {
             // Function Call
+            let mut node = ASTNode::new(ASTType::FunctionCall(built_identifier));
 
-            let delimiter = self.get_next_token()?;
-            Parser::validate_token_is_delimiter(delimiter, Delimiter::CloseParen)?;
+            loop {
+                let token = self.peek_next_token(0)?;
+                if Parser::token_is_delimiter(token, Delimiter::CloseParen) {
+                    self.get_next_token()?;
+                    break;
+                }
+
+                node.children.push(self.parse_expression()?);
+
+                let token = self.peek_next_token(0)?;
+                if Parser::token_is_delimiter(token, Delimiter::Comma) {
+                    self.get_next_token()?;
+                }
+            }
+
+
             let delimiter = self.get_next_token()?;
             Parser::validate_token_is_delimiter(delimiter, Delimiter::Semicolon)?;
 
-            return Ok(ASTNode::new(ASTType::FunctionCall(built_identifier)));
+            return Ok(node);
         }
 
         if Parser::token_is_delimiter(delimiter, Delimiter::Equal) {
@@ -271,11 +286,26 @@ impl Parser {
 
         let token = self.get_next_token()?;
         Parser::validate_token_is_delimiter(token, Delimiter::OpenParen)?;
-        // Parse parameters
 
-        let token = self.get_next_token()?;
-        Parser::validate_token_is_delimiter(token, Delimiter::CloseParen)?;
+        loop {
+            let token = self.get_next_token()?;
+            match token {
+                Token::Identifier(identifier) => {
+                    let identifier = identifier.clone();
+                    node.children.push(ASTNode::new(ASTType::Identifier(identifier)));
+                }
+                Token::Delimiter(d) => match d {
+                    Delimiter::CloseParen => break,
+                    _ => {}
+                },
+                _ => {}
+            };
 
+            let token = self.peek_next_token(0)?;
+            if Parser::token_is_delimiter(token, Delimiter::Comma) {
+                self.get_next_token()?;
+            }
+        }
 
         let token = self.get_next_token()?;
         if Parser::token_is_delimiter(token, Delimiter::Semicolon) {
@@ -347,7 +377,7 @@ impl Parser {
         self.peek_next_token(0)?;
         let delimiter = self.peek_next_token(1)?;
 
-        if Parser::token_is_delimiter(&delimiter, Delimiter::Semicolon) {
+        if !Parser::token_is_math_delimiter(&delimiter) && !Parser::token_is_boolean_delimiter(&delimiter) {
             // Very simple single token expression
             let token = self.get_next_token()?;
             node.children.push(Parser::token_to_simple_ast_node(&token)?);

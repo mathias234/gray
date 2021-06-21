@@ -1,18 +1,12 @@
 fn entry() {
-    let i = 0;
-    let b = 50000;
-
-    while i < b {
-        function_test();
-        i = i + 1;
-    }
+    function_test(5 * 5, 10 * 10, 100 * 100);
 }
 
-fn function_test() {
-    let var1 = 1000 * 1000;
-    let var2 = 100;
-    let var3 = var1 * var2;
-    let var4 = var1 / var2;
-    let var5 = var1 + var2;
-    let var6 = var1 - var2;
+fn function_test(a, b, c) {
+    let g = a + b;
+    function_test_2();
+}
+
+fn function_test_2() {
+
 }

@@ -48,7 +48,7 @@ impl ExecutionContext {
             call_block_id: None,
             call_arguments: None,
             call_return: false,
-            scope_stack: Vec::new(),
+            scope_stack: vec![Scope::new()],
         }
     }
 
@@ -192,7 +192,13 @@ impl<'interp> Interpreter<'interp> {
                 let call_block_id = self.execution_context.call_block_id.clone().unwrap();
                 self.execution_context.call_block_id = None;
 
-                //println!("Calling block {}", call_block_id);
+                println!("Calling block {} with arguments", call_block_id);
+                let mut idx = 0;
+                for reg in self.execution_context.call_arguments.as_ref().unwrap() {
+                    println!("\t[{:04}] {}", idx, self.execution_context.registers[reg.index]);
+                    idx += 1;
+                }
+
 
                 let current_frame = StackFrame {
                     pc: self.pc,

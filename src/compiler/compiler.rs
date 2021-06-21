@@ -4,7 +4,7 @@ use crate::bytecode::generator::Generator;
 use std::collections::HashMap;
 use crate::bytecode::register::Register;
 use crate::interpreter::value::Value;
-use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, CompareEq, CompareNotEq, CompareLessThan, CompareGreaterThan, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable};
+use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, CompareEq, CompareNotEq, CompareLessThan, CompareGreaterThan, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument};
 use crate::bytecode::instructions::jump::{JumpZero, Jump};
 use crate::bytecode::instructions::math::{Add, Subtract, Multiply, Divide};
 
@@ -55,8 +55,17 @@ impl Compiler {
     fn compile_function(&mut self, name: &str, node: &ASTNode) -> Result<(), CompilerError> {
         let mut generator = Generator::new();
 
-        if node.children.len() > 0 {
-            self.compile_scope(&mut generator, &node.children[0])?;
+        let mut argument_index = 0;
+        for child in &node.children {
+            match &child.ast_type {
+                ASTType::Scope => self.compile_scope(&mut generator, child)?,
+                ASTType::Identifier(parameter) => {
+                    generator.emit(LoadArgument::new_boxed(argument_index));
+                    generator.emit(DeclareVariable::new_boxed(parameter.clone()));
+                    argument_index += 1;
+                },
+                _ => return Err(CompilerError::UnexpectedASTNode(child.clone()))
+            }
         }
 
         generator.emit(Return::new_boxed());
@@ -70,7 +79,7 @@ impl Compiler {
         for child in &node.children {
             match &child.ast_type {
                 ASTType::FunctionCall(call) => {
-                    generator.emit(Call::new_boxed(&*call, None));
+                    self.compile_function_call(call, generator, child)?;
                 }
                 ASTType::VariableDeclaration(variable) => {
                     self.compile_variable_declaration(variable, generator, child)?;
@@ -89,6 +98,27 @@ impl Compiler {
         }
 
         generator.emit(PopScope::new_boxed());
+        Ok({})
+    }
+
+    fn compile_function_call(&mut self, call: &String, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
+        if node.children.len() == 0 {
+            generator.emit(Call::new_boxed(&*call, None));
+            return Ok({});
+        }
+
+        let mut argument_registers = Vec::new();
+
+        for child in &node.children {
+            self.compile_expression(generator, child)?;
+            let register = generator.next_free_register();
+            generator.emit(Store::new_boxed(register));
+            argument_registers.push(register);
+        }
+
+        generator.emit(Call::new_boxed(&*call, Some(argument_registers)));
+
+
         Ok({})
     }
 
