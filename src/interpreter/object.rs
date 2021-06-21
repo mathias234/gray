@@ -1,28 +1,48 @@
 use std::collections::HashMap;
 use crate::interpreter::value::Value;
 use std::rc::Rc;
+use std::fmt;
+use std::cell::RefCell;
 
 #[derive(Clone)]
 pub struct Object {
-    variables: HashMap<Rc<String>, Value>,
+    variables: Rc<RefCell<HashMap<Rc<String>, Value>>>,
 }
 
 impl Object {
     pub fn new() -> Object {
         Object {
-            variables: HashMap::new(),
+            variables: Rc::new(RefCell::new(HashMap::new())),
         }
     }
 
-    pub fn set(&mut self, name: Rc<String>, value: Value) {
-        self.variables.insert(name, value);
+    pub fn declare(&mut self, name: Rc<String>, value: &Value) {
+        self.variables.borrow_mut().insert(name, value.clone());
     }
 
-    pub fn get_mut(&mut self, name: Rc<String>) -> Option<&mut Value> {
-        self.variables.get_mut(&name)
+    pub fn set(&mut self, name: Rc<String>, value: &Value) -> bool {
+        let mut variables = self.variables.borrow_mut();
+        if variables.contains_key(&name) {
+            variables.insert(name, value.clone());
+            return true;
+        }
+
+        return false;
     }
 
-    pub fn get(&self, name: Rc<String>) -> Option<&Value> {
-        self.variables.get(&name)
+    pub fn get(&self, name: Rc<String>) -> Option<Value> {
+        let variables_borrowed = self.variables.borrow();
+        let result = variables_borrowed.get(&name);
+        if result.is_some() {
+            return Some(result.unwrap().clone());
+        }
+
+        None
+    }
+}
+
+impl fmt::Debug for Object {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Object").finish()
     }
 }

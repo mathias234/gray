@@ -1,12 +1,7 @@
 fn entry() {
-    function_test(5 * 5, 10 * 10, 100 * 100);
-}
+    let a = 0;
 
-fn function_test(a, b, c) {
-    let g = a + b;
-    function_test_2(g);
-}
-
-fn function_test_2(g) {
-
+    while a < 100000 {
+        a = a + 1;
+    }
 }

@@ -178,7 +178,7 @@ impl PopScope {
 
 impl Instruction for LoadImmediate {
     fn execute(&self, context: &mut ExecutionContext) {
-        context.set_accumulator(self.value);
+        context.set_accumulator(self.value.clone());
     }
 
     fn to_string(&self) -> String {
@@ -222,7 +222,7 @@ impl Instruction for CompareEq {
         let lhs = context.get_accumulator();
         let rhs = context.get_register(&self.register);
 
-        context.set_accumulator(Value::from_i32((lhs == rhs) as i32));
+        context.set_accumulator(Value::from_i64((lhs == rhs) as i64));
     }
 
     fn to_string(&self) -> String { format!("CompareEq {}", self.register) }
@@ -233,7 +233,7 @@ impl Instruction for CompareNotEq {
         let lhs = context.get_accumulator();
         let rhs = context.get_register(&self.register);
 
-        context.set_accumulator(Value::from_i32((lhs != rhs) as i32));
+        context.set_accumulator(Value::from_i64((lhs != rhs) as i64));
     }
 
     fn to_string(&self) -> String { format!("CompareNotEq {}", self.register) }
@@ -244,7 +244,7 @@ impl Instruction for CompareGreaterThan {
         let lhs = context.get_accumulator();
         let rhs = context.get_register(&self.register);
 
-        context.set_accumulator(Value::from_i32((lhs > rhs) as i32));
+        context.set_accumulator(Value::from_i64((lhs > rhs) as i64));
     }
 
     fn to_string(&self) -> String { format!("CompareGreaterThan {}", self.register) }
@@ -255,7 +255,7 @@ impl Instruction for CompareLessThan {
         let lhs = context.get_accumulator();
         let rhs = context.get_register(&self.register);
 
-        context.set_accumulator(Value::from_i32((lhs < rhs) as i32));
+        context.set_accumulator(Value::from_i64((lhs < rhs) as i64));
     }
 
     fn to_string(&self) -> String { format!("CompareLessThan {}", self.register) }
@@ -297,7 +297,7 @@ impl Instruction for Return {
 
 impl Instruction for DeclareVariable {
     fn execute(&self, context: &mut ExecutionContext) {
-        context.declare_variable(self.variable.clone(), context.get_accumulator());
+        context.declare_variable(self.variable.clone(), &context.get_accumulator());
     }
 
     fn to_string(&self) -> String {
@@ -307,7 +307,7 @@ impl Instruction for DeclareVariable {
 
 impl Instruction for SetVariable {
     fn execute(&self, context: &mut ExecutionContext) {
-        context.set_variable(self.variable.clone(), context.get_accumulator());
+        context.set_variable(self.variable.clone(), &context.get_accumulator());
     }
 
     fn to_string(&self) -> String {

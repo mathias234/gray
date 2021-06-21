@@ -43,7 +43,7 @@ pub struct ExecutionContext {
 impl ExecutionContext {
     pub fn new() -> ExecutionContext {
         ExecutionContext {
-            accumulator: Value::from_i32(0),
+            accumulator: Value::from_i64(0),
             registers: Vec::new(),
             block_arguments: Vec::new(),
             jump_target: None,
@@ -58,21 +58,21 @@ impl ExecutionContext {
         self.accumulator = value;
     }
     pub fn get_accumulator(&self) -> Value {
-        self.accumulator
+        self.accumulator.clone()
     }
 
     pub fn set_register(&mut self, register: &Register, value: Value) {
         while register.index >= self.registers.len() {
-            self.registers.push(Value::from_i32(0));
+            self.registers.push(Value::from_i64(0));
         }
         self.registers[register.index] = value;
     }
 
     pub fn get_register(&self, register: &Register) -> Value {
-        self.registers[register.index]
+        self.registers[register.index].clone()
     }
 
-    pub fn get_argument(&self, arg: usize) -> Value { self.block_arguments[arg] }
+    pub fn get_argument(&self, arg: usize) -> Value { self.block_arguments[arg].clone() }
 
     pub fn set_jump_target(&mut self, label: &Label) {
         self.jump_target = Some(*label);
@@ -86,16 +86,14 @@ impl ExecutionContext {
         self.call_return = true;
     }
 
-    pub fn declare_variable(&mut self, variable: Rc<String>, value: Value) {
-        self.scope_stack[0].scope_object.set(variable, value);
+    pub fn declare_variable(&mut self, variable: Rc<String>, value: &Value) {
+        self.scope_stack[0].scope_object.declare(variable, value);
     }
 
-    pub fn set_variable(&mut self, variable: Rc<String>, value: Value) {
+    pub fn set_variable(&mut self, variable: Rc<String>, value: &Value) {
         let mut found_variable = false;
         for scope in &mut self.scope_stack {
-            let variable = scope.scope_object.get_mut(variable.clone());
-            if variable.is_some() {
-                *variable.unwrap() = value;
+            if scope.scope_object.set(variable.clone(), value) {
                 found_variable = true;
                 break;
             }
@@ -110,7 +108,7 @@ impl ExecutionContext {
         for scope in &self.scope_stack {
             let variable = scope.scope_object.get(variable.clone());
             if variable.is_some() {
-                return *variable.unwrap();
+                return variable.unwrap().clone();
             }
         }
 
