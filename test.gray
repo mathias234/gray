@@ -8,5 +8,8 @@ fn entry() {
 }
 
 fn test(a) {
+    if a > 500 {
+        return 10000;
+    }
     a + 1;
 }
