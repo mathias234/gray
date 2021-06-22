@@ -7,6 +7,7 @@ use interpreter::interpreter::Interpreter;
 use crate::parser::parser::{Parser, ParserError};
 use crate::parser::lexer::{Lexer, LexerError};
 use crate::compiler::compiler::{Compiler, CompilerError};
+use crate::interpreter::value::Value;
 
 #[derive(Debug)]
 enum GrayError {
@@ -57,7 +58,16 @@ fn main() -> Result<(), GrayError> {
 
     let mut interpreter = Interpreter::new(blocks);
 
-    interpreter.run();
+    interpreter.set_native_function(String::from("print"), print_function);
+
+    interpreter.run(String::from("entry"));
 
     return Ok({});
+}
+
+fn print_function(args: Vec<Value>) {
+    for arg in args {
+        print!("{:#?} ", arg);
+    }
+    println!();
 }

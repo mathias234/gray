@@ -2,14 +2,14 @@ use std::{fmt, ops, cmp};
 use std::cmp::Ordering;
 use crate::interpreter::object::Object;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum DataValue {
     I64(i64),
     F64(f64),
     Object(Object),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Value {
     value: DataValue,
 }

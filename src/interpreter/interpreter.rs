@@ -4,7 +4,7 @@ pub use crate::{
         label::Label,
         code_block::CodeBlock,
     },
-    interpreter::{value::Value},
+    interpreter::{value::Value, function_pointer::FunctionPointer},
 };
 
 use std::time::Instant;
@@ -140,21 +140,26 @@ pub struct Interpreter<'interp> {
     blocks: HashMap<String, CodeBlock>,
 
     call_stack: Vec<StackFrame>,
+
+    native_functions: HashMap<String, FunctionPointer>,
 }
 
 impl<'interp> Interpreter<'interp> {
     pub fn new(blocks: HashMap<String, CodeBlock>) -> Interpreter<'interp> {
         Interpreter {
-            active_block: String::from("entry"),
+            active_block: String::from(""),
             active_code_block: None,
             execution_context: ExecutionContext::new(),
             pc: 0,
             blocks,
             call_stack: Vec::new(),
+            native_functions: HashMap::new(),
         }
     }
 
-    pub fn run(&'interp mut self) {
+    pub fn run(&'interp mut self, start_block: String) {
+        self.active_block = start_block;
+
         println!("Compiled code");
         for (name, block) in &self.blocks {
             println!("\tBlock {}", name);
@@ -193,14 +198,38 @@ impl<'interp> Interpreter<'interp> {
                 let call_block_id = self.execution_context.call_block_id.clone().unwrap();
                 self.execution_context.call_block_id = None;
 
-                //println!("Calling block {} with arguments", call_block_id);
                 /*
+                println!("Calling block {} with arguments", call_block_id);
                 let mut idx = 0;
                 for reg in self.execution_context.call_arguments.as_ref().unwrap() {
                     println!("\t[{:04}] {}", idx, self.execution_context.registers[reg.index]);
                     idx += 1;
                 }
-                 */
+                */
+
+                let call_args = self.execution_context.call_arguments.clone();
+                let mut block_args = Vec::new();
+
+                if call_args.is_some() {
+                    for call_arg in &call_args.unwrap() {
+                        block_args.push(self.execution_context.get_register(call_arg));
+                    }
+                }
+
+
+                let block_to_call = self.blocks.get(&call_block_id);
+                if block_to_call.is_none() {
+                    let native_function = self.native_functions.get(&call_block_id);
+                    match native_function {
+                        Some(func) => {
+                            func(block_args);
+                            self.pc += 1;
+                            continue;
+                        },
+                        None => panic!("Unable to find function `{}`", call_block_id)
+
+                    }
+                }
 
 
                 let current_frame = StackFrame {
@@ -212,21 +241,9 @@ impl<'interp> Interpreter<'interp> {
                 self.call_stack.push(current_frame);
 
                 self.active_block = call_block_id;
-                self.active_code_block = self.blocks.get(&self.active_block);
-                if self.active_code_block.is_none() {
-                    panic!("Unable to find function `{}`", self.active_block);
-                }
+                self.active_code_block = block_to_call;
 
                 len = self.active_code_block.unwrap().get_instructions().len();
-
-                let call_args = self.execution_context.call_arguments.clone();
-                let mut block_args = Vec::new();
-
-                if call_args.is_some() {
-                    for call_arg in &call_args.unwrap() {
-                        block_args.push(self.execution_context.get_register(call_arg));
-                    }
-                }
 
                 self.execution_context = ExecutionContext::new();
 
@@ -266,6 +283,10 @@ impl<'interp> Interpreter<'interp> {
         self.dump();
 
         println! {"Execution took {}ms", now.elapsed().as_millis()}
+    }
+
+    pub fn set_native_function(&mut self, name: String, function: FunctionPointer) {
+        self.native_functions.insert(name, function);
     }
 
     pub fn dump(&self) {
