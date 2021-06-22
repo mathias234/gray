@@ -212,8 +212,6 @@ impl Compiler {
     }
 
     fn compile_comparison_expression(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
-        println!("Dumping comp expression");
-        node.dump(0);
         let rhs_register = self.compile_value(generator, &node.children[2])?;
         self.compile_value_to_accumulator(generator, &node.children[0])?;
 

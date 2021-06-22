@@ -334,19 +334,13 @@ impl Parser {
         let first = self.peek_next_token(0)?;
         let delimiter = self.peek_next_token(1)?;
 
-        println!("Expression tokens {:?}, {:?}", first, delimiter);
-
         if Parser::token_is_math_delimiter(&delimiter) {
-            println!("Parsing as math");
             node.children.push(self.parse_math_expression()?);
         } else if Parser::tokens_are_comparison(&first, &delimiter).is_some() {
-            println!("Parsing as Cmp");
             node.children.push(self.parse_comparison_expression()?);
         } else if Parser::token_is_delimiter(&delimiter, Delimiter::OpenParen) {
-            println!("Parsing as Fun Call");
             node.children.push(self.parse_function_call()?);
         } else if Parser::token_is_delimiter(&delimiter, Delimiter::Equal) {
-            println!("Parsing as Assignment");
             node.children.push(self.parse_variable_assignment()?);
         } else {
             // Very simple single token expression
@@ -364,12 +358,9 @@ impl Parser {
             _ => Err(ParserError::UnexpectedTokenInStream(name.clone()))
         }?;
 
-        println!("name is {}", name);
-
         Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Equal)?;
 
         let mut assigment_node = ASTNode::new(ASTType::VariableAssignment(name));
-
 
         assigment_node.children.push(self.parse_expression()?);
 
@@ -439,9 +430,9 @@ impl Parser {
         let comparison_op = self.get_next_token()?.clone();
         let token = self.get_next_token()?;
 
-        let mut operator = ComparisonOp::Equal;
+        let operator;
 
-        let mut rhs = None;
+        let rhs;
 
         let tokens_are_comparison = Parser::tokens_are_comparison(token, &comparison_op);
 
