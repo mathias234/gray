@@ -38,6 +38,7 @@ pub enum ASTType {
     VariableAssignment(String),
     FloatValue(f64),
     IntegerValue(i64),
+    StringValue(String),
     Identifier(String),
     Trait(String),
 }
@@ -492,6 +493,9 @@ impl Parser {
         match token {
             Token::Identifier(identifier) => {
                 Ok(ASTNode::new(ASTType::Identifier(identifier.clone())))
+            }
+            Token::String(value) => {
+                Ok(ASTNode::new(ASTType::StringValue(value.clone())))
             }
             Token::Integer(value) => {
                 Ok(ASTNode::new(ASTType::IntegerValue(*value)))

@@ -189,6 +189,7 @@ impl Compiler {
             ASTType::FunctionCall(call) => self.compile_function_call(call, generator, child),
             ASTType::FloatValue(_) => self.compile_value_to_accumulator(generator, child),
             ASTType::Identifier(_) => self.compile_value_to_accumulator(generator, child),
+            ASTType::StringValue(_) => self.compile_value_to_accumulator(generator, child),
             ASTType::VariableAssignment(variable) => self.compile_variable_assignment(variable, generator, child),
             _ => Err(CompilerError::UnexpectedASTNode(child.clone())),
         }
@@ -241,6 +242,9 @@ impl Compiler {
 
     fn compile_value_to_accumulator(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
         match &node.ast_type {
+            ASTType::StringValue(value) => {
+                Ok(generator.emit(LoadImmediate::new_boxed(Value::from_string(value.clone()))))
+            }
             ASTType::IntegerValue(value) => {
                 Ok(generator.emit(LoadImmediate::new_boxed(Value::from_i64(*value))))
             }

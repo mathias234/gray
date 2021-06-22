@@ -22,6 +22,7 @@ pub enum Delimiter {
     LessThan,
     GreaterThan,
     Exclamation,
+    Quotation,
     LineFeed,
     CarriageReturn,
 }
@@ -44,6 +45,7 @@ pub enum Token {
     Identifier(String),
     Integer(i64),
     Float(f64),
+    String(String),
     Delimiter(Delimiter),
     Keyword(Keyword),
     EndOfFile,
@@ -141,6 +143,8 @@ impl Lexer {
         let mut word = String::new();
         let chars = &mut self.file[self.position..self.file.len()].chars();
 
+        let mut is_string = false;
+
         loop {
             let char = chars.next();
 
@@ -153,6 +157,24 @@ impl Lexer {
             let delimiter = Lexer::char_to_delimiter(char);
             if delimiter.is_some() {
                 let delimiter = delimiter.unwrap();
+                if delimiter == Delimiter::Quotation {
+                    self.position += char.len_utf8();
+
+                    if is_string {
+                        break;
+                    }
+
+                    is_string = true;
+                    continue;
+                }
+
+                // While parsing strings any character is fine
+                if is_string {
+                    word += &String::from(char);
+                    self.position += char.len_utf8();
+                    continue;
+                }
+
                 if delimiter == Delimiter::Dot && Lexer::word_to_integer(&word).is_some() {
                     // Seems like a float, as we have a full integer before then a dot
                     // Lets try and pop another token to get the fractional portion
@@ -189,6 +211,10 @@ impl Lexer {
             self.position += char.len_utf8();
 
             word += &String::from(char);
+        }
+
+        if is_string {
+            return Ok(Token::String(word));
         }
 
         match Lexer::word_to_integer(&word) {
@@ -265,6 +291,7 @@ impl Lexer {
             '<' => Some(Delimiter::LessThan),
             '>' => Some(Delimiter::GreaterThan),
             '!' => Some(Delimiter::Exclamation),
+            '\"' => Some(Delimiter::Quotation),
             '\n' => Some(Delimiter::LineFeed),
             '\r' => Some(Delimiter::CarriageReturn),
             _ => None,

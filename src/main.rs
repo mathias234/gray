@@ -71,6 +71,7 @@ fn print_function(args: Vec<Value>) -> Value {
             DataValue::F64(float_value) => format!("{}", float_value),
             DataValue::I64(int_value) => format!("{}", int_value),
             DataValue::Object(object) => format!("{:?}", object),
+            DataValue::String(string) => format!("{}", string),
         };
 
         print!("{} ", pretty_printed);

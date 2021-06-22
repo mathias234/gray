@@ -7,6 +7,7 @@ pub enum DataValue {
     I64(i64),
     F64(f64),
     Object(Object),
+    String(String),
 }
 
 #[derive(Clone, Debug)]
@@ -31,6 +32,12 @@ impl Value {
         }
     }
 
+    pub fn from_string(value: String) -> Value {
+        Value {
+            value: DataValue::String(value)
+        }
+    }
+
     pub fn get_data_value(&self) -> &DataValue {
         &self.value
     }
@@ -48,6 +55,7 @@ impl ops::Add<Value> for Value {
                     DataValue::I64(rhs) => { Value::from_i64(*lhs + *rhs) }
                     DataValue::F64(rhs) => { Value::from_f64(*lhs as f64 + *rhs) }
                     DataValue::Object(_) => panic!("Cannot add a basic value to object"),
+                    DataValue::String(_) => panic!("Cannot add a basic value to string"),
                 }
             }
             DataValue::F64(lhs) => {
@@ -55,9 +63,15 @@ impl ops::Add<Value> for Value {
                     DataValue::I64(rhs) => { Value::from_f64(lhs + *rhs as f64) }
                     DataValue::F64(rhs) => { Value::from_f64(lhs + rhs) }
                     DataValue::Object(_) => panic!("Cannot add a basic value to object"),
+                    DataValue::String(_) => panic!("Cannot add a basic value to string"),
                 }
             }
             DataValue::Object(_) => {
+                match &rhs_value.value {
+                    _ => panic!("Operations are currently not supported on objects"),
+                }
+            }
+            DataValue::String(_) => {
                 match &rhs_value.value {
                     _ => panic!("Operations are currently not supported on objects"),
                 }
@@ -76,6 +90,7 @@ impl ops::Sub<Value> for Value {
                     DataValue::I64(rhs) => { Value::from_i64(lhs - rhs) }
                     DataValue::F64(rhs) => { Value::from_f64(lhs as f64 - rhs) }
                     DataValue::Object(_) => panic!("Cannot subtract a basic value from object"),
+                    DataValue::String(_) => panic!("Cannot subtract a basic value from string"),
                 }
             }
             DataValue::F64(lhs) => {
@@ -83,9 +98,15 @@ impl ops::Sub<Value> for Value {
                     DataValue::I64(rhs) => { Value::from_f64(lhs - rhs as f64) }
                     DataValue::F64(rhs) => { Value::from_f64(lhs - rhs) }
                     DataValue::Object(_) => panic!("Cannot subtract a basic value from object"),
+                    DataValue::String(_) => panic!("Cannot subtract a basic value from string"),
                 }
             }
             DataValue::Object(_) => {
+                match &rhs_value.value {
+                    _ => panic!("Operations are currently not supported on objects"),
+                }
+            }
+            DataValue::String(_) => {
                 match &rhs_value.value {
                     _ => panic!("Operations are currently not supported on objects"),
                 }
@@ -104,6 +125,7 @@ impl ops::Mul<Value> for Value {
                     DataValue::I64(rhs) => { Value::from_i64(lhs * rhs) }
                     DataValue::F64(rhs) => { Value::from_f64(lhs as f64 * rhs) }
                     DataValue::Object(_) => panic!("Cannot multiply a basic value with object"),
+                    DataValue::String(_) => panic!("Cannot multiply a basic value with string"),
                 }
             }
             DataValue::F64(lhs) => {
@@ -111,9 +133,15 @@ impl ops::Mul<Value> for Value {
                     DataValue::I64(rhs) => { Value::from_f64(lhs * rhs as f64) }
                     DataValue::F64(rhs) => { Value::from_f64(lhs * rhs) }
                     DataValue::Object(_) => panic!("Cannot multiply a basic value with object"),
+                    DataValue::String(_) => panic!("Cannot multiply a basic value with string"),
                 }
             }
             DataValue::Object(_) => {
+                match &rhs_value.value {
+                    _ => panic!("Operations are currently not supported on objects"),
+                }
+            }
+            DataValue::String(_) => {
                 match &rhs_value.value {
                     _ => panic!("Operations are currently not supported on objects"),
                 }
@@ -132,6 +160,7 @@ impl ops::Div<Value> for Value {
                     DataValue::I64(rhs) => { Value::from_i64(lhs / rhs) }
                     DataValue::F64(rhs) => { Value::from_f64(lhs as f64 / rhs) }
                     DataValue::Object(_) => panic!("Cannot divide a basic value with object"),
+                    DataValue::String(_) => panic!("Cannot divide a basic value with string"),
                 }
             }
             DataValue::F64(lhs) => {
@@ -139,9 +168,15 @@ impl ops::Div<Value> for Value {
                     DataValue::I64(rhs) => { Value::from_f64(lhs / rhs as f64) }
                     DataValue::F64(rhs) => { Value::from_f64(lhs / rhs) }
                     DataValue::Object(_) => panic!("Cannot divide a basic value with object"),
+                    DataValue::String(_) => panic!("Cannot divide a basic value with string"),
                 }
             }
             DataValue::Object(_) => {
+                match &rhs_value.value {
+                    _ => panic!("Operations are currently not supported on objects"),
+                }
+            }
+            DataValue::String(_) => {
                 match &rhs_value.value {
                     _ => panic!("Operations are currently not supported on objects"),
                 }
@@ -157,17 +192,24 @@ impl cmp::PartialEq for Value {
                 match rhs_value.value {
                     DataValue::I64(rhs) => { *lhs == rhs }
                     DataValue::F64(rhs) => { *lhs as f64 == rhs }
-                    DataValue::Object(_) => panic!("Cannot divide a basic value with object"),
+                    DataValue::Object(_) => panic!("Cannot compare a basic value with object"),
+                    DataValue::String(_) => panic!("Cannot compare a basic value with string"),
                 }
             }
             DataValue::F64(lhs) => {
                 match rhs_value.value {
                     DataValue::I64(rhs) => { *lhs == rhs as f64 }
                     DataValue::F64(rhs) => { *lhs == rhs }
-                    DataValue::Object(_) => panic!("Cannot divide a basic value with object"),
+                    DataValue::Object(_) => panic!("Cannot compare a basic value with object"),
+                    DataValue::String(_) => panic!("Cannot compare a basic value with string"),
                 }
             }
             DataValue::Object(_) => {
+                match &rhs_value.value {
+                    _ => panic!("Operations are currently not supported on objects"),
+                }
+            }
+            DataValue::String(_) => {
                 match &rhs_value.value {
                     _ => panic!("Operations are currently not supported on objects"),
                 }
@@ -184,6 +226,7 @@ impl cmp::PartialOrd for Value {
                     DataValue::I64(rhs) => { lhs.partial_cmp(&rhs) }
                     DataValue::F64(rhs) => { (lhs as f64).partial_cmp(&rhs) }
                     DataValue::Object(_) => panic!("Cannot compare i64 with object"),
+                    DataValue::String(_) => panic!("Cannot compare i64 with string"),
                 }
             }
             DataValue::F64(lhs) => {
@@ -191,9 +234,15 @@ impl cmp::PartialOrd for Value {
                     DataValue::I64(rhs) => { lhs.partial_cmp(&(rhs as f64)) }
                     DataValue::F64(rhs) => { lhs.partial_cmp(&rhs) }
                     DataValue::Object(_) => panic!("Cannot compare object with i64"),
+                    DataValue::String(_) => panic!("Cannot compare object with i64"),
                 }
             }
             DataValue::Object(_) => {
+                match &rhs_value.value {
+                    _ => panic!("Operations are currently not supported on objects"),
+                }
+            }
+            DataValue::String(_) => {
                 match &rhs_value.value {
                     _ => panic!("Operations are currently not supported on objects"),
                 }
@@ -208,7 +257,8 @@ impl fmt::Display for Value {
         match self.value.clone() {
             DataValue::I64(v) => write!(f, "({}: i64)", v),
             DataValue::F64(v) => write!(f, "({}: f64)", v),
-            DataValue::Object(v) => write!(f, "({:#?}: Object)", v.clone()),
+            DataValue::Object(v) => write!(f, "({:?}: Object)", v.clone()),
+            DataValue::String(v) => write!(f, "({}: String)", v.clone()),
         }
     }
 }
