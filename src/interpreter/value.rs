@@ -209,9 +209,10 @@ impl cmp::PartialEq for Value {
                     _ => panic!("Operations are currently not supported on objects"),
                 }
             }
-            DataValue::String(_) => {
+            DataValue::String(lhs) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on objects"),
+                    DataValue::String(rhs) => { *lhs == *rhs }
+                    _ => panic!("Cannot compare a string to a basic value"),
                 }
             }
         }
@@ -242,9 +243,10 @@ impl cmp::PartialOrd for Value {
                     _ => panic!("Operations are currently not supported on objects"),
                 }
             }
-            DataValue::String(_) => {
+            DataValue::String(lhs) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on objects"),
+                    DataValue::String(rhs) => { lhs.partial_cmp(&rhs) }
+                    _ => panic!("Cannot PartialOrd a string to with a basic value"),
                 }
             }
         }

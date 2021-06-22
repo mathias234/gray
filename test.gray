@@ -1,15 +1,8 @@
 fn entry() {
-    let a = 5.0;
+    let a = "Helldo";
 
-    while a < 1000 {
-        a = test(a);
+    if a == "Hello" {
         print("Hello World");
     }
 }
 
-fn test(a) {
-    if a > 500 {
-        return 10000;
-    }
-    a + 1;
-}
