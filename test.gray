@@ -1,5 +1,7 @@
 fn entry() {
     let a = 5;
-    print("Hello World {}", a);
+    if a > 5 {
+
+    }
 }
 

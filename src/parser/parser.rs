@@ -128,7 +128,7 @@ impl Parser {
                             return_node.children.push(self.parse_expression()?);
                             Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
                             Ok(return_node)
-                        },
+                        }
                         _ => Err(ParserError::UnexpectedKeywordInStream(keyword.clone())),
                     }
                 }
@@ -428,33 +428,28 @@ impl Parser {
         let lhs_token = self.get_next_token()?;
         node.children.push(Parser::token_to_simple_ast_node(lhs_token)?);
 
-        let comparison_op = self.get_next_token()?.clone();
-        let token = self.get_next_token()?;
+        let token = self.get_next_token()?.clone();
+        let token1 = self.get_next_token()?.clone();
 
         let operator;
 
         let rhs;
 
-        let tokens_are_comparison = Parser::tokens_are_comparison(token, &comparison_op);
+        let tokens_are_comparison = Parser::tokens_are_comparison(&token, &token1);
 
         match tokens_are_comparison {
             Some(op) => operator = op,
-            None => return Err(ParserError::UnexpectedTokenInStream(comparison_op))
+            None => return Err(ParserError::UnexpectedTokenInStream(token))
         }
 
         if operator == ComparisonOp::LessThan || operator == ComparisonOp::GreaterThan {
-            rhs = Some(token);
-        }
-        else {
-            rhs = Some(self.get_next_token()?);
+            rhs = token1;
+        } else {
+            rhs = self.get_next_token()?.clone();
         }
 
         node.children.push(ASTNode::new(ASTType::ComparisonOp(operator)));
-
-        match rhs {
-            Some(rhs) => node.children.push(Parser::token_to_simple_ast_node(rhs)?),
-            None => return Err(ParserError::UnimplementedFeature("parse_comparison_expression: This should not happen?")),
-        }
+        node.children.push(Parser::token_to_simple_ast_node(&rhs)?);
 
         Ok(node)
     }
@@ -536,19 +531,19 @@ impl Parser {
     }
 
     fn tokens_are_comparison(token: &Token, token2: &Token) -> Option<ComparisonOp> {
-        if Parser::token_is_delimiter(token, Delimiter::Equal) {
-            if Parser::token_is_delimiter(&token2, Delimiter::Equal) {
+        if Parser::token_is_delimiter(token2, Delimiter::Equal) {
+            if Parser::token_is_delimiter(&token, Delimiter::Equal) {
                 return Some(ComparisonOp::Equal);
-            } else if Parser::token_is_delimiter(&token2, Delimiter::Exclamation) {
+            } else if Parser::token_is_delimiter(&token, Delimiter::Exclamation) {
                 return Some(ComparisonOp::NotEqual);
-            } else if Parser::token_is_delimiter(&token2, Delimiter::LessThan) {
+            } else if Parser::token_is_delimiter(&token, Delimiter::LessThan) {
                 return Some(ComparisonOp::LessThanOrEqual);
-            } else if Parser::token_is_delimiter(&token2, Delimiter::GreaterThan) {
+            } else if Parser::token_is_delimiter(&token, Delimiter::GreaterThan) {
                 return Some(ComparisonOp::GreaterThanOrEqual);
             }
-        } else if Parser::token_is_delimiter(&token2, Delimiter::LessThan) {
+        } else if Parser::token_is_delimiter(&token, Delimiter::LessThan) {
             return Some(ComparisonOp::LessThan);
-        } else if Parser::token_is_delimiter(&token2, Delimiter::GreaterThan) {
+        } else if Parser::token_is_delimiter(&token, Delimiter::GreaterThan) {
             return Some(ComparisonOp::GreaterThan);
         }
 
