@@ -84,14 +84,14 @@ impl Compiler {
                 ASTType::VariableDeclaration(variable) => {
                     self.compile_variable_declaration(variable, generator, child)?;
                 }
-                ASTType::VariableAssignment(variable) => {
-                    self.compile_variable_assignment(variable, generator, child)?;
-                }
                 ASTType::IfStatement => {
                     self.compile_if_statement(generator, child)?;
                 }
                 ASTType::WhileStatement => {
                     self.compile_while_statement(generator, child)?;
+                }
+                ASTType::ReturnExpression => {
+                    self.compile_return(generator, child)?;
                 }
                 _ => return Err(CompilerError::UnexpectedASTNode(child.clone())),
             }
@@ -168,6 +168,18 @@ impl Compiler {
         Ok({})
     }
 
+    fn compile_return(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
+        // The last value in accumulator will be returned
+        // and placed in the accumulator of the caller function
+
+        self.compile_expression(generator, &node.children[0])?;
+
+        generator.emit(PopScope::new_boxed());
+        generator.emit(Return::new_boxed());
+
+        Ok({})
+    }
+
     fn compile_expression(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
         let child = &node.children[0];
         match &child.ast_type {
@@ -177,6 +189,7 @@ impl Compiler {
             ASTType::FunctionCall(call) => self.compile_function_call(call, generator, child),
             ASTType::FloatValue(_) => self.compile_value_to_accumulator(generator, child),
             ASTType::Identifier(_) => self.compile_value_to_accumulator(generator, child),
+            ASTType::VariableAssignment(variable) => self.compile_variable_assignment(variable, generator, child),
             _ => Err(CompilerError::UnexpectedASTNode(child.clone())),
         }
     }

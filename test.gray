@@ -1,11 +1,12 @@
 fn entry() {
     let a = 5.0;
 
-    let c = test(a);
-    print(c);
+    while a < 1000 {
+        a = test(a);
+        print(a);
+    }
 }
 
 fn test(a) {
-    let b = a;
-    print(b);
+    a + 1;
 }

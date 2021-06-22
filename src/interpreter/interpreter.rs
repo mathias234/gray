@@ -222,7 +222,8 @@ impl<'interp> Interpreter<'interp> {
                     let native_function = self.native_functions.get(&call_block_id);
                     match native_function {
                         Some(func) => {
-                            func(block_args);
+                            let returned_value = func(block_args);
+                            self.execution_context.set_accumulator(returned_value);
                             self.pc += 1;
                             continue;
                         },
@@ -264,6 +265,9 @@ impl<'interp> Interpreter<'interp> {
 
                 //self.dump();
 
+                // Store the last value of the returned block in the accumulator
+                let accumulator = self.execution_context.get_accumulator();
+
                 self.active_block = last_frame.active_block;
                 self.active_code_block = self.blocks.get(&self.active_block);
                 if self.active_code_block.is_none() {
@@ -273,6 +277,9 @@ impl<'interp> Interpreter<'interp> {
 
                 len = self.active_code_block.unwrap().get_instructions().len();
                 self.execution_context = last_frame.execution_context;
+
+                // Put the value back in the accumulator into the current blocks accumulator
+                self.execution_context.set_accumulator(accumulator);
                 self.pc = last_frame.pc + 1;
             } else {
                 //println!("Continue");

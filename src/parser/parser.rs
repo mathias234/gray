@@ -1,6 +1,5 @@
 use crate::parser::lexer::{TokenStream, Token, Keyword};
 use crate::parser::lexer::Delimiter;
-use crate::parser::lexer::Delimiter::OpenParen;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum MathOp {
@@ -27,6 +26,7 @@ pub enum ASTType {
     Expression,
     MathExpression,
     ComparisonExpression,
+    ReturnExpression,
     IfStatement,
     WhileStatement,
     ComparisonOp(ComparisonOp),
@@ -103,7 +103,6 @@ impl Parser {
 
         loop {
             let token_result = self.peek_next_token(0);
-            println!("Scope token {:#?}", token_result);
 
             match token_result {
                 Ok(t) => token = t,
@@ -122,13 +121,20 @@ impl Parser {
                         Keyword::VariableDeclaration => self.parse_variable_declaration(),
                         Keyword::IfStatement => self.parse_if_statement(),
                         Keyword::WhileStatement => self.parse_while_statement(),
+                        Keyword::Return => {
+                            self.get_next_token()?;
+                            let mut return_node = ASTNode::new(ASTType::ReturnExpression);
+                            return_node.children.push(self.parse_expression()?);
+                            Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
+                            Ok(return_node)
+                        },
                         _ => Err(ParserError::UnexpectedKeywordInStream(keyword.clone())),
                     }
                 }
                 Token::Delimiter(d) => {
                     match d {
                         Delimiter::CloseCurlyBracket => {
-                            self.get_next_token();
+                            self.get_next_token()?;
                             return Ok(scope);
                         }
                         _ => Err(ParserError::UnexpectedDelimiterInStream(Delimiter::CloseCurlyBracket, d.clone())),
@@ -136,7 +142,7 @@ impl Parser {
                 }
                 _ => {
                     let result = self.parse_expression()?;
-                    Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon);
+                    Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
 
                     Ok(result)
                 }
@@ -325,14 +331,23 @@ impl Parser {
     fn parse_expression(&mut self) -> Result<ASTNode, ParserError> {
         let mut node = ASTNode::new(ASTType::Expression);
 
+        let first = self.peek_next_token(0)?;
         let delimiter = self.peek_next_token(1)?;
 
+        println!("Expression tokens {:?}, {:?}", first, delimiter);
+
         if Parser::token_is_math_delimiter(&delimiter) {
+            println!("Parsing as math");
             node.children.push(self.parse_math_expression()?);
-        } else if Parser::token_is_boolean_delimiter(&delimiter) {
+        } else if Parser::tokens_are_comparison(&first, &delimiter).is_some() {
+            println!("Parsing as Cmp");
             node.children.push(self.parse_comparison_expression()?);
         } else if Parser::token_is_delimiter(&delimiter, Delimiter::OpenParen) {
+            println!("Parsing as Fun Call");
             node.children.push(self.parse_function_call()?);
+        } else if Parser::token_is_delimiter(&delimiter, Delimiter::Equal) {
+            println!("Parsing as Assignment");
+            node.children.push(self.parse_variable_assignment()?);
         } else {
             // Very simple single token expression
             let token = self.get_next_token()?;
@@ -340,6 +355,25 @@ impl Parser {
         }
 
         Ok(node)
+    }
+
+    fn parse_variable_assignment(&mut self) -> Result<ASTNode, ParserError> {
+        let name = self.get_next_token()?;
+        let name = match name {
+            Token::Identifier(n) => Ok(n.clone()),
+            _ => Err(ParserError::UnexpectedTokenInStream(name.clone()))
+        }?;
+
+        println!("name is {}", name);
+
+        Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Equal)?;
+
+        let mut assigment_node = ASTNode::new(ASTType::VariableAssignment(name));
+
+
+        assigment_node.children.push(self.parse_expression()?);
+
+        Ok(assigment_node)
     }
 
     fn parse_function_call(&mut self) -> Result<ASTNode, ParserError> {
@@ -409,29 +443,18 @@ impl Parser {
 
         let mut rhs = None;
 
-        if Parser::token_is_delimiter(token, Delimiter::Equal) {
-            if Parser::token_is_delimiter(&comparison_op, Delimiter::Equal) {
-                operator = ComparisonOp::Equal;
-            } else if Parser::token_is_delimiter(&comparison_op, Delimiter::Exclamation) {
-                operator = ComparisonOp::NotEqual;
-            } else if Parser::token_is_delimiter(&comparison_op, Delimiter::LessThan) {
-                operator = ComparisonOp::LessThanOrEqual;
-            } else if Parser::token_is_delimiter(&comparison_op, Delimiter::GreaterThan) {
-                operator = ComparisonOp::GreaterThanOrEqual;
-            } else {
-                return match &comparison_op {
-                    Token::Delimiter(delim) => Err(ParserError::DelimiterIsNotComparisonOperation(delim.clone())),
-                    _ => Err(ParserError::UnexpectedTokenInStream(comparison_op))
-                };
-            }
+        let tokens_are_comparison = Parser::tokens_are_comparison(token, &comparison_op);
 
+        match tokens_are_comparison {
+            Some(op) => operator = op,
+            None => return Err(ParserError::UnexpectedTokenInStream(comparison_op))
+        }
+
+        if operator == ComparisonOp::LessThan || operator == ComparisonOp::GreaterThan {
+            rhs = Some(token);
+        }
+        else {
             rhs = Some(self.get_next_token()?);
-        } else if Parser::token_is_delimiter(&comparison_op, Delimiter::LessThan) {
-            operator = ComparisonOp::LessThan;
-            rhs = Some(token);
-        } else if Parser::token_is_delimiter(&comparison_op, Delimiter::GreaterThan) {
-            operator = ComparisonOp::GreaterThan;
-            rhs = Some(token);
         }
 
         node.children.push(ASTNode::new(ASTType::ComparisonOp(operator)));
@@ -517,19 +540,24 @@ impl Parser {
         };
     }
 
-    fn token_is_boolean_delimiter(token: &Token) -> bool {
-        return match token {
-            Token::Delimiter(d) => {
-                match d {
-                    Delimiter::Equal => true,
-                    Delimiter::GreaterThan => true,
-                    Delimiter::LessThan => true,
-                    Delimiter::Exclamation => true,
-                    _ => false,
-                }
+    fn tokens_are_comparison(token: &Token, token2: &Token) -> Option<ComparisonOp> {
+        if Parser::token_is_delimiter(token, Delimiter::Equal) {
+            if Parser::token_is_delimiter(&token2, Delimiter::Equal) {
+                return Some(ComparisonOp::Equal);
+            } else if Parser::token_is_delimiter(&token2, Delimiter::Exclamation) {
+                return Some(ComparisonOp::NotEqual);
+            } else if Parser::token_is_delimiter(&token2, Delimiter::LessThan) {
+                return Some(ComparisonOp::LessThanOrEqual);
+            } else if Parser::token_is_delimiter(&token2, Delimiter::GreaterThan) {
+                return Some(ComparisonOp::GreaterThanOrEqual);
             }
-            _ => false
-        };
+        } else if Parser::token_is_delimiter(&token2, Delimiter::LessThan) {
+            return Some(ComparisonOp::LessThan);
+        } else if Parser::token_is_delimiter(&token2, Delimiter::GreaterThan) {
+            return Some(ComparisonOp::GreaterThan);
+        }
+
+        return None;
     }
 
     fn validate_token_is_delimiter(token: &Token, delimiter: Delimiter) -> Result<(), ParserError> {

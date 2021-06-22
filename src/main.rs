@@ -65,7 +65,7 @@ fn main() -> Result<(), GrayError> {
     return Ok({});
 }
 
-fn print_function(args: Vec<Value>) {
+fn print_function(args: Vec<Value>) -> Value {
     for arg in args {
         let pretty_printed = match arg.get_data_value() {
             DataValue::F64(float_value) => format!("{}", float_value),
@@ -76,4 +76,6 @@ fn print_function(args: Vec<Value>) {
         print!("{} ", pretty_printed);
     }
     println!();
+
+    Value::from_i64(0)
 }
