@@ -1,10 +1,11 @@
 fn entry() {
     let a = 5.0;
 
-    test(a);
+    let c = test(a);
+    print(c);
 }
 
 fn test(a) {
-    a = a + 1;
-    print(a);
+    let b = a;
+    print(b);
 }

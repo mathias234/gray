@@ -7,7 +7,7 @@ use interpreter::interpreter::Interpreter;
 use crate::parser::parser::{Parser, ParserError};
 use crate::parser::lexer::{Lexer, LexerError};
 use crate::compiler::compiler::{Compiler, CompilerError};
-use crate::interpreter::value::Value;
+use crate::interpreter::value::{Value, DataValue};
 
 #[derive(Debug)]
 enum GrayError {
@@ -67,7 +67,13 @@ fn main() -> Result<(), GrayError> {
 
 fn print_function(args: Vec<Value>) {
     for arg in args {
-        print!("{:#?} ", arg);
+        let pretty_printed = match arg.get_data_value() {
+            DataValue::F64(float_value) => format!("{}", float_value),
+            DataValue::I64(int_value) => format!("{}", int_value),
+            DataValue::Object(object) => format!("{:?}", object),
+        };
+
+        print!("{} ", pretty_printed);
     }
     println!();
 }

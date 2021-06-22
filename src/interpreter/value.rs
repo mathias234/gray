@@ -30,6 +30,10 @@ impl Value {
             value: DataValue::Object(value)
         }
     }
+
+    pub fn get_data_value(&self) -> &DataValue {
+        &self.value
+    }
 }
 
 // FIXME: find a better way to do this, very verbose and error prone..

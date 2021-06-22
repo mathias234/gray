@@ -63,7 +63,7 @@ impl Compiler {
                     generator.emit(LoadArgument::new_boxed(argument_index));
                     generator.emit(DeclareVariable::new_boxed(parameter.clone()));
                     argument_index += 1;
-                },
+                }
                 _ => return Err(CompilerError::UnexpectedASTNode(child.clone()))
             }
         }
@@ -78,8 +78,8 @@ impl Compiler {
         generator.emit(PushScope::new_boxed());
         for child in &node.children {
             match &child.ast_type {
-                ASTType::FunctionCall(call) => {
-                    self.compile_function_call(call, generator, child)?;
+                ASTType::Expression => {
+                    self.compile_expression(generator, child)?;
                 }
                 ASTType::VariableDeclaration(variable) => {
                     self.compile_variable_declaration(variable, generator, child)?;
@@ -174,6 +174,7 @@ impl Compiler {
             ASTType::MathExpression => self.compile_math_expression(generator, child),
             ASTType::ComparisonExpression => self.compile_comparison_expression(generator, child),
             ASTType::IntegerValue(_) => self.compile_value_to_accumulator(generator, child),
+            ASTType::FunctionCall(call) => self.compile_function_call(call, generator, child),
             ASTType::FloatValue(_) => self.compile_value_to_accumulator(generator, child),
             ASTType::Identifier(_) => self.compile_value_to_accumulator(generator, child),
             _ => Err(CompilerError::UnexpectedASTNode(child.clone())),
