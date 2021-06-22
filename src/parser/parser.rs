@@ -332,12 +332,12 @@ impl Parser {
     fn parse_expression(&mut self) -> Result<ASTNode, ParserError> {
         let mut node = ASTNode::new(ASTType::Expression);
 
-        let first = self.peek_next_token(0)?;
         let delimiter = self.peek_next_token(1)?;
+        let second_delimiter = self.peek_next_token(2)?;
 
         if Parser::token_is_math_delimiter(&delimiter) {
             node.children.push(self.parse_math_expression()?);
-        } else if Parser::tokens_are_comparison(&first, &delimiter).is_some() {
+        } else if Parser::tokens_are_comparison(&delimiter, &second_delimiter).is_some() {
             node.children.push(self.parse_comparison_expression()?);
         } else if Parser::token_is_delimiter(&delimiter, Delimiter::OpenParen) {
             node.children.push(self.parse_function_call()?);
