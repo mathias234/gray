@@ -1,8 +1,5 @@
 fn entry() {
-    let a = "Helldo";
-
-    if a == "Hello" {
-        print("Hello World");
-    }
+    let a = 5;
+    print("Hello World {}", a);
 }
 

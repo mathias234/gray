@@ -66,17 +66,45 @@ fn main() -> Result<(), GrayError> {
 }
 
 fn print_function(args: Vec<Value>) -> Value {
-    for arg in args {
-        let pretty_printed = match arg.get_data_value() {
-            DataValue::F64(float_value) => format!("{}", float_value),
-            DataValue::I64(int_value) => format!("{}", int_value),
-            DataValue::Object(object) => format!("{:?}", object),
-            DataValue::String(string) => format!("{}", string),
-        };
+    let format_str = &args[0];
+    let format_str = match format_str.get_data_value() {
+        DataValue::String(str) => str,
+        _ => panic!("Only strings can be used as format string"),
+    };
 
-        print!("{} ", pretty_printed);
+    let mut arg_idx = 1;
+
+    let mut formatted_string = String::new();
+
+    let mut chars = format_str.chars();
+    loop {
+        let char = chars.next();
+        if char.is_none() {
+            break;
+        }
+
+        match char.unwrap() {
+            '{' => {
+                chars.next();
+
+                let value_formatted = match args[arg_idx].get_data_value() {
+                    DataValue::F64(float_value) => format!("{}", float_value),
+                    DataValue::I64(int_value) => format!("{}", int_value),
+                    DataValue::Object(object) => format!("{:?}", object),
+                    DataValue::String(string) => format!("{}", string),
+                };
+
+                formatted_string.push_str(&value_formatted);
+
+                arg_idx += 1;
+            }
+            c => {
+                formatted_string.push(c);
+            }
+        }
     }
-    println!();
+
+    println!("{}", formatted_string);
 
     Value::from_i64(0)
 }
