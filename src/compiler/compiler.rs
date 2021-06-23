@@ -4,10 +4,11 @@ use crate::bytecode::generator::Generator;
 use std::collections::HashMap;
 use crate::bytecode::register::Register;
 use crate::interpreter::value::Value;
-use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, CompareEq, CompareNotEq, CompareLessThan, CompareGreaterThan, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument, LoadRegister};
+use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument, LoadRegister};
 use crate::bytecode::instructions::jump::{JumpZero, Jump};
 use crate::bytecode::instructions::math::{Add, Subtract, Multiply, Divide};
 use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember};
+use crate::bytecode::instructions::comparison::{CompareGreaterThan, CompareLessThan, CompareNotEq, CompareEq, CompareLessThanOrEqual, CompareGreaterThanOrEqual};
 
 #[derive(Debug)]
 pub enum CompilerError {
@@ -245,7 +246,8 @@ impl Compiler {
                 ComparisonOp::NotEqual => generator.emit(CompareNotEq::new_boxed(rhs_register)),
                 ComparisonOp::LessThan => generator.emit(CompareLessThan::new_boxed(rhs_register)),
                 ComparisonOp::GreaterThan => generator.emit(CompareGreaterThan::new_boxed(rhs_register)),
-                _ => return Err(CompilerError::UnexpectedASTNode(node.children[1].clone()))
+                ComparisonOp::LessThanOrEqual => generator.emit(CompareLessThanOrEqual::new_boxed(rhs_register)),
+                ComparisonOp::GreaterThanOrEqual => generator.emit(CompareGreaterThanOrEqual::new_boxed(rhs_register)),
             }
             _ => return Err(CompilerError::UnexpectedASTNode(node.children[1].clone()))
         }
