@@ -375,7 +375,14 @@ impl Parser {
 
             object_member.children.push(expression);
 
-            Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Comma)?;
+            // If we do not end with comma we can assume that the object is fully declared
+            if Parser::token_is_delimiter(self.peek_next_token(0)?, Delimiter::Comma) {
+                self.get_next_token()?;
+            }
+            else {
+                object_node.children.push(object_member);
+                break;
+            }
 
             object_node.children.push(object_member);
         }

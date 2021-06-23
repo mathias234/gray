@@ -43,20 +43,20 @@ impl Object {
 
 impl fmt::Debug for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("[ ");
+        f.write_str("[ ")?;
 
         let count = self.variables.borrow().len();
         let mut idx = 0;
         for (k, v) in self.variables.borrow().clone() {
-            f.write_fmt(format_args!("{}: {}", k, value_to_string(&v)));
+            f.write_fmt(format_args!("{}: {}", k, value_to_string(&v)))?;
             if idx < count - 1 {
-                f.write_str(", ");
+                f.write_str(", ")?;
             }
 
             idx += 1;
 
         }
-        f.write_str(" ]");
+        f.write_str(" ]")?;
 
 
         Ok({})

@@ -2,12 +2,18 @@ fn entry() {
     let i = 0;
 
     let a = {
-        hello: "hello world",
-        child_object: {
-            yeeet: "skeet",
-        },
+        j: 69,
+        z: {
+            f: 420
+        }
     };
 
-    print("Object is {}", a);
+    let result = function_a(a, { b: "hello world" });
+
+    print("Object is: {}", result);
+}
+
+fn function_a(object_a, object_b) {
+    return { object_a: object_a, object_b: object_b };
 }
 
