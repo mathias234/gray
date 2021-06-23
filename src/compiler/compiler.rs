@@ -4,9 +4,10 @@ use crate::bytecode::generator::Generator;
 use std::collections::HashMap;
 use crate::bytecode::register::Register;
 use crate::interpreter::value::Value;
-use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, CompareEq, CompareNotEq, CompareLessThan, CompareGreaterThan, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument};
+use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, CompareEq, CompareNotEq, CompareLessThan, CompareGreaterThan, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument, LoadRegister};
 use crate::bytecode::instructions::jump::{JumpZero, Jump};
 use crate::bytecode::instructions::math::{Add, Subtract, Multiply, Divide};
+use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember};
 
 #[derive(Debug)]
 pub enum CompilerError {
@@ -191,8 +192,30 @@ impl Compiler {
             ASTType::Identifier(_) => self.compile_value_to_accumulator(generator, child),
             ASTType::StringValue(_) => self.compile_value_to_accumulator(generator, child),
             ASTType::VariableAssignment(variable) => self.compile_variable_assignment(variable, generator, child),
+            ASTType::CreateObject => self.compile_create_object(generator, child),
             _ => Err(CompilerError::UnexpectedASTNode(child.clone())),
         }
+    }
+
+    fn compile_create_object(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
+        generator.emit(CreateEmptyObject::new_boxed());
+        let object_register = generator.next_free_register();
+        generator.emit(Store::new_boxed(object_register));
+
+        for member in &node.children {
+            match &member.ast_type {
+                ASTType::ObjectMember(name) => {
+                    self.compile_expression(generator, &member.children[0])?;
+                    generator.emit(SetObjectMember::new_boxed(object_register.clone(), name.clone()))
+                }
+                _ => return Err(CompilerError::UnexpectedASTNode(member.clone()))
+            }
+        }
+
+        // Set the object into the accumulator
+        generator.emit(LoadRegister::new_boxed(object_register));
+
+        Ok({})
     }
 
     fn compile_math_expression(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {

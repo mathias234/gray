@@ -43,6 +43,11 @@ impl Object {
 
 impl fmt::Debug for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Object").finish()
+        let mut variables = Vec::new();
+
+        for (k, v) in self.variables.borrow().clone() {
+            variables.push(format!("{}: {}", k, v));
+        }
+        f.debug_list().entries(variables).finish()
     }
 }

@@ -160,6 +160,7 @@ impl<'interp> Interpreter<'interp> {
     pub fn run(&'interp mut self, start_block: String) {
         self.active_block = start_block;
 
+
         println!("Compiled code");
         for (name, block) in &self.blocks {
             println!("\tBlock {}", name);

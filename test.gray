@@ -1,7 +1,9 @@
 fn entry() {
-    let a = 5;
-    if a > 5 {
+    let a = {
+        hello: "hello world",
+        age: 5,
+    };
 
-    }
+    print("Object is: {}", a);
 }
 
