@@ -1,9 +1,13 @@
 fn entry() {
-    let a = {
-        hello: "hello world",
-        age: 5,
-    };
+    let i = 0;
 
-    print("Object is: {}", a);
+    while i < 10000 {
+        let a = {
+            hello: "hello world",
+            age: 40,
+        };
+
+        i = i + 1;
+    }
 }
 

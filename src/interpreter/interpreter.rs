@@ -14,13 +14,13 @@ use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct Scope {
-    scope_object: Object,
+    variables: HashMap<Rc<String>, Value>,
 }
 
 impl Scope {
     pub fn new() -> Scope {
         Scope {
-            scope_object: Object::new(),
+            variables: HashMap::new(),
         }
     }
 }
@@ -87,13 +87,14 @@ impl ExecutionContext {
     }
 
     pub fn declare_variable(&mut self, variable: Rc<String>, value: &Value) {
-        self.scope_stack[0].scope_object.declare(variable, value);
+        self.scope_stack[0].variables.insert(variable, value.clone());
     }
 
     pub fn set_variable(&mut self, variable: Rc<String>, value: &Value) {
         let mut found_variable = false;
         for scope in &mut self.scope_stack {
-            if scope.scope_object.set(variable.clone(), value) {
+            if scope.variables.contains_key(&variable) {
+                scope.variables.insert(variable.clone(), value.clone());
                 found_variable = true;
                 break;
             }
@@ -106,7 +107,7 @@ impl ExecutionContext {
 
     pub fn get_variable(&self, variable: Rc<String>) -> Value {
         for scope in &self.scope_stack {
-            let variable = scope.scope_object.get(variable.clone());
+            let variable = scope.variables.get(&variable);
             if variable.is_some() {
                 return variable.unwrap().clone();
             }
@@ -180,7 +181,6 @@ impl<'interp> Interpreter<'interp> {
 
         let mut len = self.active_code_block.unwrap().get_instructions().len();
 
-        let now = Instant::now();
 
         while self.pc <= len {
             let active_block = self.active_code_block.unwrap();
@@ -288,9 +288,8 @@ impl<'interp> Interpreter<'interp> {
             }
         }
 
-        self.dump();
+        //self.dump();
 
-        println! {"Execution took {}ms", now.elapsed().as_millis()}
     }
 
     pub fn set_native_function(&mut self, name: String, function: FunctionPointer) {

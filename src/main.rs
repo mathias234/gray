@@ -8,6 +8,7 @@ use crate::parser::parser::{Parser, ParserError};
 use crate::parser::lexer::{Lexer, LexerError};
 use crate::compiler::compiler::{Compiler, CompilerError};
 use crate::interpreter::value::{Value, DataValue};
+use std::time::Instant;
 
 #[derive(Debug)]
 enum GrayError {
@@ -35,6 +36,8 @@ impl From<CompilerError> for GrayError {
 }
 
 fn main() -> Result<(), GrayError> {
+    let now = Instant::now();
+
     let mut token_stream = Lexer::lex_file("./test.gray")?;
 
     println!("\nLexer token stream");
@@ -61,6 +64,9 @@ fn main() -> Result<(), GrayError> {
     interpreter.set_native_function(String::from("print"), print_function);
 
     interpreter.run(String::from("entry"));
+
+    println! {"Execution took {}ms", now.elapsed().as_millis()}
+
 
     return Ok({});
 }
