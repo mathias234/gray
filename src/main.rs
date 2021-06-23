@@ -62,6 +62,7 @@ fn main() -> Result<(), GrayError> {
     let mut interpreter = Interpreter::new(blocks);
 
     interpreter.set_native_function(String::from("print"), print_function);
+    interpreter.set_native_function(String::from("format"), format_to_value);
 
     interpreter.run(String::from("entry"));
 
@@ -72,6 +73,13 @@ fn main() -> Result<(), GrayError> {
 }
 
 fn print_function(args: Vec<Value>) -> Value {
+
+    println!("{}", value_to_string(&format_to_value(args)));
+
+    Value::from_i64(0)
+}
+
+fn format_to_value(args: Vec<Value>) -> Value {
     let format_str = &args[0];
     let format_str = match format_str.get_data_value() {
         DataValue::String(str) => str,
@@ -93,13 +101,7 @@ fn print_function(args: Vec<Value>) -> Value {
             '{' => {
                 chars.next();
 
-                let value_formatted = match args[arg_idx].get_data_value() {
-                    DataValue::F64(float_value) => format!("{}", float_value),
-                    DataValue::I64(int_value) => format!("{}", int_value),
-                    DataValue::Object(object) => format!("{:?}", object),
-                    DataValue::String(string) => format!("{}", string),
-                };
-
+                let value_formatted = value_to_string(&args[arg_idx]);
                 formatted_string.push_str(&value_formatted);
 
                 arg_idx += 1;
@@ -110,7 +112,14 @@ fn print_function(args: Vec<Value>) -> Value {
         }
     }
 
-    println!("{}", formatted_string);
+    Value::from_string(formatted_string)
+}
 
-    Value::from_i64(0)
+fn value_to_string(args: &Value) -> String {
+    match args.get_data_value() {
+        DataValue::F64(float_value) => format!("{}", float_value),
+        DataValue::I64(int_value) => format!("{}", int_value),
+        DataValue::Object(object) => format!("{:?}", object),
+        DataValue::String(string) => format!("{}", string),
+    }
 }

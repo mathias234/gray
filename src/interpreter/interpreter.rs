@@ -7,9 +7,7 @@ pub use crate::{
     interpreter::{value::Value, function_pointer::FunctionPointer},
 };
 
-use std::time::Instant;
 use std::collections::HashMap;
-use crate::interpreter::object::Object;
 use std::rc::Rc;
 
 #[derive(Clone)]

@@ -9,5 +9,8 @@ fn entry() {
 
         i = i + 1;
     }
+
+    let formatted = format("{} - {}", 50, i);
+    print("{}", formatted);
 }
 
