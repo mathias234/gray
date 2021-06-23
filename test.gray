@@ -1,16 +1,13 @@
 fn entry() {
     let i = 0;
 
-    while i < 10000 {
-        let a = {
-            hello: "hello world",
-            age: 40,
-        };
+    let a = {
+        hello: "hello world",
+        child_object: {
+            yeeet: "skeet",
+        },
+    };
 
-        i = i + 1;
-    }
-
-    let formatted = format("{} - {}", 50, i);
-    print("{}", formatted);
+    print("Object is {}", a);
 }
 

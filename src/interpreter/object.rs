@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::interpreter::value::Value;
+use crate::interpreter::value::{Value, DataValue};
 use std::rc::Rc;
 use std::fmt;
 use std::cell::RefCell;
@@ -43,11 +43,31 @@ impl Object {
 
 impl fmt::Debug for Object {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut variables = Vec::new();
+        f.write_str("[ ");
 
+        let count = self.variables.borrow().len();
+        let mut idx = 0;
         for (k, v) in self.variables.borrow().clone() {
-            variables.push(format!("{}: {}", k, v));
+            f.write_fmt(format_args!("{}: {}", k, value_to_string(&v)));
+            if idx < count - 1 {
+                f.write_str(", ");
+            }
+
+            idx += 1;
+
         }
-        f.debug_list().entries(variables).finish()
+        f.write_str(" ]");
+
+
+        Ok({})
+    }
+}
+
+fn value_to_string(args: &Value) -> String {
+    match args.get_data_value() {
+        DataValue::F64(float_value) => format!("{}", float_value),
+        DataValue::I64(int_value) => format!("{}", int_value),
+        DataValue::Object(object) => format!("{:?}", object),
+        DataValue::String(string) => format!("{}", string),
     }
 }
