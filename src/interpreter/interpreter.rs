@@ -260,9 +260,9 @@ impl<'interp> Interpreter<'interp> {
 
                 let last_frame = last_frame.unwrap();
 
-                //println!("Returning from block {} to block {}", self.active_block, last_frame.active_block);
+                println!("Returning from block {} to block {}", self.active_block, last_frame.active_block);
 
-                //self.dump();
+                self.dump();
 
                 // Store the last value of the returned block in the accumulator
                 let accumulator = self.execution_context.get_accumulator();

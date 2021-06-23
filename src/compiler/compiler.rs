@@ -7,7 +7,7 @@ use crate::interpreter::value::Value;
 use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument, LoadRegister};
 use crate::bytecode::instructions::jump::{JumpZero, Jump};
 use crate::bytecode::instructions::math::{Add, Subtract, Multiply, Divide};
-use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember};
+use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember, GetObjectMember};
 use crate::bytecode::instructions::comparison::{CompareGreaterThan, CompareLessThan, CompareNotEq, CompareEq, CompareLessThanOrEqual, CompareGreaterThanOrEqual};
 
 #[derive(Debug)]
@@ -95,6 +95,9 @@ impl Compiler {
                 ASTType::ReturnExpression => {
                     self.compile_return(generator, child)?;
                 }
+                ASTType::VariableAssignment => {
+                    self.compile_variable_assignment(generator, child)?
+                }
                 _ => return Err(CompilerError::UnexpectedASTNode(child.clone())),
             }
         }
@@ -131,12 +134,48 @@ impl Compiler {
         Ok({})
     }
 
-    fn compile_variable_assignment(&mut self, variable: &String, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
-        self.compile_expression(generator, &node.children[0])?;
-        generator.emit(SetVariable::new_boxed(variable.clone()));
+    fn compile_variable_assignment(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
+        self.compile_expression(generator, &node.children[1])?;
+        let expression_result = generator.next_free_register();
+        generator.emit(Store::new_boxed(expression_result));
+
+        match &node.children[0].ast_type {
+            ASTType::Identifier(identifier) => {
+                generator.emit(LoadRegister::new_boxed(expression_result));
+                generator.emit(SetVariable::new_boxed(identifier.clone()));
+            }
+            ASTType::ObjectAccess(name) => {
+                generator.emit(GetVariable::new_boxed(name.clone()));
+                let object_register = generator.next_free_register();
+                generator.emit(Store::new_boxed(object_register));
+
+                self.compile_object_access(generator, &node.children[0], object_register, expression_result)?;
+            }
+            _ => {}
+        }
 
         Ok({})
     }
+
+    fn compile_object_access(&mut self, generator: &mut Generator, node: &ASTNode, previous: Register, expression_result: Register) -> Result<(), CompilerError> {
+        match &node.children[0].ast_type {
+            ASTType::ObjectAccess(name) => {
+                generator.emit(GetObjectMember::new_boxed(previous, name.clone()));
+                let object_register = generator.next_free_register();
+                generator.emit(Store::new_boxed(object_register));
+                self.compile_object_access(generator, &node.children[0], object_register, expression_result)?;
+            }
+            ASTType::Identifier(name) => {
+                generator.emit(LoadRegister::new_boxed(expression_result));
+                generator.emit(SetObjectMember::new_boxed(previous, name.clone()));
+            }
+            _ => {}
+        }
+
+
+        Ok({})
+    }
+
 
     fn compile_if_statement(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
         self.compile_expression(generator, &node.children[0])?;
@@ -192,7 +231,6 @@ impl Compiler {
             ASTType::FloatValue(_) => self.compile_value_to_accumulator(generator, child),
             ASTType::Identifier(_) => self.compile_value_to_accumulator(generator, child),
             ASTType::StringValue(_) => self.compile_value_to_accumulator(generator, child),
-            ASTType::VariableAssignment(variable) => self.compile_variable_assignment(variable, generator, child),
             ASTType::CreateObject => self.compile_create_object(generator, child),
             _ => Err(CompilerError::UnexpectedASTNode(child.clone())),
         }

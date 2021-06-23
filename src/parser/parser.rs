@@ -35,13 +35,14 @@ pub enum ASTType {
     Structure(String),
     FunctionCall(String),
     VariableDeclaration(String),
-    VariableAssignment(String),
+    VariableAssignment,
     FloatValue(f64),
     IntegerValue(i64),
     StringValue(String),
     Identifier(String),
     CreateObject,
     ObjectMember(String),
+    ObjectAccess(String),
     Trait(String),
 }
 
@@ -144,8 +145,17 @@ impl Parser {
                     }
                 }
                 _ => {
-                    let result = self.parse_expression()?;
-                    Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
+                    let delimiter = self.peek_next_token(1)?;
+                    let result;
+
+                    if Parser::token_is_delimiter(delimiter, Delimiter::Equal) ||
+                        Parser::token_is_delimiter(delimiter, Delimiter::Dot) {
+                        result = self.parse_variable_assignment()?;
+                        Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
+                    } else {
+                        result = self.parse_expression()?;
+                        Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
+                    }
 
                     Ok(result)
                 }
@@ -344,8 +354,6 @@ impl Parser {
             node.children.push(self.parse_comparison_expression()?);
         } else if Parser::token_is_delimiter(&delimiter, Delimiter::OpenParen) {
             node.children.push(self.parse_function_call()?);
-        } else if Parser::token_is_delimiter(&delimiter, Delimiter::Equal) {
-            node.children.push(self.parse_variable_assignment()?);
         } else if Parser::token_is_delimiter(&first_delimiter, Delimiter::OpenCurlyBracket) {
             node.children.push(self.parse_object_declaration()?);
         } else {
@@ -378,8 +386,7 @@ impl Parser {
             // If we do not end with comma we can assume that the object is fully declared
             if Parser::token_is_delimiter(self.peek_next_token(0)?, Delimiter::Comma) {
                 self.get_next_token()?;
-            }
-            else {
+            } else {
                 object_node.children.push(object_member);
                 break;
             }
@@ -392,16 +399,40 @@ impl Parser {
         Ok(object_node)
     }
 
-    fn parse_variable_assignment(&mut self) -> Result<ASTNode, ParserError> {
+    fn parse_member_expression(&mut self) -> Result<ASTNode, ParserError> {
         let name = self.get_next_token()?;
         let name = match name {
             Token::Identifier(n) => Ok(n.clone()),
             _ => Err(ParserError::UnexpectedTokenInStream(name.clone()))
         }?;
 
+        self.get_next_token()?;
+
+        let mut node = ASTNode::new(ASTType::ObjectAccess(name));
+
+        if Parser::token_is_delimiter(self.peek_next_token(1)?, Delimiter::Dot) {
+            node.children.push(self.parse_member_expression()?);
+        } else {
+            node.children.push(Parser::token_to_simple_ast_node(self.get_next_token()?)?);
+        }
+
+        Ok(node)
+    }
+
+    fn parse_variable_assignment(&mut self) -> Result<ASTNode, ParserError> {
+        let lhs;
+
+        if Parser::token_is_delimiter(self.peek_next_token(1)?, Delimiter::Dot) {
+            lhs = self.parse_member_expression()?;
+        }
+        else {
+            lhs = Parser::token_to_simple_ast_node(self.get_next_token()?)?;
+        }
+
         Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Equal)?;
 
-        let mut assigment_node = ASTNode::new(ASTType::VariableAssignment(name));
+        let mut assigment_node = ASTNode::new(ASTType::VariableAssignment);
+        assigment_node.children.push(lhs);
 
         assigment_node.children.push(self.parse_expression()?);
 
@@ -493,7 +524,6 @@ impl Parser {
 
         Ok(node)
     }
-
 
     fn get_next_token(&mut self) -> Result<&Token, ParserError> {
         let token = self.token_stream.next();

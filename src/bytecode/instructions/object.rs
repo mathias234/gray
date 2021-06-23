@@ -29,6 +29,21 @@ impl SetObjectMember {
     }
 }
 
+pub struct GetObjectMember {
+    object_register: Register,
+    member: Rc<String>,
+}
+
+#[allow(dead_code)]
+impl GetObjectMember {
+    pub fn new_boxed(object_register: Register, member: String) -> Box<GetObjectMember> {
+        Box::new(GetObjectMember {
+            object_register,
+            member: Rc::from(member),
+        })
+    }
+}
+
 impl Instruction for CreateEmptyObject {
     fn execute(&self, context: &mut ExecutionContext) {
         context.set_accumulator(Value::from_object(Object::new()));
@@ -50,4 +65,17 @@ impl Instruction for SetObjectMember {
     }
 
     fn to_string(&self) -> String { format!("SetObjectMember {} {}", self.object_register, self.member) }
+}
+
+impl Instruction for GetObjectMember {
+    fn execute(&self, context: &mut ExecutionContext) {
+        let obj = match context.get_register(&self.object_register).get_data_value() {
+            DataValue::Object(object) => object.clone(),
+            _ => { panic!("Trying to get a member value of something that is not an object") }
+        };
+
+        context.set_accumulator(obj.get(self.member.clone()).unwrap());
+    }
+
+    fn to_string(&self) -> String { format!("GetObjectMember {} {}", self.object_register, self.member) }
 }
