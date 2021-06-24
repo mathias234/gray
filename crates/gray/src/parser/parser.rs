@@ -1,6 +1,5 @@
 use crate::parser::lexer::{TokenStream, Token, Keyword, TokenType};
 use crate::parser::lexer::Delimiter;
-use crate::parser::lexer::Keyword::Function;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum MathOp {
@@ -22,7 +21,6 @@ pub enum ComparisonOp {
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum ASTType {
-    ProgramRoot,
     Scope,
     Expression,
     MathExpression,
@@ -33,7 +31,6 @@ pub enum ASTType {
     ComparisonOp(ComparisonOp),
     MathOp(MathOp),
     Function(String),
-    Structure(String),
     FunctionCall(String),
     VariableDeclaration(String),
     VariableAssignment,
@@ -96,9 +93,7 @@ impl Parser {
     pub fn parse(token_stream: TokenStream) -> Result<ASTNode, ParserError> {
         let mut parser = Parser { token_stream };
 
-        let mut root = parser.parse_scope()?;
-        // Change it from Scope to ProgramRoot to be more explicit
-        root.ast_type = ASTType::ProgramRoot;
+        let root = parser.parse_scope()?;
 
         return Ok(root);
     }
@@ -122,7 +117,6 @@ impl Parser {
             let child = match &token.token_type {
                 TokenType::Keyword(keyword) => {
                     match keyword {
-                        Keyword::Structure => self.parse_structure(),
                         Keyword::Function => self.parse_function(),
                         Keyword::VariableDeclaration => self.parse_variable_declaration(),
                         Keyword::IfStatement => self.parse_if_statement(),
@@ -165,41 +159,6 @@ impl Parser {
 
             scope.children.push(child);
         }
-    }
-
-    fn parse_structure(&mut self) -> Result<ASTNode, ParserError> {
-        self.get_next_token()?;
-
-        let struct_name;
-        let name_token = self.get_next_token()?;
-
-        match &name_token.token_type {
-            TokenType::Identifier(name) => struct_name = String::from(name),
-            _ => return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(name_token.clone())),
-        }
-
-        let mut node = ASTNode::new(ASTType::Structure(struct_name));
-
-        Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenCurlyBracket)?;
-
-        // Parse body
-        loop {
-            let token = self.get_next_token()?;
-            if Parser::token_is_delimiter(token, Delimiter::CloseCurlyBracket) {
-                break;
-            }
-
-            node.children.push(match &token.token_type {
-                TokenType::Keyword(keyword) => match keyword {
-                    Keyword::Function => self.parse_function(),
-                    _ => Err(ParserError::UnexpectedKeywordInStream(keyword.clone()))
-                },
-                _ => Err(ParserError::UnexpectedTokenInStreamWithExpected(TokenType::Keyword(Function), token.clone())),
-            }?);
-        }
-
-
-        Ok(node)
     }
 
     fn parse_function(&mut self) -> Result<ASTNode, ParserError> {
@@ -314,7 +273,10 @@ impl Parser {
         node = self.parse_non_math_expression()?;
 
         let next = self.peek_next_token(0)?;
-        let next1 = self.peek_next_token(1)?;
+        let next1 = match self.peek_next_token(1) {
+            Ok(t) => Some(t),
+            Err(_) => None,
+        };
 
         if Parser::token_is_math_delimiter(next) {
             let math_expr = self.parse_math_expression(node)?;
@@ -530,7 +492,10 @@ impl Parser {
         node.children.push(lhs);
 
         let token = self.peek_next_token(0)?;
-        let token1 = self.peek_next_token(1)?;
+        let token1 = match self.peek_next_token(1) {
+            Ok(t) => Some(t),
+            Err(_) => None,
+        };
 
         let operator;
 
@@ -633,8 +598,8 @@ impl Parser {
         };
     }
 
-    fn tokens_are_comparison(token: &Token, token2: &Token) -> Option<ComparisonOp> {
-        if Parser::token_is_delimiter(token2, Delimiter::Equal) {
+    fn tokens_are_comparison(token: &Token, token2: Option<&Token>) -> Option<ComparisonOp> {
+        if token2.is_some() && Parser::token_is_delimiter(token2.unwrap(), Delimiter::Equal) {
             if Parser::token_is_delimiter(&token, Delimiter::Equal) {
                 return Some(ComparisonOp::Equal);
             } else if Parser::token_is_delimiter(&token, Delimiter::Exclamation) {

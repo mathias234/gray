@@ -25,33 +25,12 @@ impl Compiler {
             blocks: HashMap::new(),
         };
 
-        compiler.compile_program_root(&root_node)?;
 
+        let mut generator = Generator::new();
+        compiler.compile_scope(&mut generator, &root_node)?;
+        compiler.blocks.insert(String::from("ProgramMain"), generator.block);
 
         Ok(compiler.blocks)
-    }
-
-    fn compile_program_root(&mut self, root: &ASTNode) -> Result<(), CompilerError> {
-        for child in &root.children {
-            match &child.ast_type {
-                ASTType::Structure(name) => self.compile_structure(name, child),
-                ASTType::Function(name) => self.compile_function(name, child),
-                _ => Err(CompilerError::UnexpectedASTNode(child.clone())),
-            }?;
-        }
-
-        Ok({})
-    }
-
-    fn compile_structure(&mut self, name: &str, node: &ASTNode) -> Result<(), CompilerError> {
-        for child in &node.children {
-            match &child.ast_type {
-                ASTType::Function(function_name) => self.compile_function(&format!("{}::{}", name, function_name), child),
-                _ => Err(CompilerError::UnexpectedASTNode(child.clone())),
-            }?;
-        }
-
-        Ok({})
     }
 
     fn compile_function(&mut self, name: &str, node: &ASTNode) -> Result<(), CompilerError> {
@@ -98,6 +77,7 @@ impl Compiler {
                 ASTType::VariableAssignment => {
                     self.compile_variable_assignment(generator, child)?
                 }
+                ASTType::Function(name) => self.compile_function(name, child)?,
                 _ => return Err(CompilerError::UnexpectedASTNode(child.clone())),
             }
         }

@@ -6,7 +6,7 @@ fn main() -> Result<(), GrayError> {
 
     declare_functions(&mut interpreter);
 
-    interpreter.run(String::from("entry"));
+    interpreter.run(None);
 
     Ok({})
 }

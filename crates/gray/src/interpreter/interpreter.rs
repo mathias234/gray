@@ -156,8 +156,11 @@ impl<'interp> Interpreter<'interp> {
         }
     }
 
-    pub fn run(&'interp mut self, start_block: String) {
-        self.active_block = start_block;
+    pub fn run(&'interp mut self, start_block: Option<String>) {
+        self.active_block = match start_block {
+            Some(start_block) => start_block,
+            None => String::from("ProgramMain"),
+        };
 
 
         println!("Compiled code");
@@ -180,7 +183,7 @@ impl<'interp> Interpreter<'interp> {
         let mut len = self.active_code_block.unwrap().get_instructions().len();
 
 
-        while self.pc <= len {
+        while self.pc < len {
             let active_block = self.active_code_block.unwrap();
 
             let instructions = active_block.get_instructions();

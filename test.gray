@@ -1,4 +1,7 @@
-fn entry() {
-    let a = 5 * (2 + 7);
-    print("{}", a);
+let a = 5;
+
+fn test1(a) {
+    print(" {}", a + 1);
 }
+
+test1(a);
