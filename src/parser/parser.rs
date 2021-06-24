@@ -488,19 +488,56 @@ impl Parser {
         return Ok(node);
     }
 
+    fn operator_precedence(node: &ASTNode) -> i32 {
+        match &node.ast_type {
+            ASTType::MathOp(op) => {
+                match op {
+                    MathOp::Add => 0,
+                    MathOp::Subtract => 0,
+                    MathOp::Multiply => 1,
+                    MathOp::Divide => 1,
+                }
+            }
+            _ => 0,
+        }
+    }
+
     fn parse_math_expression(&mut self, lhs: ASTNode) -> Result<ASTNode, ParserError> {
-        println!("{:?}, {:?}, {:?}", self.peek_next_token(0)?, self.peek_next_token(1)?, self.peek_next_token(2)?);
         let mut node = ASTNode::new(ASTType::MathExpression);
 
         let operator = Parser::token_to_math_op_ast_node(self.get_next_token()?)?;
 
-        let rhs= self.parse_expression()?;
+        let rhs = self.parse_expression()?;
 
         node.children.push(lhs);
-        node.children.push(operator);
+        node.children.push(operator.clone());
         node.children.push(rhs);
 
-        node.dump(0);
+        let my_precedence = Parser::operator_precedence(&operator);
+
+        match &node.children[2].children[0].ast_type {
+            ASTType::MathExpression => {
+                let child_precedence = Parser::operator_precedence(&node.children[2].children[0]);
+                if child_precedence < my_precedence {
+                    // Kinda messy because of all the .children[]
+                    // but essentially we are just rotating the tree to the left
+
+                    let old_operator = node.children[1].clone();
+                    node.children[1] = node.children[2].children[0].children[1].clone();
+                    node.children[2].children[0].children[1] = old_operator;
+
+                    let old_lhs = node.children[0].clone();
+                    let child_old_lhs = node.children[2].children[0].children[0].clone();
+                    let child_old_rhs = node.children[2].children[0].children[2].clone();
+
+                    node.children[0] = node.children[2].clone();
+                    node.children[0].children[0].children[0] = old_lhs;
+                    node.children[0].children[0].children[2] = child_old_lhs;
+                    node.children[2] = child_old_rhs;
+                }
+            }
+            _ => {}
+        }
 
         Ok(node)
     }
