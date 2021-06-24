@@ -1,5 +1,6 @@
-use crate::parser::lexer::{TokenStream, Token, Keyword};
+use crate::parser::lexer::{TokenStream, Token, Keyword, TokenType};
 use crate::parser::lexer::Delimiter;
+use crate::parser::lexer::Keyword::Function;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum MathOp {
@@ -52,6 +53,8 @@ pub enum ParserError {
     UnexpectedKeywordInStream(Keyword),
     UnexpectedDelimiterInStream(Delimiter, Delimiter),
     UnexpectedTokenInStream(Token),
+    UnexpectedTokenInStreamWithExpected(TokenType, Token),
+    UnexpectedTokenInStreamExpectedIdentifier(Token),
     DelimiterIsNotMathOperation(Delimiter),
     DelimiterIsNotComparisonOperation(Delimiter),
     UnimplementedFeature(&'static str),
@@ -116,10 +119,9 @@ impl Parser {
                 }
             }
 
-            let child = match token {
-                Token::Keyword(keyword) => {
+            let child = match &token.token_type {
+                TokenType::Keyword(keyword) => {
                     match keyword {
-                        Keyword::Trait => self.parse_trait(),
                         Keyword::Structure => self.parse_structure(),
                         Keyword::Function => self.parse_function(),
                         Keyword::VariableDeclaration => self.parse_variable_declaration(),
@@ -135,7 +137,7 @@ impl Parser {
                         _ => Err(ParserError::UnexpectedKeywordInStream(keyword.clone())),
                     }
                 }
-                Token::Delimiter(d) => {
+                TokenType::Delimiter(d) => {
                     match d {
                         Delimiter::CloseCurlyBracket => {
                             self.get_next_token()?;
@@ -165,50 +167,15 @@ impl Parser {
         }
     }
 
-    fn parse_trait(&mut self) -> Result<ASTNode, ParserError> {
-        self.get_next_token()?;
-
-        let trait_name;
-        let name_token = self.get_next_token()?;
-
-        match name_token {
-            Token::Identifier(name) => trait_name = String::from(name),
-            _ => return Err(ParserError::UnexpectedTokenInStream(name_token.clone())),
-        }
-
-        let mut node = ASTNode::new(ASTType::Trait(trait_name));
-
-        Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenCurlyBracket)?;
-
-        // Parse body
-        loop {
-            let token = self.get_next_token()?;
-            if Parser::token_is_delimiter(token, Delimiter::CloseCurlyBracket) {
-                break;
-            }
-
-            node.children.push(match token {
-                Token::Keyword(keyword) => match keyword {
-                    Keyword::Function => self.parse_function(),
-                    _ => Err(ParserError::UnexpectedKeywordInStream(keyword.clone()))
-                },
-                _ => Err(ParserError::UnexpectedTokenInStream(token.clone())),
-            }?);
-        }
-
-
-        Ok(node)
-    }
-
     fn parse_structure(&mut self) -> Result<ASTNode, ParserError> {
         self.get_next_token()?;
 
         let struct_name;
         let name_token = self.get_next_token()?;
 
-        match name_token {
-            Token::Identifier(name) => struct_name = String::from(name),
-            _ => return Err(ParserError::UnexpectedTokenInStream(name_token.clone())),
+        match &name_token.token_type {
+            TokenType::Identifier(name) => struct_name = String::from(name),
+            _ => return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(name_token.clone())),
         }
 
         let mut node = ASTNode::new(ASTType::Structure(struct_name));
@@ -222,12 +189,12 @@ impl Parser {
                 break;
             }
 
-            node.children.push(match token {
-                Token::Keyword(keyword) => match keyword {
+            node.children.push(match &token.token_type {
+                TokenType::Keyword(keyword) => match keyword {
                     Keyword::Function => self.parse_function(),
                     _ => Err(ParserError::UnexpectedKeywordInStream(keyword.clone()))
                 },
-                _ => Err(ParserError::UnexpectedTokenInStream(token.clone())),
+                _ => Err(ParserError::UnexpectedTokenInStreamWithExpected(TokenType::Keyword(Function), token.clone())),
             }?);
         }
 
@@ -241,9 +208,9 @@ impl Parser {
         let func_name;
         let name_token = self.get_next_token()?;
 
-        match name_token {
-            Token::Identifier(name) => func_name = String::from(name),
-            _ => return Err(ParserError::UnexpectedTokenInStream(name_token.clone())),
+        match &name_token.token_type {
+            TokenType::Identifier(name) => func_name = String::from(name),
+            _ => return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(name_token.clone())),
         }
 
         let mut node = ASTNode::new(ASTType::Function(func_name));
@@ -253,12 +220,12 @@ impl Parser {
 
         loop {
             let token = self.get_next_token()?;
-            match token {
-                Token::Identifier(identifier) => {
+            match &token.token_type {
+                TokenType::Identifier(identifier) => {
                     let identifier = identifier.clone();
                     node.children.push(ASTNode::new(ASTType::Identifier(identifier)));
                 }
-                Token::Delimiter(d) => match d {
+                TokenType::Delimiter(d) => match d {
                     Delimiter::CloseParen => break,
                     _ => {}
                 },
@@ -277,9 +244,9 @@ impl Parser {
         } else if Parser::token_is_delimiter(token, Delimiter::OpenCurlyBracket) {
             node.children.push(self.parse_scope()?);
             return Ok(node);
-        } else {
-            return Err(ParserError::UnexpectedTokenInStream(token.clone()));
         }
+
+        return Err(ParserError::UnexpectedTokenInStream(token.clone()));
     }
 
     fn parse_variable_declaration(&mut self) -> Result<ASTNode, ParserError> {
@@ -288,9 +255,9 @@ impl Parser {
         let variable_name;
         let name_token = self.get_next_token()?;
 
-        match name_token {
-            Token::Identifier(name) => variable_name = String::from(name),
-            _ => return Err(ParserError::UnexpectedTokenInStream(name_token.clone())),
+        match &name_token.token_type {
+            TokenType::Identifier(name) => variable_name = String::from(name),
+            _ => return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(name_token.clone())),
         }
 
         let mut node = ASTNode::new(ASTType::VariableDeclaration(variable_name));
@@ -388,9 +355,10 @@ impl Parser {
 
         Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenCurlyBracket)?;
         while !Parser::token_is_delimiter(self.peek_next_token(0)?, Delimiter::CloseCurlyBracket) {
-            let identifier = match self.get_next_token()? {
-                Token::Identifier(identifier) => Ok(identifier.clone()),
-                t => Err(ParserError::UnexpectedTokenInStream(t.clone()))
+            let token = self.get_next_token()?;
+            let identifier = match &token.token_type {
+                TokenType::Identifier(identifier) => Ok(identifier.clone()),
+                _ => Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(token.clone()))
             }?;
 
 
@@ -419,9 +387,9 @@ impl Parser {
 
     fn parse_member_expression(&mut self) -> Result<ASTNode, ParserError> {
         let name = self.get_next_token()?;
-        let name = match name {
-            Token::Identifier(n) => Ok(n.clone()),
-            _ => Err(ParserError::UnexpectedTokenInStream(name.clone()))
+        let name = match &name.token_type {
+            TokenType::Identifier(n) => Ok(n.clone()),
+            _ => Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(name.clone()))
         }?;
 
         self.get_next_token()?;
@@ -459,9 +427,9 @@ impl Parser {
     fn parse_function_call(&mut self) -> Result<ASTNode, ParserError> {
         let identifier = self.get_next_token()?;
 
-        let identifier = match identifier {
-            Token::Identifier(identifier) => identifier.clone(),
-            _ => return Err(ParserError::UnexpectedTokenInStream(identifier.clone())),
+        let identifier = match &identifier.token_type {
+            TokenType::Identifier(identifier) => identifier.clone(),
+            _ => return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(identifier.clone())),
         };
 
         let open_paren = self.get_next_token()?;
@@ -607,8 +575,8 @@ impl Parser {
     }
 
     fn token_is_delimiter(token: &Token, delimiter: Delimiter) -> bool {
-        return match token {
-            Token::Delimiter(d) => {
+        return match &token.token_type {
+            TokenType::Delimiter(d) => {
                 return if *d == delimiter {
                     true
                 } else {
@@ -620,17 +588,17 @@ impl Parser {
     }
 
     fn token_to_simple_ast_node(token: &Token) -> Result<ASTNode, ParserError> {
-        match token {
-            Token::Identifier(identifier) => {
+        match &token.token_type {
+            TokenType::Identifier(identifier) => {
                 Ok(ASTNode::new(ASTType::Identifier(identifier.clone())))
             }
-            Token::String(value) => {
+            TokenType::String(value) => {
                 Ok(ASTNode::new(ASTType::StringValue(value.clone())))
             }
-            Token::Integer(value) => {
+            TokenType::Integer(value) => {
                 Ok(ASTNode::new(ASTType::IntegerValue(*value)))
             }
-            Token::Float(value) => {
+            TokenType::Float(value) => {
                 Ok(ASTNode::new(ASTType::FloatValue(*value)))
             }
             _ => Err(ParserError::UnexpectedTokenInStream(token.clone()))
@@ -638,8 +606,8 @@ impl Parser {
     }
 
     fn token_to_math_op_ast_node(token: &Token) -> Result<ASTNode, ParserError> {
-        match token {
-            Token::Delimiter(delimiter) => match delimiter {
+        match &token.token_type {
+            TokenType::Delimiter(delimiter) => match delimiter {
                 Delimiter::Plus => Ok(ASTNode::new(ASTType::MathOp(MathOp::Add))),
                 Delimiter::Hyphen => Ok(ASTNode::new(ASTType::MathOp(MathOp::Subtract))),
                 Delimiter::Star => Ok(ASTNode::new(ASTType::MathOp(MathOp::Multiply))),
@@ -651,8 +619,8 @@ impl Parser {
     }
 
     fn token_is_math_delimiter(token: &Token) -> bool {
-        return match token {
-            Token::Delimiter(d) => {
+        return match &token.token_type {
+            TokenType::Delimiter(d) => {
                 match d {
                     Delimiter::Star => true,
                     Delimiter::Plus => true,
@@ -688,12 +656,12 @@ impl Parser {
     fn validate_token_is_delimiter(token: &Token, delimiter: Delimiter) -> Result<(), ParserError> {
         match Parser::token_is_delimiter(token, delimiter.clone()) {
             true => Ok({}),
-            false => match token {
-                Token::Delimiter(unexpected_delimiter) => {
+            false => match &token.token_type {
+                TokenType::Delimiter(unexpected_delimiter) => {
                     Err(ParserError::UnexpectedDelimiterInStream(delimiter, unexpected_delimiter.clone()))
                 }
                 _ => {
-                    Err(ParserError::UnexpectedTokenInStream(token.clone()))
+                    Err(ParserError::UnexpectedTokenInStreamWithExpected(TokenType::Delimiter(delimiter), token.clone()))
                 }
             }
         }

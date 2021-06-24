@@ -33,7 +33,6 @@ pub enum Keyword {
     Private,
     Function,
     Structure,
-    Trait,
     VariableDeclaration,
     IfStatement,
     WhileStatement,
@@ -41,7 +40,7 @@ pub enum Keyword {
 }
 
 #[derive(PartialEq, Debug, Clone)]
-pub enum Token {
+pub enum TokenType {
     Identifier(String),
     Integer(i64),
     Float(f64),
@@ -49,6 +48,28 @@ pub enum Token {
     Delimiter(Delimiter),
     Keyword(Keyword),
     EndOfFile,
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub struct Token {
+    pub token_type: TokenType,
+    pub position: (usize, usize),
+
+}
+
+impl Token {
+    pub fn new(token_type: TokenType, position: (usize, usize)) -> Token {
+        Token {
+            token_type,
+            position,
+        }
+    }
+}
+
+impl PartialEq<TokenType> for Token {
+    fn eq(&self, other: &TokenType) -> bool {
+        self.token_type == *other
+    }
 }
 
 pub struct TokenStream {
@@ -100,6 +121,8 @@ pub enum LexerError {
 pub struct Lexer {
     file: String,
     position: usize,
+    pos_x: usize,
+    pos_y: usize,
 }
 
 impl Lexer {
@@ -124,6 +147,8 @@ impl Lexer {
         let mut lexer = Lexer {
             file,
             position: 0,
+            pos_x: 1,
+            pos_y: 1,
         };
 
         let mut token_stream = TokenStream::new();
@@ -131,7 +156,7 @@ impl Lexer {
         loop {
             let token = lexer.pop_token()?;
 
-            if token == Token::EndOfFile {
+            if token == TokenType::EndOfFile {
                 return Ok(token_stream);
             }
 
@@ -145,11 +170,12 @@ impl Lexer {
 
         let mut is_string = false;
 
+
         loop {
             let char = chars.next();
 
             if char.is_none() {
-                return Ok(Token::EndOfFile);
+                return Ok(Token::new(TokenType::EndOfFile, (self.pos_x, self.pos_y)));
             }
 
             let char = char.unwrap();
@@ -159,6 +185,7 @@ impl Lexer {
                 let delimiter = delimiter.unwrap();
                 if delimiter == Delimiter::Quotation {
                     self.position += char.len_utf8();
+                    self.pos_x += 1;
 
                     if is_string {
                         break;
@@ -172,6 +199,7 @@ impl Lexer {
                 if is_string {
                     word += &String::from(char);
                     self.position += char.len_utf8();
+                    self.pos_x += 1;
                     continue;
                 }
 
@@ -184,10 +212,10 @@ impl Lexer {
                     let integer = Lexer::word_to_integer(&word).unwrap();
                     let fractional = self.pop_token()?;
 
-                    return match fractional {
-                        Token::Integer(i) => {
+                    return match fractional.token_type {
+                        TokenType::Integer(i) => {
                             let result = Lexer::integer_and_fractional_to_float(integer, i)?;
-                            Ok(Token::Float(result))
+                            Ok(Token::new(TokenType::Float(result), (self.pos_x, self.pos_y)))
                         }
                         _ => Err(LexerError::UnexpectedTokenWhileParsingFloat(fractional))
                     };
@@ -195,41 +223,47 @@ impl Lexer {
                     break;
                 } else {
                     self.position += char.len_utf8();
+                    self.pos_x += 1;
 
                     // Space and new line is ignored
                     match delimiter {
                         Delimiter::Space => return self.pop_token(),
-                        Delimiter::LineFeed => return self.pop_token(),
+                        Delimiter::LineFeed => {
+                            self.pos_y += 1;
+                            self.pos_x = 0;
+                            return self.pop_token();
+                        }
                         Delimiter::CarriageReturn => return self.pop_token(),
                         _ => {}
                     }
 
-                    return Ok(Token::Delimiter(delimiter));
+                    return Ok(Token::new(TokenType::Delimiter(delimiter), (self.pos_x, self.pos_y)));
                 }
             }
 
             self.position += char.len_utf8();
+            self.pos_x += 1;
 
             word += &String::from(char);
         }
 
         if is_string {
-            return Ok(Token::String(word));
+            return Ok(Token::new(TokenType::String(word), (self.pos_x, self.pos_y)));
         }
 
         match Lexer::word_to_integer(&word) {
-            Some(value) => return Ok(Token::Integer(value)),
+            Some(value) => return Ok(Token::new(TokenType::Integer(value), (self.pos_x, self.pos_y))),
             None => {}
         };
 
 
         match Lexer::word_to_keyword(&word) {
-            Some(keyword) => return Ok(Token::Keyword(keyword)),
+            Some(keyword) => return Ok(Token::new(TokenType::Keyword(keyword), (self.pos_x, self.pos_y))),
             None => {}
         }
 
 
-        return Ok(Token::Identifier(word));
+        return Ok(Token::new(TokenType::Identifier(word), (self.pos_x, self.pos_y)));
     }
 
     fn word_to_integer(word: &str) -> Option<i64> {
@@ -260,7 +294,6 @@ impl Lexer {
             "public" => Some(Keyword::Public),
             "private" => Some(Keyword::Private),
             "fn" => Some(Keyword::Function),
-            "trait" => Some(Keyword::Trait),
             "struct" => Some(Keyword::Structure),
             "let" => Some(Keyword::VariableDeclaration),
             "if" => Some(Keyword::IfStatement),
