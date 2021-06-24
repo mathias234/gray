@@ -1,4 +1,4 @@
-pub use crate::{
+use crate::{
     bytecode::{
         register::Register,
         label::Label,

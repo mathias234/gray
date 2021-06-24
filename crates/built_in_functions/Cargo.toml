@@ -1,5 +1,5 @@
 [package]
-name = "gray_cli"
+name = "built_in_functions"
 version = "0.1.0"
 authors = ["Mathias Danielsen <mathiasda98@gmail.com>"]
 edition = "2018"
@@ -7,5 +7,3 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-gray = { path = "crates/gray" }
-built_in_functions = { path = "crates/built_in_functions" }
