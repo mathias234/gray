@@ -507,11 +507,25 @@ impl Parser {
 
         let operator = Parser::token_to_math_op_ast_node(self.get_next_token()?)?;
 
+        let mut protected_expression = false;
+        if Parser::token_is_delimiter(self.peek_next_token(0)?, Delimiter::OpenParen) {
+            self.get_next_token()?;
+            protected_expression = true;
+        }
+
         let rhs = self.parse_expression()?;
 
         node.children.push(lhs);
         node.children.push(operator.clone());
         node.children.push(rhs);
+
+        if protected_expression {
+            self.get_next_token()?;
+
+            // This is a protected expression meaning it's wrapped in ()
+            // We can return early so not to do operator precedence on this
+            return Ok(node);
+        }
 
         let my_precedence = Parser::operator_precedence(&operator);
 
