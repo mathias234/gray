@@ -342,17 +342,35 @@ impl Parser {
     }
 
     fn parse_expression(&mut self) -> Result<ASTNode, ParserError> {
+        let mut node;
+
+        node = self.parse_non_math_expression()?;
+
+        let next = self.peek_next_token(0)?;
+        let next1 = self.peek_next_token(1)?;
+
+        if Parser::token_is_math_delimiter(next) {
+            let math_expr = self.parse_math_expression(node)?;
+
+            node = ASTNode::new(ASTType::Expression);
+            node.children.push(math_expr);
+        } else if Parser::tokens_are_comparison(next, next1).is_some() {
+            let comp_expr = self.parse_comparison_expression(node)?;
+
+            node = ASTNode::new(ASTType::Expression);
+            node.children.push(comp_expr);
+        }
+
+        Ok(node)
+    }
+
+    fn parse_non_math_expression(&mut self) -> Result<ASTNode, ParserError> {
         let mut node = ASTNode::new(ASTType::Expression);
 
         let first_delimiter = self.peek_next_token(0)?;
         let delimiter = self.peek_next_token(1)?;
-        let second_delimiter = self.peek_next_token(2)?;
 
-        if Parser::token_is_math_delimiter(&delimiter) {
-            node.children.push(self.parse_math_expression()?);
-        } else if Parser::tokens_are_comparison(&delimiter, &second_delimiter).is_some() {
-            node.children.push(self.parse_comparison_expression()?);
-        } else if Parser::token_is_delimiter(&delimiter, Delimiter::OpenParen) {
+        if Parser::token_is_delimiter(&delimiter, Delimiter::OpenParen) {
             node.children.push(self.parse_function_call()?);
         } else if Parser::token_is_delimiter(&first_delimiter, Delimiter::OpenCurlyBracket) {
             node.children.push(self.parse_object_declaration()?);
@@ -424,8 +442,7 @@ impl Parser {
 
         if Parser::token_is_delimiter(self.peek_next_token(1)?, Delimiter::Dot) {
             lhs = self.parse_member_expression()?;
-        }
-        else {
+        } else {
             lhs = Parser::token_to_simple_ast_node(self.get_next_token()?)?;
         }
 
@@ -471,56 +488,53 @@ impl Parser {
         return Ok(node);
     }
 
-    fn parse_math_expression(&mut self) -> Result<ASTNode, ParserError> {
+    fn parse_math_expression(&mut self, lhs: ASTNode) -> Result<ASTNode, ParserError> {
+        println!("{:?}, {:?}, {:?}", self.peek_next_token(0)?, self.peek_next_token(1)?, self.peek_next_token(2)?);
         let mut node = ASTNode::new(ASTType::MathExpression);
-        let lhs_token = self.get_next_token()?;
 
-        node.children.push(Parser::token_to_simple_ast_node(lhs_token)?);
+        let operator = Parser::token_to_math_op_ast_node(self.get_next_token()?)?;
 
-        let math_op_token = self.get_next_token()?;
-        node.children.push(Parser::token_to_math_op_ast_node(math_op_token)?);
+        let rhs= self.parse_expression()?;
 
+        node.children.push(lhs);
+        node.children.push(operator);
+        node.children.push(rhs);
 
-        let rhs_token = self.peek_next_token(0)?;
-
-        if Parser::token_is_delimiter(rhs_token, Delimiter::OpenParen) {
-            node.children.push(self.parse_math_expression()?);
-        } else {
-            let rhs_token = self.get_next_token()?;
-            node.children.push(Parser::token_to_simple_ast_node(rhs_token)?);
-        }
+        node.dump(0);
 
         Ok(node)
     }
 
-    fn parse_comparison_expression(&mut self) -> Result<ASTNode, ParserError> {
+    fn parse_comparison_expression(&mut self, lhs: ASTNode) -> Result<ASTNode, ParserError> {
         let mut node = ASTNode::new(ASTType::ComparisonExpression);
 
-        let lhs_token = self.get_next_token()?;
-        node.children.push(Parser::token_to_simple_ast_node(lhs_token)?);
+        node.children.push(lhs);
 
-        let token = self.get_next_token()?.clone();
-        let token1 = self.get_next_token()?.clone();
+        let token = self.peek_next_token(0)?;
+        let token1 = self.peek_next_token(1)?;
 
         let operator;
 
         let rhs;
 
-        let tokens_are_comparison = Parser::tokens_are_comparison(&token, &token1);
+        let tokens_are_comparison = Parser::tokens_are_comparison(token, token1);
 
         match tokens_are_comparison {
             Some(op) => operator = op,
-            None => return Err(ParserError::UnexpectedTokenInStream(token))
+            None => return Err(ParserError::UnexpectedTokenInStream(token.clone()))
         }
 
         if operator == ComparisonOp::LessThan || operator == ComparisonOp::GreaterThan {
-            rhs = token1;
+            self.get_next_token()?;
+            rhs = self.parse_expression()?;
         } else {
-            rhs = self.get_next_token()?.clone();
+            self.get_next_token()?;
+            self.get_next_token()?;
+            rhs = self.parse_expression()?;
         }
 
         node.children.push(ASTNode::new(ASTType::ComparisonOp(operator)));
-        node.children.push(Parser::token_to_simple_ast_node(&rhs)?);
+        node.children.push(rhs);
 
         Ok(node)
     }

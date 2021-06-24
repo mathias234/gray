@@ -258,8 +258,11 @@ impl Compiler {
     }
 
     fn compile_math_expression(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
-        let rhs_register = self.compile_value(generator, &node.children[2])?;
-        self.compile_value_to_accumulator(generator, &node.children[0])?;
+        self.compile_expression(generator, &node.children[2])?;
+        let rhs_register = generator.next_free_register();
+        generator.emit(Store::new_boxed(rhs_register));
+
+        self.compile_expression(generator, &node.children[0])?;
 
         match &node.children[1].ast_type {
             ASTType::MathOp(math_op) => match math_op {
@@ -275,8 +278,11 @@ impl Compiler {
     }
 
     fn compile_comparison_expression(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
-        let rhs_register = self.compile_value(generator, &node.children[2])?;
-        self.compile_value_to_accumulator(generator, &node.children[0])?;
+        self.compile_expression(generator, &node.children[2])?;
+        let rhs_register = generator.next_free_register();
+        generator.emit(Store::new_boxed(rhs_register));
+
+        self.compile_expression(generator, &node.children[0])?;
 
         match &node.children[1].ast_type {
             ASTType::ComparisonOp(comp_op) => match comp_op {
@@ -291,16 +297,6 @@ impl Compiler {
         }
 
         Ok({})
-    }
-
-    fn compile_value(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<Register, CompilerError> {
-        let value_register = generator.next_free_register();
-
-        self.compile_value_to_accumulator(generator, node)?;
-
-        generator.emit(Store::new_boxed(value_register));
-
-        Ok(value_register)
     }
 
     fn compile_value_to_accumulator(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {

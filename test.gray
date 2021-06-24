@@ -1,18 +1,5 @@
 fn entry() {
-    let a = {
-        z: {
-            f: 420
-        }
-    };
-
-
-    test(a);
-
+    let a = 5 * 2 * 2 * 5;
     print("{}", a);
 }
-
-fn test(a) {
-    a.z.f = 5;
-}
-
 
