@@ -3,6 +3,9 @@
 [[package]]
 name = "built_in_functions"
 version = "0.1.0"
+dependencies = [
+ "gray",
+]
 
 [[package]]
 name = "gray"
