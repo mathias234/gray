@@ -1,17 +1,54 @@
 use gray::GrayError;
 use built_in_functions::declare_functions;
 use std::time::Instant;
+use std::env;
+use std::fs::{metadata, read_dir};
+use std::path::Path;
+
+fn get_dir(dir: &Path) -> Vec<String> {
+    let mut result = Vec::new();
+    if dir.is_dir() {
+        for entry in read_dir(dir).unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            if path.is_dir() {
+                result.append(&mut get_dir(&path));
+            } else {
+                result.push(String::from(entry.path().to_str().unwrap()));
+            }
+        }
+    }
+
+    return result;
+}
 
 fn main() -> Result<(), GrayError> {
-    let now = Instant::now();
+    let args: Vec<String> = env::args().collect();
 
-    let mut interpreter = gray::load_file("./test.gray")?;
+    for i in 1..args.len() {
+        let arg = &args[i];
 
-    declare_functions(&mut interpreter);
+        let md = metadata(arg).unwrap();
 
-    interpreter.run(None);
+        let mut files = Vec::new();
+        if md.is_dir() {
+            files.append(&mut get_dir(Path::new(arg)));
+        } else {
+            files.push(arg.clone());
+        }
 
-    println! {"Execution took {}ms", now.elapsed().as_millis()}
+        for file in files {
+            let now = Instant::now();
+
+            let mut interpreter = gray::load_file(&file)?;
+
+            declare_functions(&mut interpreter);
+
+            interpreter.run(None);
+
+            println! {"Execution took {}ms", now.elapsed().as_millis()}
+        }
+    }
 
     Ok({})
 }
