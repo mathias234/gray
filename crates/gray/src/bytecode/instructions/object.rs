@@ -55,6 +55,18 @@ impl CreateEmptyArray {
 }
 
 
+pub struct PushArray {
+    array: Register,
+}
+
+#[allow(dead_code)]
+impl PushArray {
+    pub fn new_boxed(array: Register) -> Box<PushArray> {
+        Box::new(PushArray { array })
+    }
+}
+
+
 impl Instruction for CreateEmptyObject {
     fn execute(&self, context: &mut ExecutionContext) {
         context.set_accumulator(Value::from_object(Object::new()));
@@ -97,4 +109,19 @@ impl Instruction for CreateEmptyArray {
     }
 
     fn to_string(&self) -> String { format!("CreateEmptyArray") }
+}
+
+impl Instruction for PushArray {
+    fn execute(&self, context: &mut ExecutionContext) {
+        let value = context.get_accumulator();
+        let mut array = context.get_register(&self.array);
+        match array.get_data_value_mut() {
+            DataValue::Array(a) => {
+                a.push(value);
+            }
+            _=> panic!("Error pushing to value that is not an array"),
+        }
+    }
+
+    fn to_string(&self) -> String { format!("PushArray {}", self.array) }
 }

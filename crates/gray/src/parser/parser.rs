@@ -316,11 +316,23 @@ impl Parser {
     }
 
     fn parse_array_declaration(&mut self) -> Result<ASTNode, ParserError> {
-        let array_node = ASTNode::new(ASTType::CreateArray);
+        let mut array_node = ASTNode::new(ASTType::CreateArray);
 
         Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenBracket)?;
 
-        // TODO: Allow data in here
+        while !Parser::token_is_delimiter(self.peek_next_token(0)?, Delimiter::CloseBracket) {
+            let expression = self.parse_expression()?;
+
+            // If we do not end with comma we can assume that the object is fully declared
+            if Parser::token_is_delimiter(self.peek_next_token(0)?, Delimiter::Comma) {
+                self.get_next_token()?;
+            } else {
+                array_node.children.push(expression);
+                break;
+            }
+
+            array_node.children.push(expression);
+        }
 
 
         Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::CloseBracket)?;

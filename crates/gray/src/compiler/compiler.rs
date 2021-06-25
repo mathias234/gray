@@ -7,7 +7,7 @@ use crate::interpreter::value::Value;
 use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument, LoadRegister};
 use crate::bytecode::instructions::jump::{JumpZero, Jump};
 use crate::bytecode::instructions::math::{Add, Subtract, Multiply, Divide};
-use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember, GetObjectMember, CreateEmptyArray};
+use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember, GetObjectMember, CreateEmptyArray, PushArray};
 use crate::bytecode::instructions::comparison::{CompareGreaterThan, CompareLessThan, CompareNotEq, CompareEq, CompareLessThanOrEqual, CompareGreaterThanOrEqual};
 use std::rc::Rc;
 
@@ -218,8 +218,17 @@ impl Compiler {
         }
     }
 
-    fn compile_create_array(&mut self, generator: &mut Generator, _node: &ASTNode) -> Result<(), CompilerError> {
+    fn compile_create_array(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
         generator.emit(CreateEmptyArray::new_boxed());
+        let array_register = generator.next_free_register();
+        generator.emit(Store::new_boxed(array_register));
+
+        for child in &node.children {
+            self.compile_expression(generator, child)?;
+            generator.emit(PushArray::new_boxed(array_register));
+        }
+
+        generator.emit(LoadRegister::new_boxed(array_register));
 
         Ok({})
     }
