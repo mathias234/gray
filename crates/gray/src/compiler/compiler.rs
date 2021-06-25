@@ -28,19 +28,19 @@ impl Compiler {
 
 
         let mut generator = Generator::new();
-        compiler.compile_scope(&mut generator, &root_node)?;
+        compiler.compile_scope("", &mut generator, &root_node)?;
         compiler.blocks.insert(String::from("ProgramMain"), generator.block);
 
         Ok(compiler.blocks)
     }
 
-    fn compile_function(&mut self, name: &str, node: &ASTNode) -> Result<(), CompilerError> {
+    fn compile_function(&mut self, namespace: &str, name: &str, node: &ASTNode) -> Result<(), CompilerError> {
         let mut generator = Generator::new();
 
         let mut argument_index = 0;
         for child in &node.children {
             match &child.ast_type {
-                ASTType::Scope => self.compile_scope(&mut generator, child)?,
+                ASTType::Scope => self.compile_scope(namespace, &mut generator, child)?,
                 ASTType::Identifier(parameter) => {
                     generator.emit(LoadArgument::new_boxed(argument_index));
                     generator.emit(DeclareVariable::new_boxed(parameter.clone()));
@@ -52,11 +52,18 @@ impl Compiler {
 
         generator.emit(Return::new_boxed());
 
-        self.blocks.insert(String::from(name), generator.block);
+        let full_name;
+        if !namespace.is_empty() {
+            full_name = format!("{}::{}", namespace, name);
+        } else {
+            full_name = String::from(name);
+        }
+
+        self.blocks.insert(full_name, generator.block);
         Ok({})
     }
 
-    fn compile_scope(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
+    fn compile_scope(&mut self, namespace: &str, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
         generator.emit(PushScope::new_boxed());
         for child in &node.children {
             match &child.ast_type {
@@ -67,10 +74,10 @@ impl Compiler {
                     self.compile_variable_declaration(variable, generator, child)?;
                 }
                 ASTType::IfStatement => {
-                    self.compile_if_statement(generator, child)?;
+                    self.compile_if_statement(namespace, generator, child)?;
                 }
                 ASTType::WhileStatement => {
-                    self.compile_while_statement(generator, child)?;
+                    self.compile_while_statement(namespace, generator, child)?;
                 }
                 ASTType::ReturnExpression => {
                     self.compile_return(generator, child)?;
@@ -78,7 +85,17 @@ impl Compiler {
                 ASTType::VariableAssignment => {
                     self.compile_variable_assignment(generator, child)?
                 }
-                ASTType::Function(name) => self.compile_function(name, child)?,
+                ASTType::Namespace(name) => {
+                    let new_namespace;
+                    if !namespace.is_empty() {
+                        new_namespace = format!("{}::{}", namespace, name);
+                    } else {
+                        new_namespace = name.clone();
+                    }
+
+                    self.compile_scope(&new_namespace, generator, &child.children[0])?;
+                }
+                ASTType::Function(name) => self.compile_function(namespace, name, child)?,
                 _ => return Err(CompilerError::UnexpectedASTNode(child.clone())),
             }
         }
@@ -187,12 +204,12 @@ impl Compiler {
     }
 
 
-    fn compile_if_statement(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
+    fn compile_if_statement(&mut self, namespace: &str, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
         self.compile_expression(generator, &node.children[0])?;
 
         let scope_start = generator.make_label();
 
-        self.compile_scope(generator, &node.children[1])?;
+        self.compile_scope(namespace, generator, &node.children[1])?;
 
         let mut scope_end = generator.make_label();
         scope_end.position += 1;
@@ -202,13 +219,13 @@ impl Compiler {
         Ok({})
     }
 
-    fn compile_while_statement(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
+    fn compile_while_statement(&mut self, namespace: &str, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
         let comparison_start = generator.make_label();
         self.compile_expression(generator, &node.children[0])?;
 
         let scope_start = generator.make_label();
 
-        self.compile_scope(generator, &node.children[1])?;
+        self.compile_scope(namespace, generator, &node.children[1])?;
         generator.emit(Jump::new_boxed(comparison_start));
 
         let mut scope_end = generator.make_label();

@@ -36,6 +36,7 @@ pub enum Keyword {
     IfStatement,
     WhileStatement,
     Return,
+    Namespace
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -297,6 +298,7 @@ impl Lexer {
             "if" => Some(Keyword::IfStatement),
             "while" => Some(Keyword::WhileStatement),
             "return" => Some(Keyword::Return),
+            "namespace" => Some(Keyword::Namespace),
             _ => None,
         }
     }

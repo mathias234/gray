@@ -292,8 +292,13 @@ impl<'interp> Interpreter<'interp> {
         self.dump();
     }
 
-    pub fn set_native_function(&mut self, name: String, function: FunctionPointer) {
-        self.native_functions.insert(name, function);
+    pub fn set_native_function(&mut self, namespace: Vec<&str>, name: String, function: FunctionPointer) {
+        let mut full_name = String::new();
+        for n in namespace {
+            full_name += &format!("{}::", n);
+        }
+        full_name += &name;
+        self.native_functions.insert(full_name, function);
     }
 
     pub fn dump(&self) {

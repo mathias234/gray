@@ -3,13 +3,13 @@ use gray::interpreter::value::{Value, DataValue};
 use std::rc::Rc;
 
 pub fn declare_functions(interpreter: &mut Interpreter) {
-    interpreter.set_native_function(String::from("print"), print_function);
-    interpreter.set_native_function(String::from("format"), format_to_value);
-    interpreter.set_native_function(String::from("assert_eq"), assert_eq);
+    interpreter.set_native_function(Vec::new(), String::from("print"), print_function);
+    interpreter.set_native_function(Vec::new(), String::from("format"), format_to_value);
+    interpreter.set_native_function(Vec::new(), String::from("assert_eq"), assert_eq);
 
-    interpreter.set_native_function(String::from("array_push"), array_push);
-    interpreter.set_native_function(String::from("array_get"), array_get);
-    interpreter.set_native_function(String::from("array_len"), array_len);
+    interpreter.set_native_function(vec!["array"], String::from("push"), array_push);
+    interpreter.set_native_function(vec!["array"], String::from("get"), array_get);
+    interpreter.set_native_function(vec!["array"], String::from("len"), array_len);
 }
 
 fn assert_eq(args: Vec<Value>) -> Value {
