@@ -1,3 +1,22 @@
-let a = [ "hello", 540 * 20, 100 ];
+fn func_test() {
+    return 50 * 50;
+}
 
-print("a {}", a);
+let test_obj = {
+    test1: 50 * 50,
+    test2: func_test()
+};
+
+assert_eq(test_obj.test1, 2500);
+assert_eq(test_obj.test2, 2500);
+
+let test_num = 5;
+assert_eq(test_num, 5);
+
+let test_num = 0;
+while test_num < 100 {
+    test_num = test_num + 1;
+}
+
+assert_eq(test_num, 100);
+

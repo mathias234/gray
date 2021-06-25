@@ -102,7 +102,11 @@ impl Compiler {
             argument_registers.push(register);
         }
 
-        generator.emit(Call::new_boxed(&*call, Some(argument_registers)));
+        generator.emit(Call::new_boxed(&call, Some(argument_registers.clone())));
+
+        for register in argument_registers {
+            generator.release_register(register);
+        }
 
 
         Ok({})
@@ -135,16 +139,42 @@ impl Compiler {
             _ => {}
         }
 
+        generator.release_register(expression_result);
+
         Ok({})
     }
+
+    fn compile_object_get(&mut self, generator: &mut Generator, node: &ASTNode, previous: Register) -> Result<(), CompilerError> {
+        match &node.children[0].ast_type {
+            ASTType::ObjectAccess(name) => {
+                generator.emit(GetObjectMember::new_boxed(previous, name.clone()));
+                let object_register = generator.next_free_register();
+
+                generator.emit(Store::new_boxed(object_register));
+                self.compile_object_get(generator, &node.children[0], object_register)?;
+
+                generator.release_register(object_register);
+            }
+            ASTType::Identifier(name) => {
+                generator.emit(GetObjectMember::new_boxed(previous, name.clone()));
+            }
+            _ => {}
+        }
+
+        Ok({})
+    }
+
 
     fn compile_object_access(&mut self, generator: &mut Generator, node: &ASTNode, previous: Register, expression_result: Register) -> Result<(), CompilerError> {
         match &node.children[0].ast_type {
             ASTType::ObjectAccess(name) => {
                 generator.emit(GetObjectMember::new_boxed(previous, name.clone()));
                 let object_register = generator.next_free_register();
+
                 generator.emit(Store::new_boxed(object_register));
                 self.compile_object_access(generator, &node.children[0], object_register, expression_result)?;
+
+                generator.release_register(object_register);
             }
             ASTType::Identifier(name) => {
                 generator.emit(LoadRegister::new_boxed(expression_result));
@@ -214,6 +244,12 @@ impl Compiler {
             ASTType::StringValue(_) => self.compile_value_to_accumulator(generator, child),
             ASTType::CreateObject => self.compile_create_object(generator, child),
             ASTType::CreateArray => self.compile_create_array(generator, child),
+            ASTType::ObjectAccess(name) => {
+                generator.emit(GetVariable::new_boxed(name.clone()));
+                let object_register = generator.next_free_register();
+                generator.emit(Store::new_boxed(object_register));
+                self.compile_object_get(generator, &node.children[0], object_register)
+            }
             _ => Err(CompilerError::UnexpectedASTNode(child.clone())),
         }
     }
@@ -228,7 +264,10 @@ impl Compiler {
             generator.emit(PushArray::new_boxed(array_register));
         }
 
+
         generator.emit(LoadRegister::new_boxed(array_register));
+
+        generator.release_register(array_register);
 
         Ok({})
     }
@@ -251,6 +290,8 @@ impl Compiler {
         // Set the object into the accumulator
         generator.emit(LoadRegister::new_boxed(object_register));
 
+        generator.release_register(object_register);
+
         Ok({})
     }
 
@@ -270,6 +311,8 @@ impl Compiler {
             }
             _ => return Err(CompilerError::UnexpectedASTNode(node.children[1].clone()))
         }
+
+        generator.release_register(rhs_register);
 
         Ok({})
     }
@@ -292,6 +335,8 @@ impl Compiler {
             }
             _ => return Err(CompilerError::UnexpectedASTNode(node.children[1].clone()))
         }
+
+        generator.release_register(rhs_register);
 
         Ok({})
     }

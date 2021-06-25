@@ -305,7 +305,9 @@ impl Parser {
         } else if Parser::token_is_delimiter(&first_delimiter, Delimiter::OpenCurlyBracket) {
             node.children.push(self.parse_object_declaration()?);
         } else if Parser::token_is_delimiter(&first_delimiter, Delimiter::OpenBracket) {
-            node.children.push(self.parse_array_declaration()?)
+            node.children.push(self.parse_array_declaration()?);
+        }  else if Parser::token_is_delimiter(delimiter, Delimiter::Dot) {
+            node.children.push(self.parse_member_expression()?);
         } else {
             // Very simple single token expression
             let token = self.get_next_token()?;

@@ -5,6 +5,7 @@ use crate::bytecode::register::Register;
 
 pub struct Generator {
     register_index: usize,
+    released_registers: Vec<Register>,
     pub block: CodeBlock,
 }
 
@@ -12,14 +13,24 @@ impl Generator {
     pub fn new() -> Generator {
         Generator {
             register_index: 0,
+            released_registers: Vec::new(),
             block: CodeBlock::new(),
         }
     }
 
     pub fn next_free_register(&mut self) -> Register {
+        if self.released_registers.len() > 0 {
+            let register = self.released_registers.pop().unwrap();
+            return register;
+        }
+
         let result = Register::new(self.register_index);
         self.register_index += 1;
         result
+    }
+
+    pub fn release_register(&mut self, register: Register) {
+        self.released_registers.push(register);
     }
 
     pub fn make_label(&self) -> Label {

@@ -289,7 +289,7 @@ impl<'interp> Interpreter<'interp> {
             }
         }
 
-        //self.dump();
+        self.dump();
     }
 
     pub fn set_native_function(&mut self, name: String, function: FunctionPointer) {
