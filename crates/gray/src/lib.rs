@@ -7,7 +7,6 @@ use interpreter::interpreter::Interpreter;
 use crate::parser::parser::{Parser, ParserError};
 use crate::parser::lexer::{Lexer, LexerError};
 use crate::compiler::compiler::{Compiler, CompilerError};
-use std::time::Instant;
 
 #[derive(Debug)]
 pub enum GrayError {
@@ -35,7 +34,6 @@ impl From<CompilerError> for GrayError {
 }
 
 pub fn load_file(file: &str) -> Result<Interpreter, GrayError> {
-    let now = Instant::now();
 
     let mut token_stream = Lexer::lex_file(file)?;
 
@@ -60,7 +58,6 @@ pub fn load_file(file: &str) -> Result<Interpreter, GrayError> {
 
     let interpreter = Interpreter::new(blocks);
 
-    println! {"Execution took {}ms", now.elapsed().as_millis()}
 
 
     return Ok(interpreter);

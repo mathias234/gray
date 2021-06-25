@@ -69,5 +69,6 @@ fn value_to_string(args: &Value) -> String {
         DataValue::I64(int_value) => format!("{}", int_value),
         DataValue::Object(object) => format!("{:?}", object),
         DataValue::String(string) => format!("{}", string),
+        DataValue::Array(array) => format!("{}", array),
     }
 }

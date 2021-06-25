@@ -39,6 +39,7 @@ pub enum ASTType {
     StringValue(String),
     Identifier(String),
     CreateObject,
+    CreateArray,
     ObjectMember(String),
     ObjectAccess(String),
     Trait(String),
@@ -303,6 +304,8 @@ impl Parser {
             node.children.push(self.parse_function_call()?);
         } else if Parser::token_is_delimiter(&first_delimiter, Delimiter::OpenCurlyBracket) {
             node.children.push(self.parse_object_declaration()?);
+        } else if Parser::token_is_delimiter(&first_delimiter, Delimiter::OpenBracket) {
+            node.children.push(self.parse_array_declaration()?)
         } else {
             // Very simple single token expression
             let token = self.get_next_token()?;
@@ -310,6 +313,19 @@ impl Parser {
         }
 
         Ok(node)
+    }
+
+    fn parse_array_declaration(&mut self) -> Result<ASTNode, ParserError> {
+        let array_node = ASTNode::new(ASTType::CreateArray);
+
+        Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenBracket)?;
+
+        // TODO: Allow data in here
+
+
+        Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::CloseBracket)?;
+
+        Ok(array_node)
     }
 
     fn parse_object_declaration(&mut self) -> Result<ASTNode, ParserError> {

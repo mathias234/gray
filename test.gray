@@ -1,7 +1,6 @@
-let a = 5;
+let a = [];
 
-fn test1(a) {
-    print(" {}", a + 1);
-}
+array_push(a, "Hello");
+array_push(a, { a: "hello" });
 
-test1(a);
+print("a {}", a);

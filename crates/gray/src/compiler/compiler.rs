@@ -7,8 +7,9 @@ use crate::interpreter::value::Value;
 use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument, LoadRegister};
 use crate::bytecode::instructions::jump::{JumpZero, Jump};
 use crate::bytecode::instructions::math::{Add, Subtract, Multiply, Divide};
-use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember, GetObjectMember};
+use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember, GetObjectMember, CreateEmptyArray};
 use crate::bytecode::instructions::comparison::{CompareGreaterThan, CompareLessThan, CompareNotEq, CompareEq, CompareLessThanOrEqual, CompareGreaterThanOrEqual};
+use std::rc::Rc;
 
 #[derive(Debug)]
 pub enum CompilerError {
@@ -212,8 +213,15 @@ impl Compiler {
             ASTType::Identifier(_) => self.compile_value_to_accumulator(generator, child),
             ASTType::StringValue(_) => self.compile_value_to_accumulator(generator, child),
             ASTType::CreateObject => self.compile_create_object(generator, child),
+            ASTType::CreateArray => self.compile_create_array(generator, child),
             _ => Err(CompilerError::UnexpectedASTNode(child.clone())),
         }
+    }
+
+    fn compile_create_array(&mut self, generator: &mut Generator, _node: &ASTNode) -> Result<(), CompilerError> {
+        generator.emit(CreateEmptyArray::new_boxed());
+
+        Ok({})
     }
 
     fn compile_create_object(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
@@ -282,7 +290,7 @@ impl Compiler {
     fn compile_value_to_accumulator(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
         match &node.ast_type {
             ASTType::StringValue(value) => {
-                Ok(generator.emit(LoadImmediate::new_boxed(Value::from_string(value.clone()))))
+                Ok(generator.emit(LoadImmediate::new_boxed(Value::from_string(Rc::new(value.clone())))))
             }
             ASTType::IntegerValue(value) => {
                 Ok(generator.emit(LoadImmediate::new_boxed(Value::from_i64(*value))))
