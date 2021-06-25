@@ -1,0 +1,16 @@
+let test_array = [];
+
+array_push(test_array, 50);
+array_push(test_array, 25);
+array_push(test_array, 100);
+
+assert_eq(array_get(test_array, 0), 50);
+assert_eq(array_get(test_array, 1), 25);
+assert_eq(array_get(test_array, 2), 100);
+
+let test_array = [ 50, 25, 100 ];
+assert_eq(array_get(test_array, 0), 50);
+assert_eq(array_get(test_array, 1), 25);
+assert_eq(array_get(test_array, 2), 100);
+
+assert_eq(array_len(test_array), 3);

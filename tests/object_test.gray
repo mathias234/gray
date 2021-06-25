@@ -1,0 +1,18 @@
+let test_object = {
+    test1: 50,
+    test_child_object: {
+        test2: 50,
+    }
+};
+
+assert_eq(test_object.test1, 50);
+assert_eq(test_object.test_child_object.test2, 50);
+
+test_object.test1 = 25;
+assert_eq(test_object.test1, 25);
+
+test_object.test_child_object = {
+    test3: 25,
+};
+
+assert_eq(test_object.test_child_object.test3, 25);

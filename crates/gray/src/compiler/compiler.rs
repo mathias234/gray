@@ -152,7 +152,6 @@ impl Compiler {
 
                 generator.emit(Store::new_boxed(object_register));
                 self.compile_object_get(generator, &node.children[0], object_register)?;
-
                 generator.release_register(object_register);
             }
             ASTType::Identifier(name) => {
