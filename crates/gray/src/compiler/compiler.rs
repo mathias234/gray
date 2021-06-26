@@ -266,26 +266,26 @@ impl Compiler {
                 generator.emit(GetVariable::new_boxed(name.clone()));
                 let object_register = generator.next_free_register();
                 generator.emit(Store::new_boxed(object_register));
-                self.compile_object_get(generator, node, object_register)
+                self.compile_object_get(generator, node, object_register)?;
+                generator.release_register(object_register);
+                Ok({})
             }
             _ => Err(CompilerError::UnexpectedASTNode(node.clone())),
         }
     }
 
     fn compile_expression(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
-        let child = &node.children[0];
-        self.compile_sub_expression(generator, child)?;
-
-        if node.children.len() > 1 {
-            let lhs_register = generator.next_free_register();
-            generator.emit(Store::new_boxed(lhs_register));
-
+        if node.children.len() == 1 {
+            let child = &node.children[0];
+            self.compile_sub_expression(generator, child)?;
+        } else {
             let rhs = &node.children[2];
             self.compile_sub_expression(generator, rhs)?;
             let rhs_register = generator.next_free_register();
             generator.emit(Store::new_boxed(rhs_register));
 
-            generator.emit(LoadRegister::new_boxed(lhs_register));
+            let child = &node.children[0];
+            self.compile_sub_expression(generator, child)?;
 
             let operator = &node.children[1];
 
@@ -325,7 +325,6 @@ impl Compiler {
                 _ => return Err(CompilerError::UnexpectedASTNode(operator.clone())),
             }
 
-            generator.release_register(lhs_register);
             generator.release_register(rhs_register);
         }
 
