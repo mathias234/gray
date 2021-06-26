@@ -13,6 +13,8 @@ pub enum ExpressionOp {
     GreaterThan,
     LessThanOrEqual,
     GreaterThanOrEqual,
+    And,
+    Or,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -509,12 +511,14 @@ impl Parser {
                     ExpressionOp::Subtract => 0,
                     ExpressionOp::Multiply => 1,
                     ExpressionOp::Divide => 1,
-                    ExpressionOp::Equal => 2,
-                    ExpressionOp::NotEqual => 2,
-                    ExpressionOp::LessThan => 2,
-                    ExpressionOp::GreaterThan => 2,
-                    ExpressionOp::LessThanOrEqual => 2,
-                    ExpressionOp::GreaterThanOrEqual => 2,
+                    ExpressionOp::And => 2,
+                    ExpressionOp::Or => 2,
+                    ExpressionOp::Equal => 3,
+                    ExpressionOp::NotEqual => 3,
+                    ExpressionOp::LessThan => 3,
+                    ExpressionOp::GreaterThan => 3,
+                    ExpressionOp::LessThanOrEqual => 3,
+                    ExpressionOp::GreaterThanOrEqual => 3,
                 }
             }
             _ => -1,
@@ -575,25 +579,37 @@ impl Parser {
             Err(_) => None,
         };
 
-        if token2.is_some() && Parser::token_is_delimiter(token2.unwrap(), Delimiter::Equal) {
-            if Parser::token_is_delimiter(&token, Delimiter::Equal) {
+        if token2.is_some() {
+            if Parser::token_is_delimiter(token2.unwrap(), Delimiter::Equal) {
+                if Parser::token_is_delimiter(&token, Delimiter::Equal) {
+                    self.get_next_token()?;
+                    self.get_next_token()?;
+                    return Ok(Some(ExpressionOp::Equal));
+                } else if Parser::token_is_delimiter(&token, Delimiter::Exclamation) {
+                    self.get_next_token()?;
+                    self.get_next_token()?;
+                    return Ok(Some(ExpressionOp::NotEqual));
+                } else if Parser::token_is_delimiter(&token, Delimiter::LessThan) {
+                    self.get_next_token()?;
+                    self.get_next_token()?;
+                    return Ok(Some(ExpressionOp::LessThanOrEqual));
+                } else if Parser::token_is_delimiter(&token, Delimiter::GreaterThan) {
+                    self.get_next_token()?;
+                    self.get_next_token()?;
+                    return Ok(Some(ExpressionOp::GreaterThanOrEqual));
+                }
+            } else if Parser::token_is_delimiter(&token, Delimiter::And) && Parser::token_is_delimiter(&token2.unwrap(), Delimiter::And) {
                 self.get_next_token()?;
                 self.get_next_token()?;
-                return Ok(Some(ExpressionOp::Equal));
-            } else if Parser::token_is_delimiter(&token, Delimiter::Exclamation) {
+                return Ok(Some(ExpressionOp::And));
+            } else if Parser::token_is_delimiter(&token, Delimiter::Pipe) && Parser::token_is_delimiter(&token2.unwrap(), Delimiter::Pipe) {
                 self.get_next_token()?;
                 self.get_next_token()?;
-                return Ok(Some(ExpressionOp::NotEqual));
-            } else if Parser::token_is_delimiter(&token, Delimiter::LessThan) {
-                self.get_next_token()?;
-                self.get_next_token()?;
-                return Ok(Some(ExpressionOp::LessThanOrEqual));
-            } else if Parser::token_is_delimiter(&token, Delimiter::GreaterThan) {
-                self.get_next_token()?;
-                self.get_next_token()?;
-                return Ok(Some(ExpressionOp::GreaterThanOrEqual));
+                return Ok(Some(ExpressionOp::Or));
             }
-        } else if Parser::token_is_delimiter(&token, Delimiter::LessThan) {
+        }
+        
+        if Parser::token_is_delimiter(&token, Delimiter::LessThan) {
             self.get_next_token()?;
             return Ok(Some(ExpressionOp::LessThan));
         } else if Parser::token_is_delimiter(&token, Delimiter::GreaterThan) {

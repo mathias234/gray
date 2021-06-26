@@ -8,7 +8,7 @@ use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, Store,
 use crate::bytecode::instructions::jump::{JumpZero, Jump};
 use crate::bytecode::instructions::math::{Add, Subtract, Multiply, Divide};
 use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember, GetObjectMember, CreateEmptyArray, PushArray};
-use crate::bytecode::instructions::comparison::{CompareGreaterThan, CompareLessThan, CompareNotEq, CompareEq, CompareLessThanOrEqual, CompareGreaterThanOrEqual};
+use crate::bytecode::instructions::comparison::{CompareGreaterThan, CompareLessThan, CompareNotEq, CompareEq, CompareLessThanOrEqual, CompareGreaterThanOrEqual, And, Or};
 use std::rc::Rc;
 
 #[derive(Debug)]
@@ -184,7 +184,6 @@ impl Compiler {
         Ok({})
     }
 
-
     fn compile_object_access(&mut self, generator: &mut Generator, node: &ASTNode, previous: Register, expression_result: Register) -> Result<(), CompilerError> {
         match &node.children[0].ast_type {
             ASTType::ObjectAccess(name) => {
@@ -206,7 +205,6 @@ impl Compiler {
 
         Ok({})
     }
-
 
     fn compile_if_statement(&mut self, namespace: &str, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
         self.compile_expression(generator, &node.children[0])?;
@@ -320,6 +318,12 @@ impl Compiler {
                     }
                     ExpressionOp::GreaterThanOrEqual => {
                         generator.emit(CompareGreaterThanOrEqual::new_boxed(rhs_register));
+                    }
+                    ExpressionOp::And => {
+                        generator.emit(And::new_boxed(rhs_register));
+                    }
+                    ExpressionOp::Or => {
+                        generator.emit(Or::new_boxed(rhs_register));
                     }
                 }
                 _ => return Err(CompilerError::UnexpectedASTNode(operator.clone())),

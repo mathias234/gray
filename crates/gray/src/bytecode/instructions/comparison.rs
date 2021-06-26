@@ -70,6 +70,28 @@ impl CompareGreaterThanOrEqual {
     }
 }
 
+pub struct And {
+    register: Register,
+}
+
+#[allow(dead_code)]
+impl And {
+    pub fn new_boxed(register: Register) -> Box<And> {
+        Box::new(And { register })
+    }
+}
+
+pub struct Or {
+    register: Register,
+}
+
+#[allow(dead_code)]
+impl Or {
+    pub fn new_boxed(register: Register) -> Box<Or> {
+        Box::new(Or { register })
+    }
+}
+
 impl Instruction for CompareEq {
     fn execute(&self, context: &mut ExecutionContext) {
         let lhs = context.get_accumulator();
@@ -134,4 +156,38 @@ impl Instruction for CompareGreaterThanOrEqual {
     }
 
     fn to_string(&self) -> String { format!("CompareGreaterThanOrEqual {}", self.register) }
+}
+
+impl Instruction for And {
+    fn execute(&self, context: &mut ExecutionContext) {
+        let lhs = context.get_accumulator();
+        let rhs = context.get_register(&self.register);
+
+        let true_value = Value::from_i64(1);
+        if lhs == true_value && rhs == true_value {
+            context.set_accumulator(true_value);
+            return;
+        }
+
+        context.set_accumulator(Value::from_i64(0));
+    }
+
+    fn to_string(&self) -> String { format!("And {}", self.register) }
+}
+
+impl Instruction for Or {
+    fn execute(&self, context: &mut ExecutionContext) {
+        let lhs = context.get_accumulator();
+        let rhs = context.get_register(&self.register);
+
+        let true_value = Value::from_i64(1);
+        if lhs == true_value || rhs == true_value {
+            context.set_accumulator(true_value);
+            return;
+        }
+
+        context.set_accumulator(Value::from_i64(0));
+    }
+
+    fn to_string(&self) -> String { format!("Or {}", self.register) }
 }

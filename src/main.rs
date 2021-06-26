@@ -40,6 +40,7 @@ fn main() -> Result<(), GrayError> {
         for file in files {
             let now = Instant::now();
 
+            println!("Running file {:?}", file);
             let mut interpreter = gray::load_file(&file)?;
 
             declare_functions(&mut interpreter);
