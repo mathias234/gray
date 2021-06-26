@@ -2,15 +2,11 @@ use crate::parser::lexer::{TokenStream, Token, Keyword, TokenType};
 use crate::parser::lexer::Delimiter;
 
 #[derive(PartialEq, Debug, Clone)]
-pub enum MathOp {
+pub enum ExpressionOp {
     Add,
     Subtract,
     Multiply,
     Divide,
-}
-
-#[derive(PartialEq, Debug, Clone)]
-pub enum ComparisonOp {
     Equal,
     NotEqual,
     LessThan,
@@ -23,14 +19,11 @@ pub enum ComparisonOp {
 pub enum ASTType {
     Scope,
     Expression,
-    MathExpression,
-    ComparisonExpression,
     ReturnExpression,
     IfStatement,
     WhileStatement,
     Namespace(String),
-    ComparisonOp(ComparisonOp),
-    MathOp(MathOp),
+    ExpressionOp(ExpressionOp),
     Function(String),
     FunctionCall(String),
     VariableDeclaration(String),
@@ -284,52 +277,81 @@ impl Parser {
     }
 
     fn parse_expression(&mut self) -> Result<ASTNode, ParserError> {
-        let mut node;
-
-        node = self.parse_non_math_expression()?;
-
         let next = self.peek_next_token(0)?;
-        let next1 = match self.peek_next_token(1) {
-            Ok(t) => Some(t),
-            Err(_) => None,
-        };
 
-        if Parser::token_is_math_delimiter(next) {
-            let math_expr = self.parse_math_expression(node)?;
+        let lhs;
+        if Parser::token_is_delimiter(next, Delimiter::OpenParen) {
+            self.get_next_token()?;
+            lhs = self.parse_expression()?;
+            self.get_next_token()?;
+        } else {
+            lhs = self.parse_sub_expression()?;
+        }
 
-            node = ASTNode::new(ASTType::Expression);
-            node.children.push(math_expr);
-        } else if Parser::tokens_are_comparison(next, next1).is_some() {
-            let comp_expr = self.parse_comparison_expression(node)?;
+        let mut node = ASTNode::new(ASTType::Expression);
 
-            node = ASTNode::new(ASTType::Expression);
-            node.children.push(comp_expr);
+        node.children.push(lhs);
+
+        let operator;
+
+        let next_expression_operator = self.get_next_expression_operator()?;
+        if next_expression_operator.is_some() {
+            operator = ASTNode::new(ASTType::ExpressionOp(next_expression_operator.unwrap()));
+            node.children.push(operator.clone());
+            let rhs = self.parse_expression()?;
+            node.children.push(rhs);
+
+
+            let my_precedence = Parser::operator_precedence(&operator);
+
+            let child_expr = &node.children[2];
+
+            if child_expr.children.len() == 3 {
+                match &child_expr.ast_type {
+                    ASTType::Expression => {
+                        let child_precedence = Parser::operator_precedence(&child_expr.children[1]);
+                        if child_precedence < my_precedence {
+                            // Kinda messy because of all the .children[]
+                            // but essentially we are just rotating the tree to the left
+                            let old_operator = node.children[1].clone();
+                            node.children[1] = node.children[2].children[1].clone();
+                            node.children[2].children[1] = old_operator;
+
+                            let old_lhs = node.children[0].clone();
+                            let child_old_lhs = node.children[2].children[0].clone();
+                            let child_old_rhs = node.children[2].children[2].clone();
+
+                            node.children[0] = node.children[2].clone();
+                            node.children[0].children[0] = old_lhs;
+                            node.children[0].children[2] = child_old_lhs;
+                            node.children[2] = child_old_rhs;
+                        }
+                    }
+                    _ => {}
+                }
+            }
         }
 
         Ok(node)
     }
 
-    fn parse_non_math_expression(&mut self) -> Result<ASTNode, ParserError> {
-        let mut node = ASTNode::new(ASTType::Expression);
-
+    fn parse_sub_expression(&mut self) -> Result<ASTNode, ParserError> {
         let first_delimiter = self.peek_next_token(0)?;
         let delimiter = self.peek_next_token(1)?;
 
-        if Parser::token_is_delimiter(&delimiter, Delimiter::OpenParen) || Parser::token_is_delimiter(&delimiter, Delimiter::Colon)  {
-            node.children.push(self.parse_function_call()?);
+        return if Parser::token_is_delimiter(&delimiter, Delimiter::OpenParen) || Parser::token_is_delimiter(&delimiter, Delimiter::Colon) {
+            Ok(self.parse_function_call()?)
         } else if Parser::token_is_delimiter(&first_delimiter, Delimiter::OpenCurlyBracket) {
-            node.children.push(self.parse_object_declaration()?);
+            Ok(self.parse_object_declaration()?)
         } else if Parser::token_is_delimiter(&first_delimiter, Delimiter::OpenBracket) {
-            node.children.push(self.parse_array_declaration()?);
-        }  else if Parser::token_is_delimiter(delimiter, Delimiter::Dot) {
-            node.children.push(self.parse_member_expression()?);
+            Ok(self.parse_array_declaration()?)
+        } else if Parser::token_is_delimiter(delimiter, Delimiter::Dot) {
+            Ok(self.parse_member_expression()?)
         } else {
             // Very simple single token expression
             let token = self.get_next_token()?;
-            node.children.push(Parser::token_to_simple_ast_node(&token)?);
-        }
-
-        Ok(node)
+            Ok(Parser::token_to_simple_ast_node(&token)?)
+        };
     }
 
     fn parse_array_declaration(&mut self) -> Result<ASTNode, ParserError> {
@@ -432,7 +454,6 @@ impl Parser {
     }
 
     fn parse_function_call(&mut self) -> Result<ASTNode, ParserError> {
-
         let mut namespace = String::new();
 
         while Parser::token_is_delimiter(self.peek_next_token(1)?, Delimiter::Colon) {
@@ -482,107 +503,22 @@ impl Parser {
 
     fn operator_precedence(node: &ASTNode) -> i32 {
         match &node.ast_type {
-            ASTType::MathOp(op) => {
+            ASTType::ExpressionOp(op) => {
                 match op {
-                    MathOp::Add => 0,
-                    MathOp::Subtract => 0,
-                    MathOp::Multiply => 1,
-                    MathOp::Divide => 1,
+                    ExpressionOp::Add => 0,
+                    ExpressionOp::Subtract => 0,
+                    ExpressionOp::Multiply => 1,
+                    ExpressionOp::Divide => 1,
+                    ExpressionOp::Equal => 2,
+                    ExpressionOp::NotEqual => 2,
+                    ExpressionOp::LessThan => 2,
+                    ExpressionOp::GreaterThan => 2,
+                    ExpressionOp::LessThanOrEqual => 2,
+                    ExpressionOp::GreaterThanOrEqual => 2,
                 }
             }
-            _ => 0,
+            _ => -1,
         }
-    }
-
-    fn parse_math_expression(&mut self, lhs: ASTNode) -> Result<ASTNode, ParserError> {
-        let mut node = ASTNode::new(ASTType::MathExpression);
-
-        let operator = Parser::token_to_math_op_ast_node(self.get_next_token()?)?;
-
-        let mut protected_expression = false;
-        if Parser::token_is_delimiter(self.peek_next_token(0)?, Delimiter::OpenParen) {
-            self.get_next_token()?;
-            protected_expression = true;
-        }
-
-        let rhs = self.parse_expression()?;
-
-        node.children.push(lhs);
-        node.children.push(operator.clone());
-        node.children.push(rhs);
-
-        if protected_expression {
-            self.get_next_token()?;
-
-            // This is a protected expression meaning it's wrapped in ()
-            // We can return early so not to do operator precedence on this
-            return Ok(node);
-        }
-
-        let my_precedence = Parser::operator_precedence(&operator);
-
-        match &node.children[2].children[0].ast_type {
-            ASTType::MathExpression => {
-                let child_precedence = Parser::operator_precedence(&node.children[2].children[0]);
-                if child_precedence < my_precedence {
-                    // Kinda messy because of all the .children[]
-                    // but essentially we are just rotating the tree to the left
-
-                    let old_operator = node.children[1].clone();
-                    node.children[1] = node.children[2].children[0].children[1].clone();
-                    node.children[2].children[0].children[1] = old_operator;
-
-                    let old_lhs = node.children[0].clone();
-                    let child_old_lhs = node.children[2].children[0].children[0].clone();
-                    let child_old_rhs = node.children[2].children[0].children[2].clone();
-
-                    node.children[0] = node.children[2].clone();
-                    node.children[0].children[0].children[0] = old_lhs;
-                    node.children[0].children[0].children[2] = child_old_lhs;
-                    node.children[2] = child_old_rhs;
-                }
-            }
-            _ => {}
-        }
-
-        Ok(node)
-    }
-
-    fn parse_comparison_expression(&mut self, lhs: ASTNode) -> Result<ASTNode, ParserError> {
-        let mut node = ASTNode::new(ASTType::ComparisonExpression);
-
-        node.children.push(lhs);
-
-        let token = self.peek_next_token(0)?;
-        let token1 = match self.peek_next_token(1) {
-            Ok(t) => Some(t),
-            Err(_) => None,
-        };
-
-        let operator;
-
-        let rhs;
-
-        let tokens_are_comparison = Parser::tokens_are_comparison(token, token1);
-
-        match tokens_are_comparison {
-            Some(op) => operator = op,
-            None => return Err(ParserError::UnexpectedTokenInStream(token.clone()))
-        }
-
-        if operator == ComparisonOp::LessThan || operator == ComparisonOp::GreaterThan {
-            self.get_next_token()?;
-            rhs = self.parse_expression()?;
-        } else {
-            self.get_next_token()?;
-            self.get_next_token()?;
-            rhs = self.parse_expression()?;
-        }
-
-        node.children.push(ASTNode::new(ASTType::ComparisonOp(operator)));
-        node.children.push(rhs);
-
-        Ok(node)
     }
 
     fn get_next_token(&mut self) -> Result<&Token, ParserError> {
@@ -632,52 +568,52 @@ impl Parser {
         }
     }
 
-    fn token_to_math_op_ast_node(token: &Token) -> Result<ASTNode, ParserError> {
-        match &token.token_type {
-            TokenType::Delimiter(delimiter) => match delimiter {
-                Delimiter::Plus => Ok(ASTNode::new(ASTType::MathOp(MathOp::Add))),
-                Delimiter::Hyphen => Ok(ASTNode::new(ASTType::MathOp(MathOp::Subtract))),
-                Delimiter::Star => Ok(ASTNode::new(ASTType::MathOp(MathOp::Multiply))),
-                Delimiter::Slash => Ok(ASTNode::new(ASTType::MathOp(MathOp::Divide))),
-                _ => Err(ParserError::DelimiterIsNotMathOperation(delimiter.clone()))
-            }
-            _ => Err(ParserError::UnexpectedTokenInStream(token.clone()))
-        }
-    }
-
-    fn token_is_math_delimiter(token: &Token) -> bool {
-        return match &token.token_type {
-            TokenType::Delimiter(d) => {
-                match d {
-                    Delimiter::Star => true,
-                    Delimiter::Plus => true,
-                    Delimiter::Hyphen => true,
-                    Delimiter::Slash => true,
-                    _ => false,
-                }
-            }
-            _ => false
+    fn get_next_expression_operator(&mut self) -> Result<Option<ExpressionOp>, ParserError> {
+        let token = self.peek_next_token(0)?;
+        let token2 = match self.peek_next_token(1) {
+            Ok(t) => Some(t),
+            Err(_) => None,
         };
-    }
 
-    fn tokens_are_comparison(token: &Token, token2: Option<&Token>) -> Option<ComparisonOp> {
         if token2.is_some() && Parser::token_is_delimiter(token2.unwrap(), Delimiter::Equal) {
             if Parser::token_is_delimiter(&token, Delimiter::Equal) {
-                return Some(ComparisonOp::Equal);
+                self.get_next_token()?;
+                self.get_next_token()?;
+                return Ok(Some(ExpressionOp::Equal));
             } else if Parser::token_is_delimiter(&token, Delimiter::Exclamation) {
-                return Some(ComparisonOp::NotEqual);
+                self.get_next_token()?;
+                self.get_next_token()?;
+                return Ok(Some(ExpressionOp::NotEqual));
             } else if Parser::token_is_delimiter(&token, Delimiter::LessThan) {
-                return Some(ComparisonOp::LessThanOrEqual);
+                self.get_next_token()?;
+                self.get_next_token()?;
+                return Ok(Some(ExpressionOp::LessThanOrEqual));
             } else if Parser::token_is_delimiter(&token, Delimiter::GreaterThan) {
-                return Some(ComparisonOp::GreaterThanOrEqual);
+                self.get_next_token()?;
+                self.get_next_token()?;
+                return Ok(Some(ExpressionOp::GreaterThanOrEqual));
             }
         } else if Parser::token_is_delimiter(&token, Delimiter::LessThan) {
-            return Some(ComparisonOp::LessThan);
+            self.get_next_token()?;
+            return Ok(Some(ExpressionOp::LessThan));
         } else if Parser::token_is_delimiter(&token, Delimiter::GreaterThan) {
-            return Some(ComparisonOp::GreaterThan);
+            self.get_next_token()?;
+            return Ok(Some(ExpressionOp::GreaterThan));
+        } else if Parser::token_is_delimiter(&token, Delimiter::Plus) {
+            self.get_next_token()?;
+            return Ok(Some(ExpressionOp::Add));
+        } else if Parser::token_is_delimiter(&token, Delimiter::Hyphen) {
+            self.get_next_token()?;
+            return Ok(Some(ExpressionOp::Subtract));
+        } else if Parser::token_is_delimiter(&token, Delimiter::Star) {
+            self.get_next_token()?;
+            return Ok(Some(ExpressionOp::Multiply));
+        } else if Parser::token_is_delimiter(&token, Delimiter::Slash) {
+            self.get_next_token()?;
+            return Ok(Some(ExpressionOp::Divide));
         }
 
-        return None;
+        return Ok(None);
     }
 
     fn validate_token_is_delimiter(token: &Token, delimiter: Delimiter) -> Result<(), ParserError> {

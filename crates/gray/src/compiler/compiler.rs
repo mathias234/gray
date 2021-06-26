@@ -1,4 +1,4 @@
-use crate::parser::parser::{ASTNode, ASTType, MathOp, ComparisonOp};
+use crate::parser::parser::{ASTNode, ASTType, ExpressionOp};
 use crate::bytecode::code_block::CodeBlock;
 use crate::bytecode::generator::Generator;
 use std::collections::HashMap;
@@ -252,26 +252,84 @@ impl Compiler {
         Ok({})
     }
 
-    fn compile_expression(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
-        let child = &node.children[0];
-        match &child.ast_type {
-            ASTType::MathExpression => self.compile_math_expression(generator, child),
-            ASTType::ComparisonExpression => self.compile_comparison_expression(generator, child),
-            ASTType::IntegerValue(_) => self.compile_value_to_accumulator(generator, child),
-            ASTType::FunctionCall(call) => self.compile_function_call(call, generator, child),
-            ASTType::FloatValue(_) => self.compile_value_to_accumulator(generator, child),
-            ASTType::Identifier(_) => self.compile_value_to_accumulator(generator, child),
-            ASTType::StringValue(_) => self.compile_value_to_accumulator(generator, child),
-            ASTType::CreateObject => self.compile_create_object(generator, child),
-            ASTType::CreateArray => self.compile_create_array(generator, child),
+    fn compile_sub_expression(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
+        match &node.ast_type {
+            ASTType::IntegerValue(_) => self.compile_value_to_accumulator(generator, node),
+            ASTType::FunctionCall(call) => self.compile_function_call(call, generator, node),
+            ASTType::FloatValue(_) => self.compile_value_to_accumulator(generator, node),
+            ASTType::Identifier(_) => self.compile_value_to_accumulator(generator, node),
+            ASTType::StringValue(_) => self.compile_value_to_accumulator(generator, node),
+            ASTType::CreateObject => self.compile_create_object(generator, node),
+            ASTType::CreateArray => self.compile_create_array(generator, node),
+            ASTType::Expression => self.compile_expression(generator, node),
             ASTType::ObjectAccess(name) => {
                 generator.emit(GetVariable::new_boxed(name.clone()));
                 let object_register = generator.next_free_register();
                 generator.emit(Store::new_boxed(object_register));
-                self.compile_object_get(generator, &node.children[0], object_register)
+                self.compile_object_get(generator, node, object_register)
             }
-            _ => Err(CompilerError::UnexpectedASTNode(child.clone())),
+            _ => Err(CompilerError::UnexpectedASTNode(node.clone())),
         }
+    }
+
+    fn compile_expression(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
+        let child = &node.children[0];
+        self.compile_sub_expression(generator, child)?;
+
+        if node.children.len() > 1 {
+            let lhs_register = generator.next_free_register();
+            generator.emit(Store::new_boxed(lhs_register));
+
+            let rhs = &node.children[2];
+            self.compile_sub_expression(generator, rhs)?;
+            let rhs_register = generator.next_free_register();
+            generator.emit(Store::new_boxed(rhs_register));
+
+            generator.emit(LoadRegister::new_boxed(lhs_register));
+
+            let operator = &node.children[1];
+
+            match &operator.ast_type {
+                ASTType::ExpressionOp(op) => match op {
+                    ExpressionOp::Add => {
+                        generator.emit(Add::new_boxed(rhs_register));
+                    }
+                    ExpressionOp::Subtract => {
+                        generator.emit(Subtract::new_boxed(rhs_register));
+                    }
+                    ExpressionOp::Multiply => {
+                        generator.emit(Multiply::new_boxed(rhs_register));
+                    }
+                    ExpressionOp::Divide => {
+                        generator.emit(Divide::new_boxed(rhs_register));
+                    }
+                    ExpressionOp::Equal => {
+                        generator.emit(CompareEq::new_boxed(rhs_register));
+                    }
+                    ExpressionOp::NotEqual => {
+                        generator.emit(CompareNotEq::new_boxed(rhs_register));
+                    }
+                    ExpressionOp::LessThan => {
+                        generator.emit(CompareLessThan::new_boxed(rhs_register));
+                    }
+                    ExpressionOp::GreaterThan => {
+                        generator.emit(CompareGreaterThan::new_boxed(rhs_register));
+                    }
+                    ExpressionOp::LessThanOrEqual => {
+                        generator.emit(CompareLessThanOrEqual::new_boxed(rhs_register));
+                    }
+                    ExpressionOp::GreaterThanOrEqual => {
+                        generator.emit(CompareGreaterThanOrEqual::new_boxed(rhs_register));
+                    }
+                }
+                _ => return Err(CompilerError::UnexpectedASTNode(operator.clone())),
+            }
+
+            generator.release_register(lhs_register);
+            generator.release_register(rhs_register);
+        }
+
+        Ok({})
     }
 
     fn compile_create_array(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
@@ -311,52 +369,6 @@ impl Compiler {
         generator.emit(LoadRegister::new_boxed(object_register));
 
         generator.release_register(object_register);
-
-        Ok({})
-    }
-
-    fn compile_math_expression(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
-        self.compile_expression(generator, &node.children[2])?;
-        let rhs_register = generator.next_free_register();
-        generator.emit(Store::new_boxed(rhs_register));
-
-        self.compile_expression(generator, &node.children[0])?;
-
-        match &node.children[1].ast_type {
-            ASTType::MathOp(math_op) => match math_op {
-                MathOp::Add => generator.emit(Add::new_boxed(rhs_register)),
-                MathOp::Subtract => generator.emit(Subtract::new_boxed(rhs_register)),
-                MathOp::Multiply => generator.emit(Multiply::new_boxed(rhs_register)),
-                MathOp::Divide => generator.emit(Divide::new_boxed(rhs_register))
-            }
-            _ => return Err(CompilerError::UnexpectedASTNode(node.children[1].clone()))
-        }
-
-        generator.release_register(rhs_register);
-
-        Ok({})
-    }
-
-    fn compile_comparison_expression(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
-        self.compile_expression(generator, &node.children[2])?;
-        let rhs_register = generator.next_free_register();
-        generator.emit(Store::new_boxed(rhs_register));
-
-        self.compile_expression(generator, &node.children[0])?;
-
-        match &node.children[1].ast_type {
-            ASTType::ComparisonOp(comp_op) => match comp_op {
-                ComparisonOp::Equal => generator.emit(CompareEq::new_boxed(rhs_register)),
-                ComparisonOp::NotEqual => generator.emit(CompareNotEq::new_boxed(rhs_register)),
-                ComparisonOp::LessThan => generator.emit(CompareLessThan::new_boxed(rhs_register)),
-                ComparisonOp::GreaterThan => generator.emit(CompareGreaterThan::new_boxed(rhs_register)),
-                ComparisonOp::LessThanOrEqual => generator.emit(CompareLessThanOrEqual::new_boxed(rhs_register)),
-                ComparisonOp::GreaterThanOrEqual => generator.emit(CompareGreaterThanOrEqual::new_boxed(rhs_register)),
-            }
-            _ => return Err(CompilerError::UnexpectedASTNode(node.children[1].clone()))
-        }
-
-        generator.release_register(rhs_register);
 
         Ok({})
     }

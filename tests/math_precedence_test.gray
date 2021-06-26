@@ -1,0 +1,19 @@
+let a = 50 * 50;
+
+assert_eq(a, 2500);
+
+let b = 50 * 50 + 5;
+
+assert_eq(b, 2505);
+
+let c = 50 * (50 + 5);
+
+assert_eq(c, 2750);
+
+let d = (50 + 50) * 5;
+
+assert_eq(d, 500);
+
+let e = ((5 + 5) * 5) + (5 * (5 + 5));
+
+assert_eq(e, 100);
