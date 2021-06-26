@@ -28,7 +28,7 @@ impl Compiler {
 
 
         let mut generator = Generator::new();
-        compiler.compile_scope("", &mut generator, &root_node)?;
+        compiler.compile_scope("", &mut generator, &root_node, true)?;
         compiler.blocks.insert(String::from("ProgramMain"), generator.block);
 
         Ok(compiler.blocks)
@@ -40,7 +40,7 @@ impl Compiler {
         let mut argument_index = 0;
         for child in &node.children {
             match &child.ast_type {
-                ASTType::Scope => self.compile_scope(namespace, &mut generator, child)?,
+                ASTType::Scope => self.compile_scope(namespace, &mut generator, child, true)?,
                 ASTType::Identifier(parameter) => {
                     generator.emit(LoadArgument::new_boxed(argument_index));
                     generator.emit(DeclareVariable::new_boxed(parameter.clone()));
@@ -63,8 +63,10 @@ impl Compiler {
         Ok({})
     }
 
-    fn compile_scope(&mut self, namespace: &str, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
-        generator.emit(PushScope::new_boxed());
+    fn compile_scope(&mut self, namespace: &str, generator: &mut Generator, node: &ASTNode, push_scope: bool) -> Result<(), CompilerError> {
+        if push_scope {
+            generator.emit(PushScope::new_boxed());
+        }
         for child in &node.children {
             match &child.ast_type {
                 ASTType::Expression => {
@@ -93,14 +95,16 @@ impl Compiler {
                         new_namespace = name.clone();
                     }
 
-                    self.compile_scope(&new_namespace, generator, &child.children[0])?;
+                    self.compile_scope(&new_namespace, generator, &child.children[0], false)?;
                 }
                 ASTType::Function(name) => self.compile_function(namespace, name, child)?,
                 _ => return Err(CompilerError::UnexpectedASTNode(child.clone())),
             }
         }
 
-        generator.emit(PopScope::new_boxed());
+        if push_scope {
+            generator.emit(PopScope::new_boxed());
+        }
         Ok({})
     }
 
@@ -209,7 +213,7 @@ impl Compiler {
 
         let scope_start = generator.make_label();
 
-        self.compile_scope(namespace, generator, &node.children[1])?;
+        self.compile_scope(namespace, generator, &node.children[1], true)?;
 
         let mut scope_end = generator.make_label();
         scope_end.position += 1;
@@ -225,7 +229,7 @@ impl Compiler {
 
         let scope_start = generator.make_label();
 
-        self.compile_scope(namespace, generator, &node.children[1])?;
+        self.compile_scope(namespace, generator, &node.children[1], true)?;
         generator.emit(Jump::new_boxed(comparison_start));
 
         let mut scope_end = generator.make_label();
