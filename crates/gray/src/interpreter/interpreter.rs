@@ -172,7 +172,7 @@ impl<'interp> Interpreter<'interp> {
             for ins in block.get_instructions() {
                 if ins.to_string() == String::from("PopScope") { indent -= 1; }
 
-                for i in 0..indent {
+                for _ in 0..indent {
                     print!("\t");
                 }
                 println!("[{:04}] {}", idx, ins.to_string());

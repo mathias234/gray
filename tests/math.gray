@@ -1,0 +1,5 @@
+assert_eq(math::sin(32), 0.5514266812416906);
+assert_eq(math::cos(32), 0.8342233605065102);
+
+assert_eq(math::abs(-50), 50);
+assert_eq(math::abs(-50.0), 50);

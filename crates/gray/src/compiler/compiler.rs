@@ -214,7 +214,7 @@ impl Compiler {
         self.compile_scope(namespace, generator, &node.children[1], true)?;
         let else_block_start = generator.make_instruction_holder();
 
-        let mut scope_end = generator.make_label();
+        let scope_end = generator.make_label();
 
         let mut else_block_end_instruction = None;
         if node.children.len() >= 3 {
@@ -231,7 +231,7 @@ impl Compiler {
             }
         }
 
-        let mut else_block_end = generator.make_label();
+        let else_block_end = generator.make_label();
 
         generator.emit_at(JumpZero::new_boxed(scope_end), &scope_start);
         generator.emit_at(Jump::new_boxed(else_block_end), &else_block_start);
@@ -251,7 +251,7 @@ impl Compiler {
         self.compile_scope(namespace, generator, &node.children[1], true)?;
         generator.emit(Jump::new_boxed(comparison_start));
 
-        let mut scope_end = generator.make_label();
+        let scope_end = generator.make_label();
 
         generator.emit_at(JumpZero::new_boxed(scope_end), &scope_start);
 

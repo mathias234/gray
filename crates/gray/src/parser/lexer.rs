@@ -172,7 +172,7 @@ impl Lexer {
         let chars = &mut self.file[self.position..self.file.len()].chars();
 
         let mut is_string = false;
-
+        let mut saw_hyphen = false;
 
         loop {
             let char = chars.next();
@@ -206,7 +206,9 @@ impl Lexer {
                     continue;
                 }
 
-                if delimiter == Delimiter::Dot && Lexer::word_to_integer(&word).is_some() {
+                if saw_hyphen == false && delimiter == Delimiter::Hyphen {
+                    saw_hyphen = true;
+                } else if delimiter == Delimiter::Dot && Lexer::word_to_integer(&word).is_some() {
                     // Seems like a float, as we have a full integer before then a dot
                     // Lets try and pop another token to get the fractional portion
 
@@ -254,6 +256,11 @@ impl Lexer {
             return Ok(Token::new(TokenType::String(word), (self.pos_x, self.pos_y)));
         }
 
+        match Lexer::word_to_delimiter(&word) {
+            Some(value) => return Ok(Token::new(TokenType::Delimiter(value), (self.pos_x, self.pos_y))),
+            None => {}
+        }
+
         match Lexer::word_to_integer(&word) {
             Some(value) => return Ok(Token::new(TokenType::Integer(value), (self.pos_x, self.pos_y))),
             None => {}
@@ -279,6 +286,16 @@ impl Lexer {
         };
 
         Some(value)
+    }
+
+    fn word_to_delimiter(word: &str) -> Option<Delimiter> {
+        if word.len() > 1 {
+            return None;
+        }
+
+        let value = Lexer::char_to_delimiter(word.chars().nth(0).unwrap());
+
+        return value;
     }
 
     fn integer_and_fractional_to_float(integer: i64, fractional: i64) -> Result<f64, LexerError> {
