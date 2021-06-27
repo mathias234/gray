@@ -209,14 +209,35 @@ impl Compiler {
     fn compile_if_statement(&mut self, namespace: &str, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
         self.compile_expression(generator, &node.children[0])?;
 
-        let scope_start = generator.make_label();
+        let scope_start = generator.make_instruction_holder();
 
         self.compile_scope(namespace, generator, &node.children[1], true)?;
+        let else_block_start = generator.make_instruction_holder();
 
         let mut scope_end = generator.make_label();
-        scope_end.position += 1;
+
+        let mut else_block_end_instruction = None;
+        if node.children.len() >= 3 {
+            match node.children[2].ast_type {
+                ASTType::IfStatement => {
+                    self.compile_if_statement(namespace, generator, &node.children[2])?;
+                    else_block_end_instruction = Some(generator.make_instruction_holder());
+                }
+                ASTType::Scope => {
+                    self.compile_scope(namespace, generator, &node.children[2], true)?;
+                    else_block_end_instruction = Some(generator.make_instruction_holder());
+                }
+                _ => return Err(CompilerError::UnexpectedASTNode(node.children[2].clone()))
+            }
+        }
+
+        let mut else_block_end = generator.make_label();
 
         generator.emit_at(JumpZero::new_boxed(scope_end), &scope_start);
+        generator.emit_at(Jump::new_boxed(else_block_end), &else_block_start);
+        if else_block_end_instruction.is_some() {
+            generator.emit_at(Jump::new_boxed(else_block_end), else_block_end_instruction.as_ref().unwrap());
+        }
 
         Ok({})
     }
@@ -225,13 +246,12 @@ impl Compiler {
         let comparison_start = generator.make_label();
         self.compile_expression(generator, &node.children[0])?;
 
-        let scope_start = generator.make_label();
+        let scope_start = generator.make_instruction_holder();
 
         self.compile_scope(namespace, generator, &node.children[1], true)?;
         generator.emit(Jump::new_boxed(comparison_start));
 
         let mut scope_end = generator.make_label();
-        scope_end.position += 1;
 
         generator.emit_at(JumpZero::new_boxed(scope_end), &scope_start);
 

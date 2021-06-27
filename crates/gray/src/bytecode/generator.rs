@@ -2,6 +2,7 @@ use crate::bytecode::code_block::CodeBlock;
 use crate::bytecode::label::Label;
 use crate::bytecode::instructions::other::Instruction;
 use crate::bytecode::register::Register;
+use crate::bytecode::instructions::object::NotAnInstruction;
 
 pub struct Generator {
     register_index: usize,
@@ -38,11 +39,19 @@ impl Generator {
         Label::new(pos)
     }
 
+    pub fn make_instruction_holder(&mut self) -> Label {
+        let label = self.make_label();
+
+        self.emit(NotAnInstruction::new_boxed());
+
+        return label;
+    }
+
     pub fn emit(&mut self, instruction: Box<dyn Instruction>)  {
         self.block.add_instruction(instruction);
     }
 
     pub fn emit_at(&mut self, instruction: Box<dyn Instruction>, label: &Label) {
-        self.block.add_instruction_at(instruction, label);
+        self.block.set_instruction_at(instruction, label);
     }
 }

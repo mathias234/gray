@@ -3,7 +3,7 @@ namespace test {
         namespace test3 {
             namespace test4 {
                 fn test() {
-
+                    print("Success");
                 }
             }
         }

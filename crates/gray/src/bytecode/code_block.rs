@@ -14,8 +14,8 @@ impl CodeBlock {
         self.instructions.push(instruction);
     }
 
-    pub fn add_instruction_at(&mut self, instruction: Box<dyn Instruction>, label: &Label) {
-        self.instructions.insert(label.position, instruction);
+    pub fn set_instruction_at(&mut self, instruction: Box<dyn Instruction>, label: &Label) {
+        self.instructions[label.position] = instruction;
     }
 
     pub fn get_instructions(&self) -> &Vec<Box<dyn Instruction>> {

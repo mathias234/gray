@@ -36,6 +36,7 @@ pub enum Keyword {
     Function,
     VariableDeclaration,
     IfStatement,
+    ElseStatement,
     WhileStatement,
     Return,
     Namespace
@@ -298,6 +299,7 @@ impl Lexer {
             "fn" => Some(Keyword::Function),
             "let" => Some(Keyword::VariableDeclaration),
             "if" => Some(Keyword::IfStatement),
+            "else" => Some(Keyword::ElseStatement),
             "while" => Some(Keyword::WhileStatement),
             "return" => Some(Keyword::Return),
             "namespace" => Some(Keyword::Namespace),

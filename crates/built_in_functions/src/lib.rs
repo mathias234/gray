@@ -67,7 +67,7 @@ fn format_to_value(args: Vec<Value>) -> Value {
     let format_str = &args[0];
     let format_str = match format_str.get_data_value() {
         DataValue::String(str) => str,
-        _ => panic!("Only strings can be used as format string"),
+        d => panic!("Only strings can be used as format string tried to print {:?}", d),
     };
 
     let mut arg_idx = 1;

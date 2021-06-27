@@ -66,6 +66,15 @@ impl PushArray {
     }
 }
 
+pub struct NotAnInstruction {}
+
+#[allow(dead_code)]
+impl NotAnInstruction {
+    pub fn new_boxed() -> Box<NotAnInstruction> {
+        Box::new(NotAnInstruction {})
+    }
+}
+
 
 impl Instruction for CreateEmptyObject {
     fn execute(&self, context: &mut ExecutionContext) {
@@ -119,9 +128,17 @@ impl Instruction for PushArray {
             DataValue::Array(a) => {
                 a.push(value);
             }
-            _=> panic!("Error pushing to value that is not an array"),
+            _ => panic!("Error pushing to value that is not an array"),
         }
     }
 
     fn to_string(&self) -> String { format!("PushArray {}", self.array) }
+}
+
+impl Instruction for NotAnInstruction {
+    fn execute(&self, _: &mut ExecutionContext) {
+
+    }
+
+    fn to_string(&self) -> String { format!("NotAnInstruction") }
 }

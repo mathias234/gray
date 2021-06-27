@@ -24,11 +24,13 @@ impl Value {
             value: DataValue::I64(value)
         }
     }
+
     pub fn from_f64(value: f64) -> Value {
         Value {
             value: DataValue::F64(value)
         }
     }
+
     pub fn from_object(value: Object) -> Value {
         Value {
             value: DataValue::Object(value)
@@ -189,7 +191,6 @@ impl ops::Div<Value> for Value {
                     DataValue::I64(rhs) => { Value::from_f64(lhs / rhs as f64) }
                     DataValue::F64(rhs) => { Value::from_f64(lhs / rhs) }
                     rhs => panic!("Unable to divide {:?} by {:?}", lhs, rhs),
-
                 }
             }
             DataValue::Object(_) => {

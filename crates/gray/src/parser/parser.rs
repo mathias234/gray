@@ -259,6 +259,45 @@ impl Parser {
 
         node.children.push(self.parse_scope()?);
 
+        if self.peek_next_token(0).is_err() {
+            return Ok(node);
+        }
+
+        match &self.peek_next_token(0)?.token_type {
+            TokenType::Keyword(keyword) => {
+                match keyword {
+                    Keyword::ElseStatement => {
+                        self.get_next_token()?;
+
+                        match &self.peek_next_token(0)?.token_type {
+                            TokenType::Keyword(keyword) => {
+                                match keyword {
+                                    Keyword::IfStatement => {
+                                        let else_if_statement = self.parse_if_statement()?;
+                                        node.children.push(else_if_statement);
+                                    }
+                                    _ => {}
+                                }
+                            }
+                            TokenType::Delimiter(delimiter) => {
+                                match delimiter {
+                                    Delimiter::OpenCurlyBracket => {
+                                        self.get_next_token()?;
+                                        let else_statement = self.parse_scope()?;
+                                        node.children.push(else_statement);
+                                    }
+                                    _ => {},
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+
         Ok(node)
     }
 
@@ -303,7 +342,6 @@ impl Parser {
             let rhs = self.parse_expression()?;
             node.children.push(rhs);
 
-
             let my_precedence = Parser::operator_precedence(&operator);
 
             let child_expr = &node.children[2];
@@ -312,6 +350,7 @@ impl Parser {
                 match &child_expr.ast_type {
                     ASTType::Expression => {
                         let child_precedence = Parser::operator_precedence(&child_expr.children[1]);
+
                         if child_precedence < my_precedence {
                             // Kinda messy because of all the .children[]
                             // but essentially we are just rotating the tree to the left
@@ -608,7 +647,7 @@ impl Parser {
                 return Ok(Some(ExpressionOp::Or));
             }
         }
-        
+
         if Parser::token_is_delimiter(&token, Delimiter::LessThan) {
             self.get_next_token()?;
             return Ok(Some(ExpressionOp::LessThan));

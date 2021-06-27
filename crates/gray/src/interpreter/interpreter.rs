@@ -168,8 +168,16 @@ impl<'interp> Interpreter<'interp> {
             println!("\tBlock {}", name);
             let mut idx = 0;
 
+            let mut indent = 2;
             for ins in block.get_instructions() {
-                println!("\t\t[{:04}] {}", idx, ins.to_string());
+                if ins.to_string() == String::from("PopScope") { indent -= 1; }
+
+                for i in 0..indent {
+                    print!("\t");
+                }
+                println!("[{:04}] {}", idx, ins.to_string());
+
+                if ins.to_string() == String::from("PushScope") { indent += 1; }
                 idx += 1;
             }
 
@@ -228,9 +236,8 @@ impl<'interp> Interpreter<'interp> {
                             self.execution_context.set_accumulator(returned_value);
                             self.pc += 1;
                             continue;
-                        },
+                        }
                         None => panic!("Unable to find function `{}`", call_block_id)
-
                     }
                 }
 
