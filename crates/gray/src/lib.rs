@@ -35,8 +35,9 @@ impl From<CompilerError> for GrayError {
 
 pub fn load_file(file: &str) -> Result<Interpreter, GrayError> {
 
-    let mut token_stream = Lexer::lex_file(file)?;
+    let token_stream = Lexer::lex_file(file)?;
 
+    /*
     println!("\nLexer token stream");
     loop {
         let token = token_stream.next();
@@ -47,12 +48,12 @@ pub fn load_file(file: &str) -> Result<Interpreter, GrayError> {
     }
 
     token_stream.reset();
+     */
 
     let root_ast_node = Parser::parse(token_stream)?;
 
-    println!("\nParser AST Tree");
-
-    root_ast_node.dump(0);
+    //println!("\nParser AST Tree");
+    //root_ast_node.dump(0);
 
     let blocks = Compiler::compile(root_ast_node)?;
 
