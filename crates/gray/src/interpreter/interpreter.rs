@@ -163,7 +163,6 @@ impl<'interp> Interpreter<'interp> {
         };
 
 
-        /*
         println!("Compiled code");
         for (name, block) in &self.blocks {
             println!("\tBlock {}", name);
@@ -184,7 +183,6 @@ impl<'interp> Interpreter<'interp> {
 
             println!();
         }
-        */
 
         println!("Starting execution");
 

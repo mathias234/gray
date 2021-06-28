@@ -13,7 +13,8 @@ use std::rc::Rc;
 
 #[derive(Debug)]
 pub enum CompilerError {
-    UnexpectedASTNode(ASTNode)
+    UnexpectedASTNode(ASTNode),
+    ExpectedIdentifier(ASTNode),
 }
 
 pub struct Compiler {
@@ -83,9 +84,6 @@ impl Compiler {
                 }
                 ASTType::ReturnExpression => {
                     self.compile_return(generator, child)?;
-                }
-                ASTType::VariableAssignment => {
-                    self.compile_variable_assignment(generator, child)?
                 }
                 ASTType::Namespace(name) => {
                     let new_namespace;
@@ -345,6 +343,26 @@ impl Compiler {
                     ExpressionOp::Or => {
                         generator.emit(Or::new_boxed(rhs_register));
                     }
+                    ExpressionOp::Assign => {
+                        generator.emit(LoadRegister::new_boxed(rhs_register));
+                        self.compile_assign(generator, op, &node.children[0], rhs_register)?;
+                    }
+                    ExpressionOp::AddAssign => {
+                        generator.emit(LoadRegister::new_boxed(rhs_register));
+                        self.compile_assign(generator, op, &node.children[0], rhs_register)?;
+                    }
+                    ExpressionOp::SubtractAssign => {
+                        generator.emit(LoadRegister::new_boxed(rhs_register));
+                        self.compile_assign(generator, op, &node.children[0], rhs_register)?;
+                    }
+                    ExpressionOp::MultiplyAssign => {
+                        generator.emit(LoadRegister::new_boxed(rhs_register));
+                        self.compile_assign(generator, op, &node.children[0], rhs_register)?;
+                    }
+                    ExpressionOp::DivideAssign => {
+                        generator.emit(LoadRegister::new_boxed(rhs_register));
+                        self.compile_assign(generator, op, &node.children[0], rhs_register)?;
+                    }
                 }
                 _ => return Err(CompilerError::UnexpectedASTNode(operator.clone())),
             }
@@ -352,6 +370,58 @@ impl Compiler {
             generator.release_register(rhs_register);
         }
 
+        Ok({})
+    }
+
+    fn compile_access(&mut self, generator: &mut Generator, node: &ASTNode, rhs_register: Register) -> Result<(), CompilerError> {
+        match &node.ast_type {
+            ASTType::Identifier(i) => {
+                generator.emit(SetVariable::new_boxed(i.clone()));
+            }
+            ASTType::ObjectAccess(i) => {
+                generator.emit(GetVariable::new_boxed(i.clone()));
+                let object_register = generator.next_free_register();
+                generator.emit(Store::new_boxed(object_register));
+
+                self.compile_object_access(generator, &node, object_register, rhs_register)?;
+            }
+            _ => return Err(CompilerError::ExpectedIdentifier(node.clone())),
+        };
+
+        Ok({})
+    }
+
+    fn compile_assign(&mut self, generator: &mut Generator, op: &ExpressionOp, node: &ASTNode, rhs_register: Register) -> Result<(), CompilerError> {
+        match op {
+            ExpressionOp::Assign => {
+                self.compile_access(generator, node, rhs_register)?;
+            }
+            ExpressionOp::AddAssign => {
+                generator.emit(Add::new_boxed(rhs_register));
+                let rhs_register = generator.next_free_register();
+                self.compile_access(generator, node, rhs_register)?;
+                generator.release_register(rhs_register);
+            }
+            ExpressionOp::SubtractAssign => {
+                generator.emit(Subtract::new_boxed(rhs_register));
+                let rhs_register = generator.next_free_register();
+                self.compile_access(generator, node, rhs_register)?;
+                generator.release_register(rhs_register);
+            }
+            ExpressionOp::MultiplyAssign => {
+                generator.emit(Multiply::new_boxed(rhs_register));
+                let rhs_register = generator.next_free_register();
+                self.compile_access(generator, node, rhs_register)?;
+                generator.release_register(rhs_register);
+            }
+            ExpressionOp::DivideAssign => {
+                generator.emit(Divide::new_boxed(rhs_register));
+                let rhs_register = generator.next_free_register();
+                self.compile_access(generator, node, rhs_register)?;
+                generator.release_register(rhs_register);
+            }
+            _ => {}
+        }
         Ok({})
     }
 

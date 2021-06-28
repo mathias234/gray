@@ -7,6 +7,13 @@ pub enum ExpressionOp {
     Subtract,
     Multiply,
     Divide,
+
+    Assign,
+    AddAssign,
+    SubtractAssign,
+    MultiplyAssign,
+    DivideAssign,
+
     Equal,
     NotEqual,
     LessThan,
@@ -29,7 +36,6 @@ pub enum ASTType {
     Function(String),
     FunctionCall(String),
     VariableDeclaration(String),
-    VariableAssignment,
     FloatValue(f64),
     IntegerValue(i64),
     StringValue(String),
@@ -155,14 +161,8 @@ impl Parser {
                     let delimiter = self.peek_next_token(1)?;
                     let result;
 
-                    if Parser::token_is_delimiter(delimiter, Delimiter::Equal) ||
-                        Parser::token_is_delimiter(delimiter, Delimiter::Dot) {
-                        result = self.parse_variable_assignment()?;
-                        Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
-                    } else {
-                        result = self.parse_expression()?;
-                        Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
-                    }
+                    result = self.parse_expression()?;
+                    Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
 
                     Ok(result)
                 }
@@ -286,7 +286,7 @@ impl Parser {
                                         let else_statement = self.parse_scope()?;
                                         node.children.push(else_statement);
                                     }
-                                    _ => {},
+                                    _ => {}
                                 }
                             }
                             _ => {}
@@ -475,6 +475,7 @@ impl Parser {
         Ok(node)
     }
 
+    /*
     fn parse_variable_assignment(&mut self) -> Result<ASTNode, ParserError> {
         let lhs;
 
@@ -493,6 +494,7 @@ impl Parser {
 
         Ok(assigment_node)
     }
+     */
 
     fn parse_function_call(&mut self) -> Result<ASTNode, ParserError> {
         let mut namespace = String::new();
@@ -546,18 +548,28 @@ impl Parser {
         match &node.ast_type {
             ASTType::ExpressionOp(op) => {
                 match op {
-                    ExpressionOp::Add => 0,
-                    ExpressionOp::Subtract => 0,
-                    ExpressionOp::Multiply => 1,
-                    ExpressionOp::Divide => 1,
-                    ExpressionOp::And => 2,
-                    ExpressionOp::Or => 2,
-                    ExpressionOp::Equal => 3,
-                    ExpressionOp::NotEqual => 3,
-                    ExpressionOp::LessThan => 3,
-                    ExpressionOp::GreaterThan => 3,
-                    ExpressionOp::LessThanOrEqual => 3,
-                    ExpressionOp::GreaterThanOrEqual => 3,
+                    ExpressionOp::Assign => 0,
+                    ExpressionOp::AddAssign => 0,
+                    ExpressionOp::SubtractAssign => 0,
+                    ExpressionOp::MultiplyAssign => 0,
+                    ExpressionOp::DivideAssign => 0,
+
+                    ExpressionOp::And => 0,
+                    ExpressionOp::Or => 0,
+
+                    ExpressionOp::Equal => 1,
+                    ExpressionOp::NotEqual => 1,
+                    ExpressionOp::LessThan => 1,
+                    ExpressionOp::GreaterThan => 1,
+                    ExpressionOp::LessThanOrEqual => 1,
+                    ExpressionOp::GreaterThanOrEqual => 1,
+
+
+                    ExpressionOp::Add => 1,
+                    ExpressionOp::Subtract => 1,
+
+                    ExpressionOp::Multiply => 2,
+                    ExpressionOp::Divide => 2,
                 }
             }
             _ => -1,
@@ -636,6 +648,22 @@ impl Parser {
                     self.get_next_token()?;
                     self.get_next_token()?;
                     return Ok(Some(ExpressionOp::GreaterThanOrEqual));
+                } else if Parser::token_is_delimiter(&token, Delimiter::Plus) {
+                    self.get_next_token()?;
+                    self.get_next_token()?;
+                    return Ok(Some(ExpressionOp::AddAssign));
+                } else if Parser::token_is_delimiter(&token, Delimiter::Hyphen) {
+                    self.get_next_token()?;
+                    self.get_next_token()?;
+                    return Ok(Some(ExpressionOp::SubtractAssign));
+                } else if Parser::token_is_delimiter(&token, Delimiter::Star) {
+                    self.get_next_token()?;
+                    self.get_next_token()?;
+                    return Ok(Some(ExpressionOp::MultiplyAssign));
+                } else if Parser::token_is_delimiter(&token, Delimiter::Slash) {
+                    self.get_next_token()?;
+                    self.get_next_token()?;
+                    return Ok(Some(ExpressionOp::DivideAssign));
                 }
             } else if Parser::token_is_delimiter(&token, Delimiter::And) && Parser::token_is_delimiter(&token2.unwrap(), Delimiter::And) {
                 self.get_next_token()?;
@@ -666,7 +694,11 @@ impl Parser {
         } else if Parser::token_is_delimiter(&token, Delimiter::Slash) {
             self.get_next_token()?;
             return Ok(Some(ExpressionOp::Divide));
+        } else if Parser::token_is_delimiter(&token, Delimiter::Equal) {
+            self.get_next_token()?;
+            return Ok(Some(ExpressionOp::Assign));
         }
+
 
         return Ok(None);
     }
