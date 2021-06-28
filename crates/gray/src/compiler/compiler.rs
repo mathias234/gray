@@ -138,31 +138,6 @@ impl Compiler {
         Ok({})
     }
 
-    fn compile_variable_assignment(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
-        self.compile_expression(generator, &node.children[1])?;
-        let expression_result = generator.next_free_register();
-        generator.emit(Store::new_boxed(expression_result));
-
-        match &node.children[0].ast_type {
-            ASTType::Identifier(identifier) => {
-                generator.emit(LoadRegister::new_boxed(expression_result));
-                generator.emit(SetVariable::new_boxed(identifier.clone()));
-            }
-            ASTType::ObjectAccess(name) => {
-                generator.emit(GetVariable::new_boxed(name.clone()));
-                let object_register = generator.next_free_register();
-                generator.emit(Store::new_boxed(object_register));
-
-                self.compile_object_access(generator, &node.children[0], object_register, expression_result)?;
-            }
-            _ => {}
-        }
-
-        generator.release_register(expression_result);
-
-        Ok({})
-    }
-
     fn compile_object_get(&mut self, generator: &mut Generator, node: &ASTNode, previous: Register) -> Result<(), CompilerError> {
         match &node.children[0].ast_type {
             ASTType::ObjectAccess(name) => {

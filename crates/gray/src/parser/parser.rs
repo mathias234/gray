@@ -158,7 +158,6 @@ impl Parser {
                     }
                 }
                 _ => {
-                    let delimiter = self.peek_next_token(1)?;
                     let result;
 
                     result = self.parse_expression()?;
