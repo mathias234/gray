@@ -471,14 +471,13 @@ impl Parser {
         if Parser::token_is_delimiter(self.peek_next_token(1)?, Delimiter::Dot) {
             node.children.push(self.parse_member_expression()?);
         } else {
-            node.children.push(Parser::token_to_simple_ast_node(self.get_next_token()?)?);
+            node.children.push(self.parse_sub_expression()?);
         }
 
         Ok(node)
     }
 
     fn parse_subscript_expression(&mut self) -> Result<ASTNode, ParserError> {
-
         let name = self.get_next_token()?;
         let name = match &name.token_type {
             TokenType::Identifier(n) => Ok(n.clone()),

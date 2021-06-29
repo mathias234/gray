@@ -66,6 +66,30 @@ impl PushArray {
     }
 }
 
+pub struct GetArray {
+    array: Register,
+}
+
+#[allow(dead_code)]
+impl GetArray {
+    pub fn new_boxed(array: Register) -> Box<GetArray> {
+        Box::new(GetArray { array })
+    }
+}
+
+pub struct ArraySet {
+    array: Register,
+    value: Register,
+}
+
+#[allow(dead_code)]
+impl ArraySet {
+    pub fn new_boxed(array: Register, value: Register) -> Box<ArraySet> {
+        Box::new(ArraySet { array, value })
+    }
+}
+
+
 pub struct NotAnInstruction {}
 
 #[allow(dead_code)]
@@ -133,6 +157,48 @@ impl Instruction for PushArray {
     }
 
     fn to_string(&self) -> String { format!("PushArray {}", self.array) }
+}
+
+impl Instruction for GetArray {
+    fn execute(&self, context: &mut ExecutionContext) {
+        let value = context.get_accumulator();
+        let mut array = context.get_register(&self.array);
+
+        let index = match value.get_data_value() {
+            DataValue::I64(v) => *v as usize,
+            d => panic!("Array can only be indexed with an integer {:?}", d),
+        };
+
+        match array.get_data_value_mut() {
+            DataValue::Array(a) => {
+                context.set_accumulator(a.get(index));
+            }
+            _ => panic!("Error getting value from object that is not an array"),
+        }
+    }
+
+    fn to_string(&self) -> String { format!("GetArray {}", self.array) }
+}
+
+impl Instruction for ArraySet {
+    fn execute(&self, context: &mut ExecutionContext) {
+        let value = context.get_accumulator();
+        let mut array = context.get_register(&self.array);
+
+        let index = match value.get_data_value() {
+            DataValue::I64(v) => *v as usize,
+            d => panic!("Array can only be indexed with an integer {:?}", d),
+        };
+
+        match array.get_data_value_mut() {
+            DataValue::Array(a) => {
+                a.set(index, context.get_register(&self.value));
+            }
+            d => panic!("Error getting value from object that is not an array {:?}", d),
+        }
+    }
+
+    fn to_string(&self) -> String { format!("SetArray {}", self.array) }
 }
 
 impl Instruction for NotAnInstruction {

@@ -14,3 +14,18 @@ assert_eq(array::get(test_array, 1), 25);
 assert_eq(array::get(test_array, 2), 100);
 
 assert_eq(array::len(test_array), 3);
+
+
+let array = [50, 20, 100];
+assert_eq(array[1], 20);
+array[1] = 25;
+assert_eq(array[1], 25);
+
+
+let obj = {
+    a: [50, 20, 100],
+};
+
+assert_eq(obj.a[1], 20);
+obj.a[1] = 25;
+assert_eq(obj.a[1], 25);

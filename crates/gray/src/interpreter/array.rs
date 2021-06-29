@@ -24,6 +24,10 @@ impl Array {
         self.array.borrow_mut().insert(index, value);
     }
 
+    pub fn set(&mut self, index: usize, value: Value) {
+        self.array.borrow_mut()[index] = value;
+    }
+
     pub fn get(&self, index: usize) -> Value {
         self.array.borrow()[index].clone()
     }
@@ -35,7 +39,7 @@ impl Array {
 
 impl fmt::Display for Array {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        Debug::fmt(self,f)?;
+        Debug::fmt(self, f)?;
         Ok({})
     }
 }

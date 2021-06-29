@@ -7,7 +7,7 @@ use crate::interpreter::value::Value;
 use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument, LoadRegister};
 use crate::bytecode::instructions::jump::{JumpZero, Jump};
 use crate::bytecode::instructions::math::{Add, Subtract, Multiply, Divide};
-use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember, GetObjectMember, CreateEmptyArray, PushArray};
+use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember, GetObjectMember, CreateEmptyArray, PushArray, GetArray, ArraySet};
 use crate::bytecode::instructions::comparison::{CompareGreaterThan, CompareLessThan, CompareNotEq, CompareEq, CompareLessThanOrEqual, CompareGreaterThanOrEqual, And, Or};
 use std::rc::Rc;
 
@@ -151,7 +151,16 @@ impl Compiler {
             ASTType::Identifier(name) => {
                 generator.emit(GetObjectMember::new_boxed(previous, name.clone()));
             }
-            _ => {}
+            ASTType::Subscript(name) => {
+                generator.emit(GetObjectMember::new_boxed(previous, name.clone()));
+                let array_register = generator.next_free_register();
+                generator.emit(Store::new_boxed(array_register));
+
+                self.compile_expression(generator, &node.children[0])?;
+
+                generator.emit(GetArray::new_boxed(array_register));
+            }
+            _ => return Err(CompilerError::ExpectedIdentifier(node.children[0].clone()))
         }
 
         Ok({})
@@ -171,6 +180,16 @@ impl Compiler {
             ASTType::Identifier(name) => {
                 generator.emit(LoadRegister::new_boxed(expression_result));
                 generator.emit(SetObjectMember::new_boxed(previous, name.clone()));
+            }
+            ASTType::Subscript(name) => {
+                generator.emit(GetObjectMember::new_boxed(previous, name.clone()));
+                let object_register = generator.next_free_register();
+                generator.emit(Store::new_boxed(object_register));
+
+                self.compile_expression(generator, &node.children[0])?;
+
+                generator.emit(ArraySet::new_boxed(object_register, expression_result));
+                generator.release_register(object_register);
             }
             _ => {}
         }
@@ -253,6 +272,19 @@ impl Compiler {
             ASTType::CreateObject => self.compile_create_object(generator, node),
             ASTType::CreateArray => self.compile_create_array(generator, node),
             ASTType::Expression => self.compile_expression(generator, node),
+            ASTType::Subscript(name) => {
+                generator.emit(GetVariable::new_boxed(name.clone()));
+                let array_register = generator.next_free_register();
+                generator.emit(Store::new_boxed(array_register));
+
+                self.compile_expression(generator, &node.children[0])?;
+
+                generator.emit(GetArray::new_boxed(array_register));
+
+                generator.release_register(array_register);
+
+                Ok({})
+            }
             ASTType::ObjectAccess(name) => {
                 generator.emit(GetVariable::new_boxed(name.clone()));
                 let object_register = generator.next_free_register();
@@ -359,6 +391,15 @@ impl Compiler {
                 generator.emit(Store::new_boxed(object_register));
 
                 self.compile_object_access(generator, &node, object_register, rhs_register)?;
+            }
+            ASTType::Subscript(i) => {
+                generator.emit(GetVariable::new_boxed(i.clone()));
+                let array_register = generator.next_free_register();
+                generator.emit(Store::new_boxed(array_register));
+
+                self.compile_expression(generator, &node.children[0])?;
+
+                generator.emit(ArraySet::new_boxed(array_register, rhs_register));
             }
             _ => return Err(CompilerError::ExpectedIdentifier(node.clone())),
         };
