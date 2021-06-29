@@ -1,0 +1,3 @@
+let file = fs::open("tests/test_file.txt");
+let result = fs::read_to_string(file);
+assert_eq(result, "Hello World");

@@ -1,5 +1,6 @@
 mod math;
 mod array;
+mod io;
 
 use gray::interpreter::interpreter::Interpreter;
 use gray::interpreter::value::{Value, DataValue};
@@ -12,6 +13,7 @@ pub fn declare_functions(interpreter: &mut Interpreter) {
 
     math::load_functions(interpreter);
     array::load_functions(interpreter);
+    io::load_functions(interpreter);
 }
 
 fn assert_eq(args: Vec<Value>) -> Value {
@@ -73,5 +75,6 @@ fn value_to_string(args: &Value) -> String {
         DataValue::Object(object) => format!("{:?}", object),
         DataValue::String(string) => format!("{}", string),
         DataValue::Array(array) => format!("{}", array),
+        DataValue::Pointer(_) => format!("Internal Pointer"),
     }
 }

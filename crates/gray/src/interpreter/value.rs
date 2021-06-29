@@ -3,6 +3,10 @@ use std::cmp::Ordering;
 use crate::interpreter::object::Object;
 use crate::interpreter::array::Array;
 use std::rc::Rc;
+use std::any::Any;
+use std::cell::RefCell;
+
+type Pointer<T> = Rc<RefCell<T>>;
 
 #[derive(Clone, Debug)]
 pub enum DataValue {
@@ -11,6 +15,7 @@ pub enum DataValue {
     Object(Object),
     String(Rc<String>),
     Array(Array),
+    Pointer(Pointer<dyn Any>),
 }
 
 #[derive(Clone, Debug)]
@@ -46,6 +51,12 @@ impl Value {
     pub fn from_array(value: Array) -> Value {
         Value {
             value: DataValue::Array(value)
+        }
+    }
+
+    pub fn to_pointer<T: Any>(value: T) -> Value {
+        Value {
+            value: DataValue::Pointer(Rc::from(RefCell::from(value))),
         }
     }
 
@@ -94,6 +105,11 @@ impl ops::Add<Value> for Value {
                     _ => panic!("Operations are currently not supported on arrays"),
                 }
             }
+            DataValue::Pointer(_) => {
+                match &rhs_value.value {
+                    _ => panic!("Operations are currently not supported on pointers"),
+                }
+            }
         }
     }
 }
@@ -130,6 +146,11 @@ impl ops::Sub<Value> for Value {
             DataValue::Array(_) => {
                 match &rhs_value.value {
                     _ => panic!("Operations are currently not supported on arrays"),
+                }
+            }
+            DataValue::Pointer(_) => {
+                match &rhs_value.value {
+                    _ => panic!("Operations are currently not supported on pointers"),
                 }
             }
         }
@@ -170,6 +191,11 @@ impl ops::Mul<Value> for Value {
                     _ => panic!("Operations are currently not supported on arrays"),
                 }
             }
+            DataValue::Pointer(_) => {
+                match &rhs_value.value {
+                    _ => panic!("Operations are currently not supported on pointers"),
+                }
+            }
         }
     }
 }
@@ -206,6 +232,11 @@ impl ops::Div<Value> for Value {
             DataValue::Array(_) => {
                 match &rhs_value.value {
                     _ => panic!("Operations are currently not supported on arrays"),
+                }
+            }
+            DataValue::Pointer(_) => {
+                match &rhs_value.value {
+                    _ => panic!("Operations are currently not supported on pointers"),
                 }
             }
         }
@@ -245,6 +276,11 @@ impl cmp::PartialEq for Value {
                     _ => panic!("Operations are currently not supported on arrays"),
                 }
             }
+            DataValue::Pointer(_) => {
+                match &rhs_value.value {
+                    _ => panic!("Operations are currently not supported on pointers"),
+                }
+            }
         }
     }
 }
@@ -282,6 +318,11 @@ impl cmp::PartialOrd for Value {
                     _ => panic!("Operations are currently not supported on arrays"),
                 }
             }
+            DataValue::Pointer(_) => {
+                match &rhs_value.value {
+                    _ => panic!("Operations are currently not supported on pointers"),
+                }
+            }
         }
     }
 }
@@ -295,6 +336,7 @@ impl fmt::Display for Value {
             DataValue::Object(v) => write!(f, "({:?}: Object)", v.clone()),
             DataValue::String(v) => write!(f, "({}: String)", v.clone()),
             DataValue::Array(v) => write!(f, "({}: Array)", v.clone()),
+            DataValue::Pointer(_) => write!(f, "(Internal Pointer)"),
         }
     }
 }

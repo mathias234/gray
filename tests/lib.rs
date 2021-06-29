@@ -21,7 +21,6 @@ fn if_statement_test() {
     run_file("./tests/if_statement_test.gray");
 }
 
-
 #[test]
 fn math_precedence_test() {
     run_file("./tests/math_precedence_test.gray");
@@ -40,4 +39,9 @@ fn namespace_test() {
 #[test]
 fn object_test() {
     run_file("./tests/object_test.gray");
+}
+
+#[test]
+fn io_test() {
+    run_file("./tests/io_test.gray");
 }
