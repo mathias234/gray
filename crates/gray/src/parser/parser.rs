@@ -44,6 +44,7 @@ pub enum ASTType {
     CreateArray,
     ObjectMember(String),
     ObjectAccess(String),
+    Subscript(String),
     Trait(String),
 }
 
@@ -379,14 +380,16 @@ impl Parser {
         let first_delimiter = self.peek_next_token(0)?;
         let delimiter = self.peek_next_token(1)?;
 
-        return if Parser::token_is_delimiter(&delimiter, Delimiter::OpenParen) || Parser::token_is_delimiter(&delimiter, Delimiter::Colon) {
+        return if Parser::token_is_delimiter(delimiter, Delimiter::OpenParen) || Parser::token_is_delimiter(&delimiter, Delimiter::Colon) {
             Ok(self.parse_function_call()?)
-        } else if Parser::token_is_delimiter(&first_delimiter, Delimiter::OpenCurlyBracket) {
+        } else if Parser::token_is_delimiter(first_delimiter, Delimiter::OpenCurlyBracket) {
             Ok(self.parse_object_declaration()?)
-        } else if Parser::token_is_delimiter(&first_delimiter, Delimiter::OpenBracket) {
+        } else if Parser::token_is_delimiter(first_delimiter, Delimiter::OpenBracket) {
             Ok(self.parse_array_declaration()?)
         } else if Parser::token_is_delimiter(delimiter, Delimiter::Dot) {
             Ok(self.parse_member_expression()?)
+        } else if Parser::token_is_delimiter(delimiter, Delimiter::OpenBracket) {
+            Ok(self.parse_subscript_expression()?)
         } else {
             // Very simple single token expression
             let token = self.get_next_token()?;
@@ -474,6 +477,25 @@ impl Parser {
         Ok(node)
     }
 
+    fn parse_subscript_expression(&mut self) -> Result<ASTNode, ParserError> {
+
+        let name = self.get_next_token()?;
+        let name = match &name.token_type {
+            TokenType::Identifier(n) => Ok(n.clone()),
+            _ => Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(name.clone()))
+        }?;
+
+        Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenBracket)?;
+
+        let mut node = ASTNode::new(ASTType::Subscript(name));
+
+        node.children.push(self.parse_expression()?);
+
+        Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::CloseBracket)?;
+
+        Ok(node)
+    }
+
     /*
     fn parse_variable_assignment(&mut self) -> Result<ASTNode, ParserError> {
         let lhs;
@@ -535,8 +557,7 @@ impl Parser {
             let token = self.peek_next_token(0)?;
             if Parser::token_is_delimiter(token, Delimiter::Comma) {
                 self.get_next_token()?;
-            }
-            else {
+            } else {
                 break;
             }
         }
@@ -566,7 +587,6 @@ impl Parser {
                     ExpressionOp::GreaterThan => 1,
                     ExpressionOp::LessThanOrEqual => 1,
                     ExpressionOp::GreaterThanOrEqual => 1,
-
 
                     ExpressionOp::Add => 1,
                     ExpressionOp::Subtract => 1,
