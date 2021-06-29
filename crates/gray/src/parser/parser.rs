@@ -526,9 +526,7 @@ impl Parser {
         let mut node = ASTNode::new(ASTType::FunctionCall(identifier));
 
         loop {
-            let token = self.peek_next_token(0)?;
-            if Parser::token_is_delimiter(token, Delimiter::CloseParen) {
-                self.get_next_token()?;
+            if Parser::token_is_delimiter(self.peek_next_token(0)?, Delimiter::CloseParen) {
                 break;
             }
 
@@ -538,7 +536,13 @@ impl Parser {
             if Parser::token_is_delimiter(token, Delimiter::Comma) {
                 self.get_next_token()?;
             }
+            else {
+                break;
+            }
         }
+
+        let close_paren = self.get_next_token()?;
+        Parser::validate_token_is_delimiter(close_paren, Delimiter::CloseParen)?;
 
         return Ok(node);
     }
