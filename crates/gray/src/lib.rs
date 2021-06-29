@@ -63,3 +63,15 @@ pub fn load_file(file: &str) -> Result<Interpreter, GrayError> {
 
     return Ok(interpreter);
 }
+
+pub fn load_string(file: &str) -> Result<Interpreter, GrayError> {
+    let token_stream = Lexer::lex_string(file)?;
+
+    let root_ast_node = Parser::parse(token_stream)?;
+
+    let blocks = Compiler::compile(root_ast_node)?;
+
+    let interpreter = Interpreter::new(blocks);
+
+    return Ok(interpreter);
+}

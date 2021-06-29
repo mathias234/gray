@@ -156,7 +156,7 @@ impl<'interp> Interpreter<'interp> {
         }
     }
 
-    pub fn run(&'interp mut self, start_block: Option<String>) {
+    pub fn run(&'interp mut self, start_block: Option<String>) -> Value {
         self.active_block = match start_block {
             Some(start_block) => start_block,
             None => String::from("ProgramMain"),
@@ -297,6 +297,7 @@ impl<'interp> Interpreter<'interp> {
         }
 
         //self.dump();
+        self.get_last_accumulator_value()
     }
 
     pub fn set_native_function(&mut self, namespace: Vec<&str>, name: String, function: FunctionPointer) {
@@ -306,6 +307,10 @@ impl<'interp> Interpreter<'interp> {
         }
         full_name += &name;
         self.native_functions.insert(full_name, function);
+    }
+
+    pub fn get_last_accumulator_value(&self) -> Value {
+        self.execution_context.accumulator.clone()
     }
 
     pub fn dump(&self) {

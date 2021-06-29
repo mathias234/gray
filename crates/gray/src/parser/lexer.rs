@@ -39,7 +39,7 @@ pub enum Keyword {
     ElseStatement,
     WhileStatement,
     Return,
-    Namespace
+    Namespace,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -129,6 +129,28 @@ pub struct Lexer {
 }
 
 impl Lexer {
+    pub fn lex_string(string: &str) -> Result<TokenStream, LexerError> {
+        let mut token_stream = TokenStream::new();
+
+        let mut lexer = Lexer {
+            file: string.to_string(),
+            position: 0,
+            pos_x: 1,
+            pos_y: 1,
+        };
+
+        loop {
+            let token = lexer.pop_token()?;
+
+            if token == TokenType::EndOfFile {
+                return Ok(token_stream);
+            }
+
+            token_stream.tokens.push(token);
+        }
+    }
+
+
     pub fn lex_file(file: &str) -> Result<TokenStream, LexerError> {
         let file_result = File::open(file);
         let mut file = String::new();

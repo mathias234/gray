@@ -1,0 +1,8 @@
+let full_line = "";
+
+while 1 {
+    let line = io::read_line();
+    full_line = full_line + line;
+    let result = interp::run_string(full_line);
+    print("{}", result);
+}

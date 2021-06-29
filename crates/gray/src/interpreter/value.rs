@@ -95,9 +95,12 @@ impl ops::Add<Value> for Value {
                     _ => panic!("Operations are currently not supported on objects"),
                 }
             }
-            DataValue::String(_) => {
+            DataValue::String(lhs) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on strings"),
+                    DataValue::String(rhs) => {
+                        Value::from_string(Rc::from(format!("{}{}", lhs, rhs)))
+                    }
+                    rhs => panic!("Unable to add {:?} to {:?}", lhs, rhs),
                 }
             }
             DataValue::Array(_) => {

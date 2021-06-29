@@ -1,6 +1,7 @@
 mod math;
 mod array;
 mod io;
+mod gray_interp;
 
 use gray::interpreter::interpreter::Interpreter;
 use gray::interpreter::value::{Value, DataValue};
@@ -14,6 +15,7 @@ pub fn declare_functions(interpreter: &mut Interpreter) {
     math::load_functions(interpreter);
     array::load_functions(interpreter);
     io::load_functions(interpreter);
+    gray_interp::load_functions(interpreter);
 }
 
 fn assert_eq(args: Vec<Value>) -> Value {

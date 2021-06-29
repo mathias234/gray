@@ -6,6 +6,7 @@ use std::io::Read;
 pub fn load_functions(interpreter: &mut Interpreter) {
     interpreter.set_native_function(vec!["fs"], String::from("open"), fs_open);
     interpreter.set_native_function(vec!["fs"], String::from("read_to_string"), fs_read_to_string);
+    interpreter.set_native_function(vec!["io"], String::from("read_line"), io_read_line);
 }
 
 pub fn fs_open(args: Vec<Value>) -> Value {
@@ -26,6 +27,13 @@ pub fn fs_read_to_string(args: Vec<Value>) -> Value {
     file.read_to_string(&mut buffer).expect("Error reading files contents");
 
     Value::from_string(Rc::from(buffer))
+}
+
+pub fn io_read_line(_: Vec<Value>) -> Value {
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input).expect("Error reading for stdin");
+
+    Value::from_string(Rc::new(input))
 }
 
 fn value_to_file(value: &Value) -> std::fs::File {
