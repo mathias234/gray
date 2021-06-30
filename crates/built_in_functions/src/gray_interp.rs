@@ -15,7 +15,7 @@ pub fn run_string(args: Vec<Value>) -> Value {
         _ => panic!("interp::run_string expected a string value"),
     };
 
-    let mut interp_result = gray::load_string(&str);
+    let interp_result = gray::load_string(&str);
 
     let mut interp;
     match interp_result {
