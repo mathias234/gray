@@ -33,7 +33,7 @@ pub fn io_read_line(_: Vec<Value>) -> Value {
     let mut input = String::new();
     std::io::stdin().read_line(&mut input).expect("Error reading for stdin");
 
-    Value::from_string(Rc::new(input))
+    Value::from_string(Rc::new(input.trim().to_string()))
 }
 
 fn value_to_file(value: &Value) -> std::fs::File {

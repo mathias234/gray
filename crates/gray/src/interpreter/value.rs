@@ -270,7 +270,7 @@ impl cmp::PartialEq for Value {
             }
             DataValue::String(lhs) => {
                 match &rhs_value.value {
-                    DataValue::String(rhs) => { *lhs == *rhs }
+                    DataValue::String(rhs) => { lhs == rhs }
                     _ => panic!("Cannot compare a string to a basic value"),
                 }
             }
