@@ -351,23 +351,18 @@ impl Compiler {
                         generator.emit(Or::new_boxed(rhs_register));
                     }
                     ExpressionOp::Assign => {
-                        generator.emit(LoadRegister::new_boxed(rhs_register));
                         self.compile_assign(generator, op, &node.children[0], rhs_register)?;
                     }
                     ExpressionOp::AddAssign => {
-                        generator.emit(LoadRegister::new_boxed(rhs_register));
                         self.compile_assign(generator, op, &node.children[0], rhs_register)?;
                     }
                     ExpressionOp::SubtractAssign => {
-                        generator.emit(LoadRegister::new_boxed(rhs_register));
                         self.compile_assign(generator, op, &node.children[0], rhs_register)?;
                     }
                     ExpressionOp::MultiplyAssign => {
-                        generator.emit(LoadRegister::new_boxed(rhs_register));
                         self.compile_assign(generator, op, &node.children[0], rhs_register)?;
                     }
                     ExpressionOp::DivideAssign => {
-                        generator.emit(LoadRegister::new_boxed(rhs_register));
                         self.compile_assign(generator, op, &node.children[0], rhs_register)?;
                     }
                 }
@@ -410,6 +405,7 @@ impl Compiler {
     fn compile_assign(&mut self, generator: &mut Generator, op: &ExpressionOp, node: &ASTNode, rhs_register: Register) -> Result<(), CompilerError> {
         match op {
             ExpressionOp::Assign => {
+                generator.emit(LoadRegister::new_boxed(rhs_register));
                 self.compile_access(generator, node, rhs_register)?;
             }
             ExpressionOp::AddAssign => {
