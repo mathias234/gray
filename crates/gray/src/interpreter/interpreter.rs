@@ -24,6 +24,21 @@ impl Scope {
 }
 
 #[derive(Clone)]
+pub struct BreakContinueScope {
+    break_label: Label,
+    continue_label: Label,
+}
+
+impl BreakContinueScope {
+    pub fn new(break_label: Label, continue_label: Label) -> BreakContinueScope {
+        BreakContinueScope {
+            break_label,
+            continue_label,
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct ExecutionContext {
     accumulator: Value,
     registers: Vec<Value>,
@@ -35,6 +50,10 @@ pub struct ExecutionContext {
     call_return: bool,
 
     scope_stack: Vec<Scope>,
+
+    should_break: bool,
+    should_continue: bool,
+    break_continue_scope_stack: Vec<BreakContinueScope>,
 }
 
 
@@ -49,6 +68,9 @@ impl ExecutionContext {
             call_arguments: None,
             call_return: false,
             scope_stack: vec![Scope::new()],
+            should_break: false,
+            should_continue: false,
+            break_continue_scope_stack: Vec::new(),
         }
     }
 
@@ -123,6 +145,21 @@ impl ExecutionContext {
     pub fn pop_scope(&mut self) {
         self.scope_stack.remove(0);
     }
+
+    pub fn push_break_continue_scope(&mut self, break_label: Label, continue_label: Label) {
+        self.break_continue_scope_stack.insert(0, BreakContinueScope::new(break_label, continue_label));
+    }
+
+    pub fn pop_break_continue_scope(&mut self) -> BreakContinueScope {
+        self.break_continue_scope_stack.remove(0)
+    }
+
+    pub fn get_top_break_continue_scope(&mut self) -> &BreakContinueScope {
+        &self.break_continue_scope_stack[0]
+    }
+
+    pub fn set_break(&mut self) { self.should_break = true; }
+    pub fn set_continue(&mut self) { self.should_continue = true; }
 }
 
 pub struct StackFrame {
@@ -196,7 +233,7 @@ impl<'interp> Interpreter<'interp> {
 
             let instructions = active_block.get_instructions();
             let ins = &instructions[self.pc];
-            //println!("Executing [{}]{}", self.active_block, ins.to_string());
+            //println!("Executing [{}][{}]{}", self.active_block, self.pc, ins.to_string());
             ins.execute(&mut self.execution_context);
             //self.dump();
 
@@ -290,6 +327,16 @@ impl<'interp> Interpreter<'interp> {
                 // Put the value back in the accumulator into the current blocks accumulator
                 self.execution_context.set_accumulator(accumulator);
                 self.pc = last_frame.pc + 1;
+            } else if self.execution_context.should_break {
+                // break
+                let break_scope = self.execution_context.get_top_break_continue_scope();
+                self.pc = break_scope.break_label.position;
+                self.execution_context.should_break = false;
+            } else if self.execution_context.should_continue {
+                // continue
+                let continue_scope = self.execution_context.get_top_break_continue_scope();
+                self.pc = continue_scope.continue_label.position;
+                self.execution_context.should_continue = false;
             } else {
                 //println!("Continue");
                 self.pc += 1;

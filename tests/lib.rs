@@ -45,3 +45,8 @@ fn object_test() {
 fn io_test() {
     run_file("./tests/io_test.gray");
 }
+
+#[test]
+fn break_continue_test() {
+    run_file("./tests/break_continue_test.gray");
+}

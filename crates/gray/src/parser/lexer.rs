@@ -40,6 +40,8 @@ pub enum Keyword {
     WhileStatement,
     Return,
     Namespace,
+    Break,
+    Continue,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -342,6 +344,8 @@ impl Lexer {
             "while" => Some(Keyword::WhileStatement),
             "return" => Some(Keyword::Return),
             "namespace" => Some(Keyword::Namespace),
+            "break" => Some(Keyword::Break),
+            "continue" => Some(Keyword::Continue),
             _ => None,
         }
     }

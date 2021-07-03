@@ -19,3 +19,4 @@ assert_eq(f, 25);
 let f = 5;
 f /= 5;
 assert_eq(f, 1);
+

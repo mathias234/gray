@@ -4,7 +4,7 @@ use crate::bytecode::generator::Generator;
 use std::collections::HashMap;
 use crate::bytecode::register::Register;
 use crate::interpreter::value::Value;
-use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument, LoadRegister};
+use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument, LoadRegister, Break, Continue, PopBreakContinueScope, PushBreakContinueScope};
 use crate::bytecode::instructions::jump::{JumpZero, Jump};
 use crate::bytecode::instructions::math::{Add, Subtract, Multiply, Divide};
 use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember, GetObjectMember, CreateEmptyArray, PushArray, GetArray, ArraySet};
@@ -81,6 +81,12 @@ impl Compiler {
                 }
                 ASTType::WhileStatement => {
                     self.compile_while_statement(namespace, generator, child)?;
+                }
+                ASTType::BreakExpresssion => {
+                    generator.emit(Break::new_boxed());
+                }
+                ASTType::ContinueExpresssion => {
+                    generator.emit(Continue::new_boxed());
                 }
                 ASTType::ReturnExpression => {
                     self.compile_return(generator, child)?;
@@ -235,6 +241,9 @@ impl Compiler {
     }
 
     fn compile_while_statement(&mut self, namespace: &str, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
+        let push_break_continue_holder = generator.make_instruction_holder();
+        let continue_label = generator.make_label();
+
         let comparison_start = generator.make_label();
         self.compile_expression(generator, &node.children[0])?;
 
@@ -246,6 +255,12 @@ impl Compiler {
         let scope_end = generator.make_label();
 
         generator.emit_at(JumpZero::new_boxed(scope_end), &scope_start);
+
+        let break_label = generator.make_label();
+
+        generator.emit(PopBreakContinueScope::new_boxed());
+
+        generator.emit_at(PushBreakContinueScope::new_boxed(break_label, continue_label), &push_break_continue_holder);
 
         Ok({})
     }

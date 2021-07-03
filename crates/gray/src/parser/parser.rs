@@ -29,6 +29,8 @@ pub enum ASTType {
     Scope,
     Expression,
     ReturnExpression,
+    ContinueExpresssion,
+    BreakExpresssion,
     IfStatement,
     WhileStatement,
     Namespace(String),
@@ -131,6 +133,18 @@ impl Parser {
                             return_node.children.push(self.parse_expression()?);
                             Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
                             Ok(return_node)
+                        }
+                        Keyword::Continue => {
+                            self.get_next_token()?;
+                            let return_value = ASTNode::new(ASTType::ContinueExpresssion);
+                            Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
+                            Ok(return_value)
+                        }
+                        Keyword::Break => {
+                            self.get_next_token()?;
+                            let return_value = ASTNode::new(ASTType::BreakExpresssion);
+                            Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
+                            Ok(return_value)
                         }
                         Keyword::Namespace => {
                             self.get_next_token()?;

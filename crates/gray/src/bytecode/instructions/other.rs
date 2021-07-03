@@ -4,6 +4,7 @@ use crate::{
     interpreter::{interpreter::ExecutionContext, value::Value},
 };
 use std::rc::Rc;
+use crate::bytecode::label::Label;
 
 
 pub trait Instruction {
@@ -127,6 +128,41 @@ impl PopScope {
     }
 }
 
+
+pub struct PushBreakContinueScope {
+    continue_label: Label,
+    break_label: Label,
+}
+
+impl PushBreakContinueScope {
+    pub fn new_boxed(break_label: Label, continue_label: Label) -> Box<PushBreakContinueScope> {
+        Box::new(PushBreakContinueScope { break_label, continue_label })
+    }
+}
+
+pub struct PopBreakContinueScope {}
+
+impl PopBreakContinueScope {
+    pub fn new_boxed() -> Box<PopBreakContinueScope> {
+        Box::new(PopBreakContinueScope {})
+    }
+}
+
+pub struct Break {}
+
+impl Break {
+    pub fn new_boxed() -> Box<Break> {
+        Box::new(Break {})
+    }
+}
+
+pub struct Continue {}
+
+impl Continue {
+    pub fn new_boxed() -> Box<Continue> {
+        Box::new(Continue {})
+    }
+}
 
 // Instruction implementations
 
@@ -253,5 +289,46 @@ impl Instruction for PopScope {
 
     fn to_string(&self) -> String {
         format!("PopScope")
+    }
+}
+
+
+impl Instruction for PushBreakContinueScope {
+    fn execute(&self, context: &mut ExecutionContext) {
+        context.push_break_continue_scope(self.break_label, self.continue_label);
+    }
+
+    fn to_string(&self) -> String {
+        format!("PushBreakContinueScope")
+    }
+}
+
+impl Instruction for PopBreakContinueScope {
+    fn execute(&self, context: &mut ExecutionContext) {
+        context.pop_break_continue_scope();
+    }
+
+    fn to_string(&self) -> String {
+        format!("PopBreakContinueScope")
+    }
+}
+
+impl Instruction for Break {
+    fn execute(&self, context: &mut ExecutionContext) {
+        context.set_break();
+    }
+
+    fn to_string(&self) -> String {
+        format!("Break")
+    }
+}
+
+impl Instruction for Continue {
+    fn execute(&self, context: &mut ExecutionContext) {
+        context.set_continue();
+    }
+
+    fn to_string(&self) -> String {
+        format!("Continue")
     }
 }
