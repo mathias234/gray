@@ -12,3 +12,4 @@ crate-type = ["staticlib"]
 
 [dependencies]
 gray = { path = "../gray" }
+built_in_functions = { path = "../built_in_functions" }

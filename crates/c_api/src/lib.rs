@@ -45,7 +45,8 @@ pub struct InterpreterPointer {
 #[no_mangle]
 pub unsafe extern "C" fn interpreter_load_file(name: *const c_char) -> InterpreterPointer {
     let file = c_str_to_string(name);
-    let interp = gray::load_file(&file).expect("Failed to load file");
+    let mut interp = gray::load_file(&file).expect("Failed to load file");
+    built_in_functions::declare_functions(&mut interp);
 
     let boxed = Box::from(interp);
     InterpreterPointer { value: Box::into_raw(boxed) as *mut c_void }
