@@ -20,6 +20,10 @@ impl FunctionArgs {
     }
 
     pub fn get_next(&mut self) -> &Value {
+        if self.index >= self.len() {
+            panic!("Expected at least {} arguments got only {}", self.index + 1, self.args.len())
+        }
+
         let result = &self.args[self.index];
         self.index += 1;
         return result;
