@@ -1,19 +1,15 @@
 use gray::interpreter::interpreter::Interpreter;
-use gray::interpreter::value::{Value, DataValue};
+use gray::interpreter::value::Value;
 use std::rc::Rc;
 use crate::declare_functions;
+use gray::interpreter::function_pointer::FunctionArgs;
 
 pub fn load_functions(interpreter: &mut Interpreter) {
     interpreter.set_native_function(vec!["interp"], String::from("run_string"), run_string);
 }
 
-pub fn run_string(args: Vec<Value>) -> Value {
-    let str = match args[0].get_data_value() {
-        DataValue::String(str) => {
-            str.clone()
-        },
-        _ => panic!("interp::run_string expected a string value"),
-    };
+pub fn run_string(mut args: FunctionArgs) -> Value {
+    let str = args.get_next_string();
 
     let interp_result = gray::load_string(&str);
 

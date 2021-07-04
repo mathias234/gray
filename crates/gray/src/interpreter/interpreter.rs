@@ -9,6 +9,7 @@ use crate::{
 
 use std::collections::HashMap;
 use std::rc::Rc;
+use crate::interpreter::function_pointer::FunctionArgs;
 
 #[derive(Clone)]
 pub struct Scope {
@@ -269,7 +270,7 @@ impl<'interp> Interpreter<'interp> {
                     let native_function = self.native_functions.get(&call_block_id);
                     match native_function {
                         Some(func) => {
-                            let returned_value = func(block_args);
+                            let returned_value = func(FunctionArgs::new(block_args));
                             self.execution_context.set_accumulator(returned_value);
                             self.pc += 1;
                             continue;

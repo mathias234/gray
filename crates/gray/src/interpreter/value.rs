@@ -6,7 +6,7 @@ use std::rc::Rc;
 use std::any::Any;
 use std::cell::RefCell;
 
-type Pointer<T> = Rc<RefCell<T>>;
+pub type Pointer<T> = Rc<RefCell<T>>;
 
 #[derive(Clone, Debug)]
 pub enum DataValue {

@@ -6,6 +6,7 @@ mod gray_interp;
 use gray::interpreter::interpreter::Interpreter;
 use gray::interpreter::value::{Value, DataValue};
 use std::rc::Rc;
+use gray::interpreter::function_pointer::FunctionArgs;
 
 pub fn declare_functions(interpreter: &mut Interpreter) {
     interpreter.set_native_function(Vec::new(), String::from("print"), print_function);
@@ -18,9 +19,9 @@ pub fn declare_functions(interpreter: &mut Interpreter) {
     gray_interp::load_functions(interpreter);
 }
 
-fn assert_eq(args: Vec<Value>) -> Value {
-    let received_value = &args[0];
-    let expected_value = &args[1];
+fn assert_eq(mut args: FunctionArgs) -> Value {
+    let received_value = args.get_next().clone();
+    let expected_value = args.get_next().clone();
 
     assert_eq!(received_value, expected_value);
 
@@ -28,20 +29,14 @@ fn assert_eq(args: Vec<Value>) -> Value {
 }
 
 
-fn print_function(args: Vec<Value>) -> Value {
+fn print_function(args: FunctionArgs) -> Value {
     println!("{}", value_to_string(&format_to_value(args)));
 
     Value::from_i64(0)
 }
 
-fn format_to_value(args: Vec<Value>) -> Value {
-    let format_str = &args[0];
-    let format_str = match format_str.get_data_value() {
-        DataValue::String(str) => str,
-        d => panic!("Only strings can be used as format string tried to print {:?}", d),
-    };
-
-    let mut arg_idx = 1;
+fn format_to_value(mut args: FunctionArgs) -> Value {
+    let format_str = args.get_next_string();
 
     let mut formatted_string = String::new();
 
@@ -56,10 +51,8 @@ fn format_to_value(args: Vec<Value>) -> Value {
             '{' => {
                 chars.next();
 
-                let value_formatted = value_to_string(&args[arg_idx]);
+                let value_formatted = value_to_string(&args.get_next());
                 formatted_string.push_str(&value_formatted);
-
-                arg_idx += 1;
             }
             c => {
                 formatted_string.push(c);

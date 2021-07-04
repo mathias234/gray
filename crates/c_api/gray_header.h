@@ -6,12 +6,20 @@
 #include <new>
 
 
+struct InterpreterPointer {
+  void *value;
+};
+
 struct ValuePointer {
   void *value;
 };
 
 
 extern "C" {
+
+InterpreterPointer interpreter_load_file(const char *name);
+
+void interpreter_run(InterpreterPointer pointer);
 
 ValuePointer value_from_f64(double value);
 
