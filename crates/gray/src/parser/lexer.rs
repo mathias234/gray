@@ -1,5 +1,6 @@
 use std::fs::File;
 use std::io::{Read, ErrorKind};
+use crate::bytecode::code_block::CodeSegment;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum Delimiter {
@@ -58,12 +59,12 @@ pub enum TokenType {
 #[derive(PartialEq, Debug, Clone)]
 pub struct Token {
     pub token_type: TokenType,
-    pub position: (usize, usize),
+    pub position: CodeSegment,
 
 }
 
 impl Token {
-    pub fn new(token_type: TokenType, position: (usize, usize)) -> Token {
+    pub fn new(token_type: TokenType, position: CodeSegment) -> Token {
         Token {
             token_type,
             position,
@@ -198,11 +199,14 @@ impl Lexer {
         let mut is_string = false;
         let mut saw_hyphen = false;
 
+        let start_x = self.pos_x;
+        let start_y = self.pos_y;
+
         loop {
             let char = chars.next();
 
             if char.is_none() {
-                return Ok(Token::new(TokenType::EndOfFile, (self.pos_x, self.pos_y)));
+                return Ok(Token::new(TokenType::EndOfFile, CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y)));
             }
 
             let char = char.unwrap();
@@ -244,7 +248,7 @@ impl Lexer {
                     return match fractional.token_type {
                         TokenType::Integer(i) => {
                             let result = Lexer::integer_and_fractional_to_float(integer, i)?;
-                            Ok(Token::new(TokenType::Float(result), (self.pos_x, self.pos_y)))
+                            Ok(Token::new(TokenType::Float(result), CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y)))
                         }
                         _ => Err(LexerError::UnexpectedTokenWhileParsingFloat(fractional))
                     };
@@ -259,14 +263,14 @@ impl Lexer {
                         Delimiter::Space => return self.pop_token(),
                         Delimiter::LineFeed => {
                             self.pos_y += 1;
-                            self.pos_x = 0;
+                            self.pos_x = 1;
                             return self.pop_token();
                         }
                         Delimiter::CarriageReturn => return self.pop_token(),
                         _ => {}
                     }
 
-                    return Ok(Token::new(TokenType::Delimiter(delimiter), (self.pos_x, self.pos_y)));
+                    return Ok(Token::new(TokenType::Delimiter(delimiter), CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y)));
                 }
             }
 
@@ -277,27 +281,27 @@ impl Lexer {
         }
 
         if is_string {
-            return Ok(Token::new(TokenType::String(word), (self.pos_x, self.pos_y)));
+            return Ok(Token::new(TokenType::String(word), CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y)));
         }
 
         match Lexer::word_to_delimiter(&word) {
-            Some(value) => return Ok(Token::new(TokenType::Delimiter(value), (self.pos_x, self.pos_y))),
+            Some(value) => return Ok(Token::new(TokenType::Delimiter(value), CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y))),
             None => {}
         }
 
         match Lexer::word_to_integer(&word) {
-            Some(value) => return Ok(Token::new(TokenType::Integer(value), (self.pos_x, self.pos_y))),
+            Some(value) => return Ok(Token::new(TokenType::Integer(value), CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y))),
             None => {}
         };
 
 
         match Lexer::word_to_keyword(&word) {
-            Some(keyword) => return Ok(Token::new(TokenType::Keyword(keyword), (self.pos_x, self.pos_y))),
+            Some(keyword) => return Ok(Token::new(TokenType::Keyword(keyword), CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y))),
             None => {}
         }
 
 
-        return Ok(Token::new(TokenType::Identifier(word), (self.pos_x, self.pos_y)));
+        return Ok(Token::new(TokenType::Identifier(word), CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y)));
     }
 
     fn word_to_integer(word: &str) -> Option<i64> {

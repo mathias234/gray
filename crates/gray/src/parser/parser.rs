@@ -1,5 +1,6 @@
 use crate::parser::lexer::{TokenStream, Token, Keyword, TokenType};
 use crate::parser::lexer::Delimiter;
+use crate::bytecode::code_block::CodeSegment;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum ExpressionOp {
@@ -67,12 +68,14 @@ pub enum ParserError {
 pub struct ASTNode {
     pub ast_type: ASTType,
     pub children: Vec<ASTNode>,
+    pub code_segment: CodeSegment,
 }
 
 impl ASTNode {
-    pub fn new(ast_type: ASTType) -> ASTNode {
+    pub fn new(ast_type: ASTType, code_segment: CodeSegment) -> ASTNode {
         ASTNode {
             ast_type,
+            code_segment,
             children: Vec::new(),
         }
     }
@@ -83,7 +86,7 @@ impl ASTNode {
             indent_str += "\t";
         }
 
-        println!("{}{:?}", indent_str, self.ast_type);
+        println!("{}{:?}({:?})", indent_str, self.ast_type, self.code_segment);
         for child in &self.children {
             child.dump(indent + 1);
         }
@@ -105,7 +108,7 @@ impl Parser {
     }
 
     fn parse_scope(&mut self) -> Result<ASTNode, ParserError> {
-        let mut scope = ASTNode::new(ASTType::Scope);
+        let mut scope = ASTNode::new(ASTType::Scope, CodeSegment::new(0, 0, 0, 0));
 
         let mut token;
 
@@ -128,26 +131,26 @@ impl Parser {
                         Keyword::IfStatement => self.parse_if_statement(),
                         Keyword::WhileStatement => self.parse_while_statement(),
                         Keyword::Return => {
-                            self.get_next_token()?;
-                            let mut return_node = ASTNode::new(ASTType::ReturnExpression);
+                            let token = self.get_next_token()?;
+                            let mut return_node = ASTNode::new(ASTType::ReturnExpression, token.position);
                             return_node.children.push(self.parse_expression()?);
                             Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
                             Ok(return_node)
                         }
                         Keyword::Continue => {
-                            self.get_next_token()?;
-                            let return_value = ASTNode::new(ASTType::ContinueExpresssion);
+                            let token = self.get_next_token()?;
+                            let return_value = ASTNode::new(ASTType::ContinueExpresssion, token.position);
                             Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
                             Ok(return_value)
                         }
                         Keyword::Break => {
-                            self.get_next_token()?;
-                            let return_value = ASTNode::new(ASTType::BreakExpresssion);
+                            let token = self.get_next_token()?;
+                            let return_value = ASTNode::new(ASTType::BreakExpresssion, token.position);
                             Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
                             Ok(return_value)
                         }
                         Keyword::Namespace => {
-                            self.get_next_token()?;
+                            let token = self.get_next_token()?.clone();
                             let name_token = self.get_next_token()?;
                             let name = match &name_token.token_type {
                                 TokenType::Identifier(name) => name.clone(),
@@ -156,7 +159,7 @@ impl Parser {
 
                             Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenCurlyBracket)?;
 
-                            let mut namespace = ASTNode::new(ASTType::Namespace(name));
+                            let mut namespace = ASTNode::new(ASTType::Namespace(name), token.position);
                             namespace.children.push(self.parse_scope()?);
                             Ok(namespace)
                         }
@@ -197,7 +200,7 @@ impl Parser {
             _ => return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(name_token.clone())),
         }
 
-        let mut node = ASTNode::new(ASTType::Function(func_name));
+        let mut node = ASTNode::new(ASTType::Function(func_name), name_token.position);
 
         let token = self.get_next_token()?;
         Parser::validate_token_is_delimiter(token, Delimiter::OpenParen)?;
@@ -207,7 +210,7 @@ impl Parser {
             match &token.token_type {
                 TokenType::Identifier(identifier) => {
                     let identifier = identifier.clone();
-                    node.children.push(ASTNode::new(ASTType::Identifier(identifier)));
+                    node.children.push(ASTNode::new(ASTType::Identifier(identifier), token.position));
                 }
                 TokenType::Delimiter(d) => match d {
                     Delimiter::CloseParen => break,
@@ -244,7 +247,7 @@ impl Parser {
             _ => return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(name_token.clone())),
         }
 
-        let mut node = ASTNode::new(ASTType::VariableDeclaration(variable_name));
+        let mut node = ASTNode::new(ASTType::VariableDeclaration(variable_name), name_token.position);
 
 
         let delimiter = self.get_next_token()?;
@@ -261,9 +264,9 @@ impl Parser {
     }
 
     fn parse_if_statement(&mut self) -> Result<ASTNode, ParserError> {
-        self.get_next_token()?;
+        let token = self.get_next_token()?;
 
-        let mut node = ASTNode::new(ASTType::IfStatement);
+        let mut node = ASTNode::new(ASTType::IfStatement, token.position);
         let condition = self.parse_expression()?;
 
         node.children.push(condition);
@@ -316,9 +319,9 @@ impl Parser {
     }
 
     fn parse_while_statement(&mut self) -> Result<ASTNode, ParserError> {
-        self.get_next_token()?;
+        let token = self.get_next_token()?;
 
-        let mut node = ASTNode::new(ASTType::WhileStatement);
+        let mut node = ASTNode::new(ASTType::WhileStatement, token.position);
         let condition = self.parse_expression()?;
 
         node.children.push(condition);
@@ -332,10 +335,10 @@ impl Parser {
     }
 
     fn parse_expression(&mut self) -> Result<ASTNode, ParserError> {
-        let next = self.peek_next_token(0)?;
+        let next = self.peek_next_token(0)?.clone();
 
         let lhs;
-        if Parser::token_is_delimiter(next, Delimiter::OpenParen) {
+        if Parser::token_is_delimiter(&next, Delimiter::OpenParen) {
             self.get_next_token()?;
             lhs = self.parse_expression()?;
             self.get_next_token()?;
@@ -343,7 +346,7 @@ impl Parser {
             lhs = self.parse_sub_expression()?;
         }
 
-        let mut node = ASTNode::new(ASTType::Expression);
+        let mut node = ASTNode::new(ASTType::Expression, next.position);
 
         node.children.push(lhs);
 
@@ -351,7 +354,8 @@ impl Parser {
 
         let next_expression_operator = self.get_next_expression_operator()?;
         if next_expression_operator.is_some() {
-            operator = ASTNode::new(ASTType::ExpressionOp(next_expression_operator.unwrap()));
+            let op = next_expression_operator.unwrap();
+            operator = ASTNode::new(ASTType::ExpressionOp(op.0), op.1);
             node.children.push(operator.clone());
             let rhs = self.parse_expression()?;
             node.children.push(rhs);
@@ -412,7 +416,7 @@ impl Parser {
     }
 
     fn parse_array_declaration(&mut self) -> Result<ASTNode, ParserError> {
-        let mut array_node = ASTNode::new(ASTType::CreateArray);
+        let mut array_node = ASTNode::new(ASTType::CreateArray, CodeSegment::new(0, 0, 0, 0));
 
         Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenBracket)?;
 
@@ -437,11 +441,11 @@ impl Parser {
     }
 
     fn parse_object_declaration(&mut self) -> Result<ASTNode, ParserError> {
-        let mut object_node = ASTNode::new(ASTType::CreateObject);
+        let mut object_node = ASTNode::new(ASTType::CreateObject, CodeSegment::new(0, 0, 0, 0));
 
         Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenCurlyBracket)?;
         while !Parser::token_is_delimiter(self.peek_next_token(0)?, Delimiter::CloseCurlyBracket) {
-            let token = self.get_next_token()?;
+            let token = self.get_next_token()?.clone();
             let identifier = match &token.token_type {
                 TokenType::Identifier(identifier) => Ok(identifier.clone()),
                 _ => Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(token.clone()))
@@ -451,7 +455,7 @@ impl Parser {
             Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Colon)?;
             let expression = self.parse_expression()?;
 
-            let mut object_member = ASTNode::new(ASTType::ObjectMember(identifier));
+            let mut object_member = ASTNode::new(ASTType::ObjectMember(identifier), token.position);
 
             object_member.children.push(expression);
 
@@ -472,15 +476,16 @@ impl Parser {
     }
 
     fn parse_member_expression(&mut self) -> Result<ASTNode, ParserError> {
-        let name = self.get_next_token()?;
-        let name = match &name.token_type {
+        let name_token = self.get_next_token()?;
+        let name = match &name_token.token_type {
             TokenType::Identifier(n) => Ok(n.clone()),
-            _ => Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(name.clone()))
+            _ => Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(name_token.clone()))
         }?;
 
-        self.get_next_token()?;
 
-        let mut node = ASTNode::new(ASTType::ObjectAccess(name));
+        let mut node = ASTNode::new(ASTType::ObjectAccess(name), name_token.position);
+
+        self.get_next_token()?;
 
         if Parser::token_is_delimiter(self.peek_next_token(1)?, Delimiter::Dot) {
             node.children.push(self.parse_member_expression()?);
@@ -492,15 +497,15 @@ impl Parser {
     }
 
     fn parse_subscript_expression(&mut self) -> Result<ASTNode, ParserError> {
-        let name = self.get_next_token()?;
-        let name = match &name.token_type {
+        let name_token = self.get_next_token()?;
+        let name = match &name_token.token_type {
             TokenType::Identifier(n) => Ok(n.clone()),
-            _ => Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(name.clone()))
+            _ => Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(name_token.clone()))
         }?;
 
-        Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenBracket)?;
+        let mut node = ASTNode::new(ASTType::Subscript(name), name_token.position);
 
-        let mut node = ASTNode::new(ASTType::Subscript(name));
+        Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenBracket)?;
 
         node.children.push(self.parse_expression()?);
 
@@ -546,20 +551,20 @@ impl Parser {
             namespace += &format!("{}::", namespace_part);
         }
 
-        let identifier = self.get_next_token()?;
-        let mut identifier = match &identifier.token_type {
+        let identifier_token = self.get_next_token()?;
+        let mut identifier = match &identifier_token.token_type {
             TokenType::Identifier(identifier) => identifier.clone(),
-            _ => return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(identifier.clone())),
+            _ => return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(identifier_token.clone())),
         };
 
         identifier = namespace + &identifier;
 
+        let mut node = ASTNode::new(ASTType::FunctionCall(identifier), identifier_token.position);
+
         let open_paren = self.get_next_token()?;
         Parser::validate_token_is_delimiter(open_paren, Delimiter::OpenParen)?;
 
-        // Function Call
-        let mut node = ASTNode::new(ASTType::FunctionCall(identifier));
-
+        // Parameters
         loop {
             if Parser::token_is_delimiter(self.peek_next_token(0)?, Delimiter::CloseParen) {
                 break;
@@ -644,22 +649,36 @@ impl Parser {
     fn token_to_simple_ast_node(token: &Token) -> Result<ASTNode, ParserError> {
         match &token.token_type {
             TokenType::Identifier(identifier) => {
-                Ok(ASTNode::new(ASTType::Identifier(identifier.clone())))
+                Ok(ASTNode::new(ASTType::Identifier(identifier.clone()), token.position))
             }
             TokenType::String(value) => {
-                Ok(ASTNode::new(ASTType::StringValue(value.clone())))
+                Ok(ASTNode::new(ASTType::StringValue(value.clone()), token.position))
             }
             TokenType::Integer(value) => {
-                Ok(ASTNode::new(ASTType::IntegerValue(*value)))
+                Ok(ASTNode::new(ASTType::IntegerValue(*value), token.position))
             }
             TokenType::Float(value) => {
-                Ok(ASTNode::new(ASTType::FloatValue(*value)))
+                Ok(ASTNode::new(ASTType::FloatValue(*value), token.position))
             }
             _ => Err(ParserError::UnexpectedTokenInStream(token.clone()))
         }
     }
 
-    fn get_next_expression_operator(&mut self) -> Result<Option<ExpressionOp>, ParserError> {
+    fn combine_code_segments(segment1: CodeSegment, segment2: CodeSegment) -> CodeSegment {
+        let mut smallest_x = segment1.start_x;
+        if segment2.start_x < smallest_x { smallest_x = segment2.start_x }
+        let mut smallest_y = segment1.start_y;
+        if segment2.start_y < smallest_y { smallest_y = segment2.start_y }
+
+        let mut largest_x = segment1.end_x;
+        if segment2.end_x < largest_x { largest_x = segment2.end_x }
+        let mut largest_y = segment1.end_y;
+        if segment2.end_y < largest_y { largest_y = segment2.end_y }
+
+        CodeSegment::new(smallest_x, smallest_y, largest_x, largest_y)
+    }
+
+    fn get_next_expression_operator(&mut self) -> Result<Option<(ExpressionOp, CodeSegment)>, ParserError> {
         let token = self.peek_next_token(0)?;
         let token2 = match self.peek_next_token(1) {
             Ok(t) => Some(t),
@@ -669,70 +688,70 @@ impl Parser {
         if token2.is_some() {
             if Parser::token_is_delimiter(token2.unwrap(), Delimiter::Equal) {
                 if Parser::token_is_delimiter(&token, Delimiter::Equal) {
-                    self.get_next_token()?;
-                    self.get_next_token()?;
-                    return Ok(Some(ExpressionOp::Equal));
+                    let token1 = self.get_next_token()?.clone();
+                    let token2 = self.get_next_token()?;
+                    return Ok(Some((ExpressionOp::Equal, Parser::combine_code_segments(token1.position, token2.position))));
                 } else if Parser::token_is_delimiter(&token, Delimiter::Exclamation) {
-                    self.get_next_token()?;
-                    self.get_next_token()?;
-                    return Ok(Some(ExpressionOp::NotEqual));
+                    let token1 = self.get_next_token()?.clone();
+                    let token2 = self.get_next_token()?;
+                    return Ok(Some((ExpressionOp::NotEqual, Parser::combine_code_segments(token1.position, token2.position))));
                 } else if Parser::token_is_delimiter(&token, Delimiter::LessThan) {
-                    self.get_next_token()?;
-                    self.get_next_token()?;
-                    return Ok(Some(ExpressionOp::LessThanOrEqual));
+                    let token1 = self.get_next_token()?.clone();
+                    let token2 = self.get_next_token()?;
+                    return Ok(Some((ExpressionOp::LessThanOrEqual, Parser::combine_code_segments(token1.position, token2.position))));
                 } else if Parser::token_is_delimiter(&token, Delimiter::GreaterThan) {
-                    self.get_next_token()?;
-                    self.get_next_token()?;
-                    return Ok(Some(ExpressionOp::GreaterThanOrEqual));
+                    let token1 = self.get_next_token()?.clone();
+                    let token2 = self.get_next_token()?;
+                    return Ok(Some((ExpressionOp::GreaterThanOrEqual, Parser::combine_code_segments(token1.position, token2.position))));
                 } else if Parser::token_is_delimiter(&token, Delimiter::Plus) {
-                    self.get_next_token()?;
-                    self.get_next_token()?;
-                    return Ok(Some(ExpressionOp::AddAssign));
+                    let token1 = self.get_next_token()?.clone();
+                    let token2 = self.get_next_token()?;
+                    return Ok(Some((ExpressionOp::AddAssign, Parser::combine_code_segments(token1.position, token2.position))));
                 } else if Parser::token_is_delimiter(&token, Delimiter::Hyphen) {
-                    self.get_next_token()?;
-                    self.get_next_token()?;
-                    return Ok(Some(ExpressionOp::SubtractAssign));
+                    let token1 = self.get_next_token()?.clone();
+                    let token2 = self.get_next_token()?;
+                    return Ok(Some((ExpressionOp::SubtractAssign, Parser::combine_code_segments(token1.position, token2.position))));
                 } else if Parser::token_is_delimiter(&token, Delimiter::Star) {
-                    self.get_next_token()?;
-                    self.get_next_token()?;
-                    return Ok(Some(ExpressionOp::MultiplyAssign));
+                    let token1 = self.get_next_token()?.clone();
+                    let token2 = self.get_next_token()?;
+                    return Ok(Some((ExpressionOp::MultiplyAssign, Parser::combine_code_segments(token1.position, token2.position))));
                 } else if Parser::token_is_delimiter(&token, Delimiter::Slash) {
-                    self.get_next_token()?;
-                    self.get_next_token()?;
-                    return Ok(Some(ExpressionOp::DivideAssign));
+                    let token1 = self.get_next_token()?.clone();
+                    let token2 = self.get_next_token()?;
+                    return Ok(Some((ExpressionOp::DivideAssign, Parser::combine_code_segments(token1.position, token2.position))));
                 }
             } else if Parser::token_is_delimiter(&token, Delimiter::And) && Parser::token_is_delimiter(&token2.unwrap(), Delimiter::And) {
-                self.get_next_token()?;
-                self.get_next_token()?;
-                return Ok(Some(ExpressionOp::And));
+                let token1 = self.get_next_token()?.clone();
+                let token2 = self.get_next_token()?;
+                return Ok(Some((ExpressionOp::And, Parser::combine_code_segments(token1.position, token2.position))));
             } else if Parser::token_is_delimiter(&token, Delimiter::Pipe) && Parser::token_is_delimiter(&token2.unwrap(), Delimiter::Pipe) {
-                self.get_next_token()?;
-                self.get_next_token()?;
-                return Ok(Some(ExpressionOp::Or));
+                let token1 = self.get_next_token()?.clone();
+                let token2 = self.get_next_token()?;
+                return Ok(Some((ExpressionOp::Or, Parser::combine_code_segments(token1.position, token2.position))));
             }
         }
 
         if Parser::token_is_delimiter(&token, Delimiter::LessThan) {
-            self.get_next_token()?;
-            return Ok(Some(ExpressionOp::LessThan));
+            let token1 = self.get_next_token()?;
+            return Ok(Some((ExpressionOp::LessThan, token1.position)));
         } else if Parser::token_is_delimiter(&token, Delimiter::GreaterThan) {
-            self.get_next_token()?;
-            return Ok(Some(ExpressionOp::GreaterThan));
+            let token1 = self.get_next_token()?;
+            return Ok(Some((ExpressionOp::GreaterThan, token1.position)));
         } else if Parser::token_is_delimiter(&token, Delimiter::Plus) {
-            self.get_next_token()?;
-            return Ok(Some(ExpressionOp::Add));
+            let token1 = self.get_next_token()?;
+            return Ok(Some((ExpressionOp::Add, token1.position)));
         } else if Parser::token_is_delimiter(&token, Delimiter::Hyphen) {
-            self.get_next_token()?;
-            return Ok(Some(ExpressionOp::Subtract));
+            let token1 = self.get_next_token()?;
+            return Ok(Some((ExpressionOp::Subtract, token1.position)));
         } else if Parser::token_is_delimiter(&token, Delimiter::Star) {
-            self.get_next_token()?;
-            return Ok(Some(ExpressionOp::Multiply));
+            let token1 = self.get_next_token()?;
+            return Ok(Some((ExpressionOp::Multiply, token1.position)));
         } else if Parser::token_is_delimiter(&token, Delimiter::Slash) {
-            self.get_next_token()?;
-            return Ok(Some(ExpressionOp::Divide));
+            let token1 = self.get_next_token()?;
+            return Ok(Some((ExpressionOp::Divide, token1.position)));
         } else if Parser::token_is_delimiter(&token, Delimiter::Equal) {
-            self.get_next_token()?;
-            return Ok(Some(ExpressionOp::Assign));
+            let token1 = self.get_next_token()?;
+            return Ok(Some((ExpressionOp::Assign, token1.position)));
         }
 
 

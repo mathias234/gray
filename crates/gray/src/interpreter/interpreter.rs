@@ -213,8 +213,14 @@ impl<'interp> Interpreter<'interp> {
                 for _ in 0..indent {
                     print!("\t");
                 }
-                println!("[{:04}] {}", idx, ins.to_string());
 
+                println!("// Segment ${:?}", block.code_mapping[idx]);
+
+                for _ in 0..indent {
+                    print!("\t");
+                }
+                println!("[{:04}] {}", idx, ins.to_string());
+                println!();
                 if ins.to_string() == String::from("PushScope") { indent += 1; }
                 idx += 1;
             }

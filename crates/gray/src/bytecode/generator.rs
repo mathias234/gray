@@ -1,4 +1,4 @@
-use crate::bytecode::code_block::CodeBlock;
+use crate::bytecode::code_block::{CodeBlock, CodeSegment};
 use crate::bytecode::label::Label;
 use crate::bytecode::instructions::other::Instruction;
 use crate::bytecode::register::Register;
@@ -42,16 +42,16 @@ impl Generator {
     pub fn make_instruction_holder(&mut self) -> Label {
         let label = self.make_label();
 
-        self.emit(NotAnInstruction::new_boxed());
+        self.emit(NotAnInstruction::new_boxed(), CodeSegment::new(0, 0, 0, 0));
 
         return label;
     }
 
-    pub fn emit(&mut self, instruction: Box<dyn Instruction>)  {
-        self.block.add_instruction(instruction);
+    pub fn emit(&mut self, instruction: Box<dyn Instruction>, segment: CodeSegment) {
+        self.block.add_instruction(instruction, segment);
     }
 
-    pub fn emit_at(&mut self, instruction: Box<dyn Instruction>, label: &Label) {
-        self.block.set_instruction_at(instruction, label);
+    pub fn emit_at(&mut self, instruction: Box<dyn Instruction>, label: &Label, segment: CodeSegment) {
+        self.block.set_instruction_at(instruction, label, segment);
     }
 }
