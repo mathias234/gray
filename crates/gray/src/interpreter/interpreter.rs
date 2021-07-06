@@ -10,6 +10,8 @@ use crate::{
 use std::collections::HashMap;
 use std::rc::Rc;
 use crate::interpreter::function_pointer::FunctionArgs;
+use crate::bytecode::code_block::CodeSegment;
+use std::cell::Cell;
 
 #[derive(Clone)]
 pub struct Scope {
@@ -55,6 +57,9 @@ pub struct ExecutionContext {
     should_break: bool,
     should_continue: bool,
     break_continue_scope_stack: Vec<BreakContinueScope>,
+
+    errored: Cell<bool>,
+    code_segment: CodeSegment,
 }
 
 
@@ -72,6 +77,8 @@ impl ExecutionContext {
             should_break: false,
             should_continue: false,
             break_continue_scope_stack: Vec::new(),
+            code_segment: CodeSegment::new(0, 0, 0, 0),
+            errored: Cell::from(false),
         }
     }
 
@@ -122,7 +129,7 @@ impl ExecutionContext {
         }
 
         if !found_variable {
-            panic!("set_variable failed to find `{}`", variable);
+            self.throw_error(&format!("Failed to find variable `{}`", variable));
         }
     }
 
@@ -135,7 +142,8 @@ impl ExecutionContext {
         }
 
 
-        panic!("get_variable failed to find `{}`", variable);
+        self.throw_error(&format!("Failed to find variable `{}`", variable));
+        return Value::from_i64(0);
     }
 
     pub fn push_scope(&mut self) {
@@ -155,12 +163,18 @@ impl ExecutionContext {
         self.break_continue_scope_stack.remove(0)
     }
 
-    pub fn get_top_break_continue_scope(&mut self) -> &BreakContinueScope {
+    pub fn get_top_break_continue_scope(&self) -> &BreakContinueScope {
         &self.break_continue_scope_stack[0]
     }
 
     pub fn set_break(&mut self) { self.should_break = true; }
     pub fn set_continue(&mut self) { self.should_continue = true; }
+
+    pub fn throw_error(&self, message: &str) {
+        self.errored.set(true);
+        println!("\nRuntime Error!\n{} at {:?}\n", message, self.code_segment);
+    }
+
 }
 
 pub struct StackFrame {
@@ -241,7 +255,14 @@ impl<'interp> Interpreter<'interp> {
             let instructions = active_block.get_instructions();
             let ins = &instructions[self.pc];
             //println!("Executing [{}][{}]{}", self.active_block, self.pc, ins.to_string());
+            self.execution_context.code_segment = self.active_code_block.unwrap().code_mapping[self.pc];
             ins.execute(&mut self.execution_context);
+
+            if self.execution_context.errored.get() {
+                // The context errored, we will then stop the execution of the interpreter
+                return Value::from_i64(-1);
+            }
+
             //self.dump();
 
             if self.execution_context.jump_target.is_some() {
