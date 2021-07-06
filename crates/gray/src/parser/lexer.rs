@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::{Read, ErrorKind};
 use crate::bytecode::code_block::CodeSegment;
+use std::rc::Rc;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum Delimiter {
@@ -154,7 +155,7 @@ impl Lexer {
     }
 
 
-    pub fn lex_file(file: &str) -> Result<TokenStream, LexerError> {
+    pub fn lex_file(file: &str) -> Result<(Rc<String>, TokenStream), LexerError> {
         let file_result = File::open(file);
         let mut file = String::new();
 
@@ -173,7 +174,7 @@ impl Lexer {
 
 
         let mut lexer = Lexer {
-            file,
+            file: file.clone(),
             position: 0,
             pos_x: 1,
             pos_y: 1,
@@ -185,7 +186,7 @@ impl Lexer {
             let token = lexer.pop_token()?;
 
             if token == TokenType::EndOfFile {
-                return Ok(token_stream);
+                return Ok((Rc::from(file), token_stream));
             }
 
             token_stream.tokens.push(token);

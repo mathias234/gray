@@ -3,6 +3,7 @@ pub mod interpreter;
 pub mod parser;
 pub mod compiler;
 
+use std::rc::Rc;
 use interpreter::interpreter::Interpreter;
 use crate::parser::parser::{Parser, ParserError};
 use crate::parser::lexer::{Lexer, LexerError};
@@ -34,7 +35,6 @@ impl From<CompilerError> for GrayError {
 }
 
 pub fn load_file(file: &str) -> Result<Interpreter, GrayError> {
-
     let token_stream = Lexer::lex_file(file)?;
 
     /*
@@ -50,15 +50,14 @@ pub fn load_file(file: &str) -> Result<Interpreter, GrayError> {
     token_stream.reset();
      */
 
-    let root_ast_node = Parser::parse(token_stream)?;
+    let root_ast_node = Parser::parse(token_stream.1)?;
 
     println!("\nParser AST Tree");
     root_ast_node.dump(0);
 
     let blocks = Compiler::compile(root_ast_node)?;
 
-    let interpreter = Interpreter::new(blocks);
-
+    let interpreter = Interpreter::new(blocks, token_stream.0);
 
 
     return Ok(interpreter);
@@ -71,7 +70,7 @@ pub fn load_string(file: &str) -> Result<Interpreter, GrayError> {
 
     let blocks = Compiler::compile(root_ast_node)?;
 
-    let interpreter = Interpreter::new(blocks);
+    let interpreter = Interpreter::new(blocks, Rc::from(file.to_string()));
 
     return Ok(interpreter);
 }

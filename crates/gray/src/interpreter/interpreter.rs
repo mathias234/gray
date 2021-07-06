@@ -59,12 +59,13 @@ pub struct ExecutionContext {
     break_continue_scope_stack: Vec<BreakContinueScope>,
 
     errored: Cell<bool>,
+    code_text: Rc<String>,
     code_segment: CodeSegment,
 }
 
 
 impl ExecutionContext {
-    pub fn new() -> ExecutionContext {
+    pub fn new(code_text: Rc<String>) -> ExecutionContext {
         ExecutionContext {
             accumulator: Value::from_i64(0),
             registers: Vec::new(),
@@ -77,7 +78,9 @@ impl ExecutionContext {
             should_break: false,
             should_continue: false,
             break_continue_scope_stack: Vec::new(),
+
             code_segment: CodeSegment::new(0, 0, 0, 0),
+            code_text,
             errored: Cell::from(false),
         }
     }
@@ -172,9 +175,37 @@ impl ExecutionContext {
 
     pub fn throw_error(&self, message: &str) {
         self.errored.set(true);
-        println!("\nRuntime Error!\n{} at {:?}\n", message, self.code_segment);
+        println!("Runtime Error!\n{} at {:?}", message, self.code_segment);
+
+        println!("----------------------------");
+        let lines: Vec<&str> = self.code_text.split('\n').collect();
+        let line_count = self.code_segment.end_y - self.code_segment.start_y;
+        if line_count == 0 {
+            ExecutionContext::print_error_line(
+                lines[self.code_segment.start_y - 1],
+                self.code_segment.start_x,
+                self.code_segment.end_x,
+            );
+        } else {
+            for line in self.code_segment.start_y - 1..self.code_segment.end_y - 1 {
+                println!("{}", lines[line]);
+            }
+        }
+        println!("----------------------------");
     }
 
+    fn print_error_line(line: &str, from_col: usize, to_col: usize) {
+        println!("{}", line);
+
+        for i in 0..line.len() {
+            if i >= from_col - 1 && i < to_col - 1 {
+                print!("^");
+            } else {
+                print!(" ");
+            }
+        }
+        println!();
+    }
 }
 
 pub struct StackFrame {
@@ -193,18 +224,21 @@ pub struct Interpreter<'interp> {
     call_stack: Vec<StackFrame>,
 
     native_functions: HashMap<String, FunctionPointer>,
+
+    code_text: Rc<String>,
 }
 
 impl<'interp> Interpreter<'interp> {
-    pub fn new(blocks: HashMap<String, CodeBlock>) -> Interpreter<'interp> {
+    pub fn new(blocks: HashMap<String, CodeBlock>, code_text: Rc<String>) -> Interpreter<'interp> {
         Interpreter {
             active_block: String::from(""),
             active_code_block: None,
-            execution_context: ExecutionContext::new(),
+            execution_context: ExecutionContext::new(code_text.clone()),
             pc: 0,
             blocks,
             call_stack: Vec::new(),
             native_functions: HashMap::new(),
+            code_text,
         }
     }
 
@@ -320,7 +354,7 @@ impl<'interp> Interpreter<'interp> {
 
                 len = self.active_code_block.unwrap().get_instructions().len();
 
-                self.execution_context = ExecutionContext::new();
+                self.execution_context = ExecutionContext::new(self.code_text.clone());
 
                 self.execution_context.block_arguments = block_args;
                 self.pc = 0;
