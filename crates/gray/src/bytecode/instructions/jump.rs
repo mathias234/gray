@@ -46,7 +46,7 @@ impl Instruction for Jump {
 
 impl Instruction for JumpNotZero {
     fn execute(&self, context: &mut ExecutionContext) {
-        if context.get_accumulator() != Value::from_i64(0) {
+        if !context.get_accumulator().eq(&Value::from_i64(0)) {
             context.set_jump_target(&self.target)
         }
     }
@@ -56,7 +56,7 @@ impl Instruction for JumpNotZero {
 
 impl Instruction for JumpZero {
     fn execute(&self, context: &mut ExecutionContext) {
-        if context.get_accumulator() == Value::from_i64(0) {
+        if context.get_accumulator().eq(&Value::from_i64(0)) {
             context.set_jump_target(&self.target)
         }
     }

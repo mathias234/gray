@@ -50,7 +50,7 @@ impl Instruction for Add {
     fn execute(&self, context: &mut ExecutionContext) {
         let value = context.get_accumulator();
         let value2 = context.get_register(&self.register);
-        context.set_accumulator(value + value2);
+        context.set_accumulator(value.add(value2));
     }
 
     fn to_string(&self) -> String {
@@ -62,7 +62,7 @@ impl Instruction for Subtract {
     fn execute(&self, context: &mut ExecutionContext) {
         let value = context.get_accumulator();
         let value2 = context.get_register(&self.register);
-        context.set_accumulator(value - value2);
+        context.set_accumulator(value.sub(value2));
     }
 
     fn to_string(&self) -> String {
@@ -74,7 +74,7 @@ impl Instruction for Multiply {
     fn execute(&self, context: &mut ExecutionContext) {
         let value = context.get_accumulator();
         let value2 = context.get_register(&self.register);
-        context.set_accumulator(value * value2);
+        context.set_accumulator(value.mul(value2));
     }
 
     fn to_string(&self) -> String {
@@ -87,7 +87,7 @@ impl Instruction for Divide {
     fn execute(&self, context: &mut ExecutionContext) {
         let value = context.get_accumulator();
         let value2 = context.get_register(&self.register);
-        context.set_accumulator(value / value2);
+        context.set_accumulator(value.div(value2));
     }
 
     fn to_string(&self) -> String {

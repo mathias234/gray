@@ -2,6 +2,7 @@ use crate::bytecode::instructions::other::Instruction;
 use crate::bytecode::register::Register;
 use crate::interpreter::interpreter::ExecutionContext;
 use crate::interpreter::value::Value;
+use std::cmp::Ordering;
 
 pub struct CompareEq {
     register: Register,
@@ -97,7 +98,7 @@ impl Instruction for CompareEq {
         let lhs = context.get_accumulator();
         let rhs = context.get_register(&self.register);
 
-        context.set_accumulator(Value::from_i64((lhs == rhs) as i64));
+        context.set_accumulator(Value::from_i64((lhs.eq(&rhs)) as i64));
     }
 
     fn to_string(&self) -> String { format!("CompareEq {}", self.register) }
@@ -108,7 +109,7 @@ impl Instruction for CompareNotEq {
         let lhs = context.get_accumulator();
         let rhs = context.get_register(&self.register);
 
-        context.set_accumulator(Value::from_i64((lhs != rhs) as i64));
+        context.set_accumulator(Value::from_i64((!lhs.eq(&rhs)) as i64));
     }
 
     fn to_string(&self) -> String { format!("CompareNotEq {}", self.register) }
@@ -119,7 +120,7 @@ impl Instruction for CompareGreaterThan {
         let lhs = context.get_accumulator();
         let rhs = context.get_register(&self.register);
 
-        context.set_accumulator(Value::from_i64((lhs > rhs) as i64));
+        context.set_accumulator(Value::from_i64((lhs.partial_cmp(&rhs).unwrap() == Ordering::Greater) as i64));
     }
 
     fn to_string(&self) -> String { format!("CompareGreaterThan {}", self.register) }
@@ -130,7 +131,7 @@ impl Instruction for CompareLessThan {
         let lhs = context.get_accumulator();
         let rhs = context.get_register(&self.register);
 
-        context.set_accumulator(Value::from_i64((lhs < rhs) as i64));
+        context.set_accumulator(Value::from_i64((lhs.partial_cmp(&rhs).unwrap() == Ordering::Less) as i64));
     }
 
     fn to_string(&self) -> String { format!("CompareLessThan {}", self.register) }
@@ -141,7 +142,7 @@ impl Instruction for CompareLessThanOrEqual {
         let lhs = context.get_accumulator();
         let rhs = context.get_register(&self.register);
 
-        context.set_accumulator(Value::from_i64((lhs <= rhs) as i64));
+        context.set_accumulator(Value::from_i64((lhs.partial_cmp(&rhs).unwrap() != Ordering::Greater) as i64));
     }
 
     fn to_string(&self) -> String { format!("CompareLessThanOrEqual {}", self.register) }
@@ -152,7 +153,7 @@ impl Instruction for CompareGreaterThanOrEqual {
         let lhs = context.get_accumulator();
         let rhs = context.get_register(&self.register);
 
-        context.set_accumulator(Value::from_i64((lhs >= rhs) as i64));
+        context.set_accumulator(Value::from_i64((lhs.partial_cmp(&rhs).unwrap() != Ordering::Less) as i64));
     }
 
     fn to_string(&self) -> String { format!("CompareGreaterThanOrEqual {}", self.register) }
@@ -164,7 +165,7 @@ impl Instruction for And {
         let rhs = context.get_register(&self.register);
 
         let true_value = Value::from_i64(1);
-        if lhs == true_value && rhs == true_value {
+        if lhs.eq(&true_value) && rhs.eq(&true_value) {
             context.set_accumulator(true_value);
             return;
         }
@@ -181,7 +182,7 @@ impl Instruction for Or {
         let rhs = context.get_register(&self.register);
 
         let true_value = Value::from_i64(1);
-        if lhs == true_value || rhs == true_value {
+        if lhs.eq(&true_value) || rhs.eq(&true_value) {
             context.set_accumulator(true_value);
             return;
         }

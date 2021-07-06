@@ -1,4 +1,4 @@
-use std::{fmt, ops, cmp};
+use std::{fmt};
 use std::cmp::Ordering;
 use crate::interpreter::object::Object;
 use crate::interpreter::array::Array;
@@ -67,14 +67,8 @@ impl Value {
     pub fn get_data_value_mut(&mut self) -> &mut DataValue {
         &mut self.value
     }
-}
 
-// FIXME: find a better way to do this, very verbose and error prone..
-
-impl ops::Add<Value> for Value {
-    type Output = Value;
-
-    fn add(self, rhs_value: Value) -> Self::Output {
+    pub fn add(self, rhs_value: Value) -> Value {
         match &self.value {
             DataValue::I64(lhs) => {
                 match &rhs_value.value {
@@ -115,12 +109,8 @@ impl ops::Add<Value> for Value {
             }
         }
     }
-}
 
-impl ops::Sub<Value> for Value {
-    type Output = Value;
-
-    fn sub(self, rhs_value: Value) -> Self::Output {
+    pub fn sub(self, rhs_value: Value) -> Value {
         match self.value {
             DataValue::I64(lhs) => {
                 match rhs_value.value {
@@ -158,12 +148,8 @@ impl ops::Sub<Value> for Value {
             }
         }
     }
-}
 
-impl ops::Mul<Value> for Value {
-    type Output = Value;
-
-    fn mul(self, rhs_value: Value) -> Self::Output {
+    pub fn mul(self, rhs_value: Value) -> Value {
         match self.value {
             DataValue::I64(lhs) => {
                 match rhs_value.value {
@@ -201,12 +187,8 @@ impl ops::Mul<Value> for Value {
             }
         }
     }
-}
 
-impl ops::Div<Value> for Value {
-    type Output = Value;
-
-    fn div(self, rhs_value: Value) -> Self::Output {
+    pub fn div(self, rhs_value: Value) -> Value {
         match self.value {
             DataValue::I64(lhs) => {
                 match rhs_value.value {
@@ -244,10 +226,8 @@ impl ops::Div<Value> for Value {
             }
         }
     }
-}
 
-impl cmp::PartialEq for Value {
-    fn eq(&self, rhs_value: &Self) -> bool {
+    pub fn eq(&self, rhs_value: &Self) -> bool {
         match &self.value {
             DataValue::I64(lhs) => {
                 match &rhs_value.value {
@@ -286,10 +266,8 @@ impl cmp::PartialEq for Value {
             }
         }
     }
-}
 
-impl cmp::PartialOrd for Value {
-    fn partial_cmp(&self, rhs_value: &Self) -> Option<Ordering> {
+    pub fn partial_cmp(&self, rhs_value: &Self) -> Option<Ordering> {
         match self.value.clone() {
             DataValue::I64(lhs) => {
                 match &rhs_value.value {
