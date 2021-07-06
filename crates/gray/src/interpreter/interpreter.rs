@@ -175,27 +175,47 @@ impl ExecutionContext {
 
     pub fn throw_error(&self, message: &str) {
         self.errored.set(true);
-        println!("Runtime Error!\n{} at {:?}", message, self.code_segment);
 
-        println!("----------------------------");
+        println!("Runtime Error!");
+        println!("---------------------------------");
         let lines: Vec<&str> = self.code_text.split('\n').collect();
         let line_count = self.code_segment.end_y - self.code_segment.start_y;
+
         if line_count == 0 {
             ExecutionContext::print_error_line(
                 lines[self.code_segment.start_y - 1],
+                self.code_segment.start_y,
                 self.code_segment.start_x,
                 self.code_segment.end_x,
             );
         } else {
             for line in self.code_segment.start_y - 1..self.code_segment.end_y - 1 {
-                println!("{}", lines[line]);
+                let start_x = 0;
+                let end_x = lines[line].len();
+
+                ExecutionContext::print_error_line(
+                    lines[line],
+                    line + 1,
+                    start_x,
+                    end_x,
+                );
             }
         }
-        println!("----------------------------");
+
+        println!("{}", message);
+        panic!();
     }
 
-    fn print_error_line(line: &str, from_col: usize, to_col: usize) {
-        println!("{}", line);
+    fn print_error_line(line: &str, line_nr: usize, from_col: usize, to_col: usize) {
+        let first_segment = format!("{} |    ", line_nr);
+        println!("{}{}", first_segment, line);
+
+
+        print!("  |");
+        for _ in 0..first_segment.len() - 3 {
+            print!(" ");
+        }
+
 
         for i in 0..line.len() {
             if i >= from_col - 1 && i < to_col - 1 {
@@ -204,7 +224,6 @@ impl ExecutionContext {
                 print!(" ");
             }
         }
-        println!();
     }
 }
 
