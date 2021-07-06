@@ -42,7 +42,7 @@ impl CodeBlock {
     }
 
     pub fn set_instruction_at(&mut self, instruction: Box<dyn Instruction>, label: &Label, segment: CodeSegment) {
-        self.code_mapping.push(segment);
+        self.code_mapping[label.position] = segment;
         self.instructions[label.position] = instruction;
     }
 
