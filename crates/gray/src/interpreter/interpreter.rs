@@ -146,7 +146,6 @@ impl ExecutionContext {
 
 
         self.throw_error(&format!("Failed to find variable `{}`", variable));
-        return Value::from_i64(0);
     }
 
     pub fn push_scope(&mut self) {
@@ -173,7 +172,7 @@ impl ExecutionContext {
     pub fn set_break(&mut self) { self.should_break = true; }
     pub fn set_continue(&mut self) { self.should_continue = true; }
 
-    pub fn throw_error(&self, message: &str) {
+    pub fn throw_error(&self, message: &str) -> ! {
         self.errored.set(true);
 
         println!("Runtime Error!");
@@ -203,7 +202,7 @@ impl ExecutionContext {
         }
 
         println!("{}", message);
-        panic!();
+        panic!()
     }
 
     fn print_error_line(line: &str, line_nr: usize, from_col: usize, to_col: usize) {

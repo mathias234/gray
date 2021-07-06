@@ -5,6 +5,7 @@ use crate::interpreter::array::Array;
 use std::rc::Rc;
 use std::any::Any;
 use std::cell::RefCell;
+use crate::interpreter::interpreter::ExecutionContext;
 
 pub type Pointer<T> = Rc<RefCell<T>>;
 
@@ -68,25 +69,25 @@ impl Value {
         &mut self.value
     }
 
-    pub fn add(self, rhs_value: Value) -> Value {
+    pub fn add(self, context: &ExecutionContext, rhs_value: Value) -> Value {
         match &self.value {
             DataValue::I64(lhs) => {
                 match &rhs_value.value {
                     DataValue::I64(rhs) => { Value::from_i64(*lhs + *rhs) }
                     DataValue::F64(rhs) => { Value::from_f64(*lhs as f64 + *rhs) }
-                    rhs => panic!("Unable to add {:?} to {:?}", lhs, rhs),
+                    rhs => context.throw_error(&format!("Cannot convert {:?} to integer", rhs)),
                 }
             }
             DataValue::F64(lhs) => {
                 match &rhs_value.value {
                     DataValue::I64(rhs) => { Value::from_f64(lhs + *rhs as f64) }
                     DataValue::F64(rhs) => { Value::from_f64(lhs + rhs) }
-                    rhs => panic!("Unable to add {:?} to {:?}", lhs, rhs),
+                    rhs => context.throw_error(&format!("Cannot convert {:?} to float", rhs)),
                 }
             }
             DataValue::Object(_) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on objects"),
+                    _ => context.throw_error("Add operator is not implemented for objects"),
                 }
             }
             DataValue::String(lhs) => {
@@ -94,214 +95,214 @@ impl Value {
                     DataValue::String(rhs) => {
                         Value::from_string(Rc::from(format!("{}{}", lhs, rhs)))
                     }
-                    rhs => panic!("Unable to add {:?} to {:?}", lhs, rhs),
+                    rhs => context.throw_error(&format!("Cannot convert {:?} to string", rhs)),
                 }
             }
             DataValue::Array(_) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on arrays"),
+                    _ => context.throw_error("Add operator is not implemented for arrays"),
                 }
             }
             DataValue::Pointer(_) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on pointers"),
+                    _ => context.throw_error("Add operator is not implemented for pointers"),
                 }
             }
         }
     }
 
-    pub fn sub(self, rhs_value: Value) -> Value {
+    pub fn sub(self, context: &ExecutionContext, rhs_value: Value) -> Value {
         match self.value {
             DataValue::I64(lhs) => {
                 match rhs_value.value {
                     DataValue::I64(rhs) => { Value::from_i64(lhs - rhs) }
                     DataValue::F64(rhs) => { Value::from_f64(lhs as f64 - rhs) }
-                    rhs => panic!("Unable to subtract {:?} from {:?}", lhs, rhs),
+                    rhs => context.throw_error(&format!("Cannot convert {:?} to integer", rhs)),
                 }
             }
             DataValue::F64(lhs) => {
                 match rhs_value.value {
                     DataValue::I64(rhs) => { Value::from_f64(lhs - rhs as f64) }
                     DataValue::F64(rhs) => { Value::from_f64(lhs - rhs) }
-                    rhs => panic!("Unable to subtract {:?} from {:?}", lhs, rhs),
+                    rhs => context.throw_error(&format!("Cannot convert {:?} to float", rhs)),
                 }
             }
             DataValue::Object(_) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on objects"),
+                    _ => context.throw_error("Subtract operator is not implemented for objects"),
                 }
             }
             DataValue::String(_) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on strings"),
+                    _ => context.throw_error("Subtract operator is not implemented for strings"),
                 }
             }
             DataValue::Array(_) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on arrays"),
+                    _ => context.throw_error("Subtract operator is not implemented for arrays"),
                 }
             }
             DataValue::Pointer(_) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on pointers"),
+                    _ => context.throw_error("Subtract operator is not implemented for pointers"),
                 }
             }
         }
     }
 
-    pub fn mul(self, rhs_value: Value) -> Value {
+    pub fn mul(self, context: &ExecutionContext, rhs_value: Value) -> Value {
         match self.value {
             DataValue::I64(lhs) => {
                 match rhs_value.value {
                     DataValue::I64(rhs) => { Value::from_i64(lhs * rhs) }
                     DataValue::F64(rhs) => { Value::from_f64(lhs as f64 * rhs) }
-                    rhs => panic!("Unable to multiply {:?} with {:?}", lhs, rhs),
+                    rhs => context.throw_error(&format!("Cannot convert {:?} to integer", rhs)),
                 }
             }
             DataValue::F64(lhs) => {
                 match rhs_value.value {
                     DataValue::I64(rhs) => { Value::from_f64(lhs * rhs as f64) }
                     DataValue::F64(rhs) => { Value::from_f64(lhs * rhs) }
-                    rhs => panic!("Unable to multiply {:?} with {:?}", lhs, rhs),
+                    rhs => context.throw_error(&format!("Cannot convert {:?} to float", rhs)),
                 }
             }
             DataValue::Object(_) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on objects"),
+                    _ => context.throw_error("Multiply operator is not implemented for object"),
                 }
             }
             DataValue::String(_) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on strings"),
+                    _ => context.throw_error("Multiply operator is not implemented for strings"),
                 }
             }
             DataValue::Array(_) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on arrays"),
+                    _ => context.throw_error("Multiply operator is not implemented for arrays"),
                 }
             }
             DataValue::Pointer(_) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on pointers"),
+                    _ => context.throw_error("Multiply operator is not implemented for pointers"),
                 }
             }
         }
     }
 
-    pub fn div(self, rhs_value: Value) -> Value {
+    pub fn div(self, context: &ExecutionContext, rhs_value: Value) -> Value {
         match self.value {
             DataValue::I64(lhs) => {
                 match rhs_value.value {
                     DataValue::I64(rhs) => { Value::from_i64(lhs / rhs) }
                     DataValue::F64(rhs) => { Value::from_f64(lhs as f64 / rhs) }
-                    rhs => panic!("Unable to divide {:?} by {:?}", lhs, rhs),
+                    rhs => context.throw_error(&format!("Cannot convert {:?} to integer", rhs)),
                 }
             }
             DataValue::F64(lhs) => {
                 match rhs_value.value {
                     DataValue::I64(rhs) => { Value::from_f64(lhs / rhs as f64) }
                     DataValue::F64(rhs) => { Value::from_f64(lhs / rhs) }
-                    rhs => panic!("Unable to divide {:?} by {:?}", lhs, rhs),
+                    rhs => context.throw_error(&format!("Cannot convert {:?} to float", rhs)),
                 }
             }
             DataValue::Object(_) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on objects"),
+                    _ => context.throw_error("Divide operator is not implemented for objects"),
                 }
             }
             DataValue::String(_) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on strings"),
+                    _ => context.throw_error("Divide operator is not implemented for strings"),
                 }
             }
             DataValue::Array(_) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on arrays"),
+                    _ => context.throw_error("Divide operator is not implemented for arrays"),
                 }
             }
             DataValue::Pointer(_) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on pointers"),
+                    _ => context.throw_error("Divide operator is not implemented for pointers"),
                 }
             }
         }
     }
 
-    pub fn eq(&self, rhs_value: &Self) -> bool {
+    pub fn eq(&self, context: &ExecutionContext, rhs_value: &Self) -> bool {
         match &self.value {
             DataValue::I64(lhs) => {
                 match &rhs_value.value {
                     DataValue::I64(rhs) => { *lhs == *rhs }
                     DataValue::F64(rhs) => { *lhs as f64 == *rhs }
-                    rhs => panic!("Unable to compare {:?} to {:?}", lhs, rhs),
+                    rhs => context.throw_error(&format!("Unable to compare {:?} to {:?}", lhs, rhs)),
                 }
             }
             DataValue::F64(lhs) => {
                 match &rhs_value.value {
                     DataValue::I64(rhs) => { *lhs == *rhs as f64 }
                     DataValue::F64(rhs) => { *lhs == *rhs }
-                    rhs => panic!("Unable to compare {:?} to {:?}", lhs, rhs),
+                    rhs => context.throw_error(&format!("Unable to compare {:?} to {:?}", lhs, rhs)),
                 }
             }
             DataValue::Object(_) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on objects"),
+                    _ => context.throw_error("Equal operator is not implemented for objects"),
                 }
             }
             DataValue::String(lhs) => {
                 match &rhs_value.value {
                     DataValue::String(rhs) => { lhs == rhs }
-                    _ => panic!("Cannot compare a string to a basic value"),
+                    _ => context.throw_error("Cannot compare a string to a basic value"),
                 }
             }
             DataValue::Array(_) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on arrays"),
+                    _ => context.throw_error("Equal operator is not implemented for arrays"),
                 }
             }
             DataValue::Pointer(_) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on pointers"),
+                    _ => context.throw_error("Equal operator is not implemented for pointers"),
                 }
             }
         }
     }
 
-    pub fn partial_cmp(&self, rhs_value: &Self) -> Option<Ordering> {
+    pub fn partial_cmp(&self, context: &ExecutionContext, rhs_value: &Self) -> Option<Ordering> {
         match self.value.clone() {
             DataValue::I64(lhs) => {
                 match &rhs_value.value {
                     DataValue::I64(rhs) => { lhs.partial_cmp(&rhs) }
                     DataValue::F64(rhs) => { (lhs as f64).partial_cmp(&rhs) }
-                    rhs => panic!("Unable to compare {:?} to {:?}", lhs, rhs),
+                    rhs => context.throw_error(&format!("Unable to compare {:?} to {:?}", lhs, rhs)),
                 }
             }
             DataValue::F64(lhs) => {
                 match &rhs_value.value {
                     DataValue::I64(rhs) => { lhs.partial_cmp(&(*rhs as f64)) }
                     DataValue::F64(rhs) => { lhs.partial_cmp(&rhs) }
-                    rhs => panic!("Unable to compare {:?} to {:?}", lhs, rhs),
+                    rhs => context.throw_error(&format!("Unable to compare {:?} to {:?}", lhs, rhs)),
                 }
             }
             DataValue::Object(_) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on objects"),
+                    _ => context.throw_error("Compare operator is not implemented for objects"),
                 }
             }
             DataValue::String(lhs) => {
                 match &rhs_value.value {
                     DataValue::String(rhs) => { lhs.partial_cmp(&rhs) }
-                    _ => panic!("Cannot PartialOrd a string to with a basic value"),
+                    _ => context.throw_error("Cannot compare a string to with a basic value"),
                 }
             }
             DataValue::Array(_) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on arrays"),
+                    _ => context.throw_error("Compare operator is not implemented for arrays"),
                 }
             }
             DataValue::Pointer(_) => {
                 match &rhs_value.value {
-                    _ => panic!("Operations are currently not supported on pointers"),
+                    _ => context.throw_error("Compare operator is not implemented for pointers"),
                 }
             }
         }

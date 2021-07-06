@@ -330,40 +330,40 @@ impl Compiler {
             match &operator.ast_type {
                 ASTType::ExpressionOp(op) => match op {
                     ExpressionOp::Add => {
-                        generator.emit(Add::new_boxed(rhs_register), node.children[2].code_segment);
+                        generator.emit(Add::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::Subtract => {
-                        generator.emit(Subtract::new_boxed(rhs_register), node.children[2].code_segment);
+                        generator.emit(Subtract::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::Multiply => {
-                        generator.emit(Multiply::new_boxed(rhs_register), node.children[2].code_segment);
+                        generator.emit(Multiply::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::Divide => {
-                        generator.emit(Divide::new_boxed(rhs_register), node.children[2].code_segment);
+                        generator.emit(Divide::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::Equal => {
-                        generator.emit(CompareEq::new_boxed(rhs_register), node.children[2].code_segment);
+                        generator.emit(CompareEq::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::NotEqual => {
-                        generator.emit(CompareNotEq::new_boxed(rhs_register), node.children[2].code_segment);
+                        generator.emit(CompareNotEq::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::LessThan => {
-                        generator.emit(CompareLessThan::new_boxed(rhs_register), node.children[2].code_segment);
+                        generator.emit(CompareLessThan::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::GreaterThan => {
-                        generator.emit(CompareGreaterThan::new_boxed(rhs_register), node.children[2].code_segment);
+                        generator.emit(CompareGreaterThan::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::LessThanOrEqual => {
-                        generator.emit(CompareLessThanOrEqual::new_boxed(rhs_register), node.children[2].code_segment);
+                        generator.emit(CompareLessThanOrEqual::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::GreaterThanOrEqual => {
-                        generator.emit(CompareGreaterThanOrEqual::new_boxed(rhs_register), node.children[2].code_segment);
+                        generator.emit(CompareGreaterThanOrEqual::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::And => {
-                        generator.emit(And::new_boxed(rhs_register), node.children[2].code_segment);
+                        generator.emit(And::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::Or => {
-                        generator.emit(Or::new_boxed(rhs_register), node.children[2].code_segment);
+                        generator.emit(Or::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::Assign => {
                         self.compile_assign(generator, op, &node.children[0], rhs_register)?;
