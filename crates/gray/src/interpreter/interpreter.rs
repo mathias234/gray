@@ -201,7 +201,7 @@ impl ExecutionContext {
             }
         }
 
-        println!("{}", message);
+        println!(" {}", message);
         panic!()
     }
 
@@ -217,7 +217,10 @@ impl ExecutionContext {
 
 
         for i in 0..line.len() {
-            if i >= from_col - 1 && i < to_col - 1 {
+            if i >= to_col - 1 {
+                break;
+            }
+            if i >= from_col - 1 {
                 print!("^");
             } else {
                 print!(" ");
@@ -349,7 +352,7 @@ impl<'interp> Interpreter<'interp> {
                     let native_function = self.native_functions.get(&call_block_id);
                     match native_function {
                         Some(func) => {
-                            let returned_value = func(FunctionArgs::new(block_args));
+                            let returned_value = func(&self.execution_context, FunctionArgs::new(block_args));
                             self.execution_context.set_accumulator(returned_value);
                             self.pc += 1;
                             continue;

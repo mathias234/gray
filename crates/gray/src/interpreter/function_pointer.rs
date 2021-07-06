@@ -2,8 +2,9 @@ use crate::interpreter::value::{Value, DataValue, Pointer};
 use crate::interpreter::array::Array;
 use std::any::Any;
 use crate::interpreter::object::Object;
+use crate::interpreter::interpreter::ExecutionContext;
 
-pub type FunctionPointer = fn(FunctionArgs) -> Value;
+pub type FunctionPointer = fn(&ExecutionContext, FunctionArgs) -> Value;
 
 
 pub struct FunctionArgs {

@@ -3,7 +3,7 @@ mod array;
 mod io;
 mod gray_interp;
 
-use gray::interpreter::interpreter::Interpreter;
+use gray::interpreter::interpreter::{Interpreter, ExecutionContext};
 use gray::interpreter::value::{Value, DataValue};
 use std::rc::Rc;
 use gray::interpreter::function_pointer::FunctionArgs;
@@ -19,25 +19,25 @@ pub fn declare_functions(interpreter: &mut Interpreter) {
     gray_interp::load_functions(interpreter);
 }
 
-fn assert_eq(mut args: FunctionArgs) -> Value {
+fn assert_eq(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
     let received_value = args.get_next().clone();
     let expected_value = args.get_next().clone();
 
-    //if !received_value.eq(&expected_value) {
-    //    panic!("Assertion failed {:?} == {:?}", received_value.get_data_value(), expected_value.get_data_value())
-    //}
+    if !received_value.eq(context, &expected_value) {
+        context.throw_error(&format!("Assertion failed {:?} == {:?}", received_value.get_data_value(), expected_value.get_data_value()))
+    }
     
     Value::from_i64(0)
 }
 
 
-fn print_function(args: FunctionArgs) -> Value {
-    println!("{}", value_to_string(&format_to_value(args)));
+fn print_function(context: &ExecutionContext, args: FunctionArgs) -> Value {
+    println!("{}", value_to_string(&format_to_value(context, args)));
 
     Value::from_i64(0)
 }
 
-fn format_to_value(mut args: FunctionArgs) -> Value {
+fn format_to_value(_: &ExecutionContext, mut args: FunctionArgs) -> Value {
     let format_str = args.get_next_string();
 
     let mut formatted_string = String::new();

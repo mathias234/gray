@@ -1,4 +1,4 @@
-use gray::interpreter::interpreter::Interpreter;
+use gray::interpreter::interpreter::{Interpreter, ExecutionContext};
 use gray::interpreter::value::{Value, Pointer};
 use std::rc::Rc;
 use std::io::Read;
@@ -11,7 +11,7 @@ pub fn load_functions(interpreter: &mut Interpreter) {
     interpreter.set_native_function(vec!["io"], String::from("read_line"), io_read_line);
 }
 
-pub fn fs_open(mut args: FunctionArgs) -> Value {
+pub fn fs_open(_: &ExecutionContext, mut args: FunctionArgs) -> Value {
     let file_name = args.get_next_string();
 
     let file = std::fs::File::open(file_name.as_str()).expect("Failed to open file");
@@ -19,7 +19,7 @@ pub fn fs_open(mut args: FunctionArgs) -> Value {
     Value::to_pointer(file)
 }
 
-pub fn fs_read_to_string(mut args: FunctionArgs) -> Value {
+pub fn fs_read_to_string(_: &ExecutionContext, mut args: FunctionArgs) -> Value {
     let mut file = value_to_file(args.get_next_pointer());
 
     let mut buffer = String::new();
@@ -28,7 +28,7 @@ pub fn fs_read_to_string(mut args: FunctionArgs) -> Value {
     Value::from_string(Rc::from(buffer))
 }
 
-pub fn io_read_line(_: FunctionArgs) -> Value {
+pub fn io_read_line(_: &ExecutionContext, _: FunctionArgs) -> Value {
     let mut input = String::new();
     std::io::stdin().read_line(&mut input).expect("Error reading for stdin");
 
