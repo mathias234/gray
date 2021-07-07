@@ -209,12 +209,10 @@ impl ExecutionContext {
         let first_segment = format!("{} |    ", line_nr);
         println!("{}{}", first_segment, line);
 
-
         print!("  |");
         for _ in 0..first_segment.len() - 3 {
             print!(" ");
         }
-
 
         for i in 0..line.len() {
             if i >= to_col - 1 {

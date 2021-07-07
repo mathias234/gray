@@ -8,8 +8,8 @@ pub fn load_functions(interpreter: &mut Interpreter) {
     interpreter.set_native_function(vec!["interp"], String::from("run_string"), run_string);
 }
 
-pub fn run_string(_: &ExecutionContext, mut args: FunctionArgs) -> Value {
-    let str = args.get_next_string();
+pub fn run_string(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
+    let str = args.get_next_string(context);
 
     let interp_result = gray::load_string(&str);
 

@@ -11,16 +11,16 @@ pub fn load_functions(interpreter: &mut Interpreter) {
     interpreter.set_native_function(vec!["io"], String::from("read_line"), io_read_line);
 }
 
-pub fn fs_open(_: &ExecutionContext, mut args: FunctionArgs) -> Value {
-    let file_name = args.get_next_string();
+pub fn fs_open(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
+    let file_name = args.get_next_string(context);
 
     let file = std::fs::File::open(file_name.as_str()).expect("Failed to open file");
 
     Value::to_pointer(file)
 }
 
-pub fn fs_read_to_string(_: &ExecutionContext, mut args: FunctionArgs) -> Value {
-    let mut file = value_to_file(args.get_next_pointer());
+pub fn fs_read_to_string(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
+    let mut file = value_to_file(args.get_next_pointer(context));
 
     let mut buffer = String::new();
     file.read_to_string(&mut buffer).expect("Error reading files contents");

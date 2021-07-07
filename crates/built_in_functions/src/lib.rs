@@ -20,8 +20,8 @@ pub fn declare_functions(interpreter: &mut Interpreter) {
 }
 
 fn assert_eq(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
-    let received_value = args.get_next().clone();
-    let expected_value = args.get_next().clone();
+    let received_value = args.get_next(context).clone();
+    let expected_value = args.get_next(context).clone();
 
     if !received_value.eq(context, &expected_value) {
         context.throw_error(&format!("Assertion failed {:?} == {:?}", received_value.get_data_value(), expected_value.get_data_value()))
@@ -37,8 +37,8 @@ fn print_function(context: &ExecutionContext, args: FunctionArgs) -> Value {
     Value::from_i64(0)
 }
 
-fn format_to_value(_: &ExecutionContext, mut args: FunctionArgs) -> Value {
-    let format_str = args.get_next_string();
+fn format_to_value(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
+    let format_str = args.get_next_string(context);
 
     let mut formatted_string = String::new();
 
@@ -53,7 +53,7 @@ fn format_to_value(_: &ExecutionContext, mut args: FunctionArgs) -> Value {
             '{' => {
                 chars.next();
 
-                let value_formatted = value_to_string(&args.get_next());
+                let value_formatted = value_to_string(&args.get_next(context));
                 formatted_string.push_str(&value_formatted);
             }
             c => {

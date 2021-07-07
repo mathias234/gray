@@ -20,9 +20,9 @@ impl FunctionArgs {
         }
     }
 
-    pub fn get_next(&mut self) -> &Value {
+    pub fn get_next(&mut self, context: &ExecutionContext) -> &Value {
         if self.index >= self.len() {
-            panic!("Expected at least {} arguments got only {}", self.index + 1, self.args.len())
+            context.throw_error(&format!("Expected at least {} arguments got only {}", self.index + 1, self.args.len()))
         }
 
         let result = &self.args[self.index];
@@ -30,57 +30,57 @@ impl FunctionArgs {
         return result;
     }
 
-    pub fn get_next_i64(&mut self) -> i64 {
-        let value = self.get_next();
+    pub fn get_next_i64(&mut self, context: &ExecutionContext) -> i64 {
+        let value = self.get_next(context);
 
         match value.get_data_value() {
             DataValue::I64(v) => *v,
-            v => panic!("Expected next value to be integer was {:?}", v)
+            v => context.throw_error(&format!("Expected next value to be integer was {:?}", v))
         }
     }
 
-    pub fn get_next_f64(&mut self) -> f64 {
-        let value = self.get_next();
+    pub fn get_next_f64(&mut self, context: &ExecutionContext) -> f64 {
+        let value = self.get_next(context);
 
         match value.get_data_value() {
             DataValue::F64(v) => *v,
-            v => panic!("Expected next value to be float was {:?}", v)
+            v => context.throw_error(&format!("Expected next value to be float was {:?}", v))
         }
     }
 
-    pub fn get_next_string(&mut self) -> String {
-        let value = self.get_next();
+    pub fn get_next_string(&mut self, context: &ExecutionContext) -> String {
+        let value = self.get_next(context);
 
         match value.get_data_value() {
             DataValue::String(v) => v.to_string(),
-            v => panic!("Expected next value to be string was {:?}", v)
+            v => context.throw_error(&format!("Expected next value to be string was {:?}", v))
         }
     }
 
-    pub fn get_next_pointer(&mut self) -> Pointer<dyn Any> {
-        let value = self.get_next();
+    pub fn get_next_pointer(&mut self, context: &ExecutionContext) -> Pointer<dyn Any> {
+        let value = self.get_next(context);
 
         match value.get_data_value() {
             DataValue::Pointer(v) => v.clone(),
-            v => panic!("Expected next value to be pointer was {:?}", v)
+            v => context.throw_error(&format!("Expected next value to be pointer was {:?}", v))
         }
     }
 
-    pub fn get_next_object(&mut self) -> Object {
-        let value = self.get_next();
+    pub fn get_next_object(&mut self, context: &ExecutionContext) -> Object {
+        let value = self.get_next(context);
 
         match value.get_data_value() {
             DataValue::Object(v) => v.clone(),
-            v => panic!("Expected next value to be object was {:?}", v)
+            v => context.throw_error(&format!("Expected next value to be object was {:?}", v))
         }
     }
 
-    pub fn get_next_array(&mut self) -> Array {
-        let value = self.get_next();
+    pub fn get_next_array(&mut self, context: &ExecutionContext) -> Array {
+        let value = self.get_next(context);
 
         match value.get_data_value() {
             DataValue::Array(v) => v.clone(),
-            v => panic!("Expected next value to be array was {:?}", v)
+            v => context.throw_error(&format!("Expected next value to be array was {:?}", v))
         }
     }
 
