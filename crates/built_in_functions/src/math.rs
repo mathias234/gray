@@ -12,7 +12,7 @@ pub fn math_abs(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
     let result = match args.get_next(context).get_data_value() {
         DataValue::F64(value) => Value::from_f64(f64::abs(*value)),
         DataValue::I64(value) => Value::from_i64(i64::abs(*value)),
-        d => panic!("math::abs() expects argument to be either float or integer was {:?}", d),
+        d => context.throw_error(&format!("Expects one argument that is either float or integer was {:?}", d)),
     };
 
     result
@@ -22,7 +22,7 @@ pub fn math_sin(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
     let result = match args.get_next(context).get_data_value() {
         DataValue::F64(value) => Value::from_f64(f64::sin(*value)),
         DataValue::I64(value) => Value::from_f64(f64::sin(*value as f64)),
-        d => panic!("math::sin() expects argument to be either float or integer was {:?}", d),
+        d => context.throw_error(&format!("Expects one argument that is either float or integer was {:?}", d)),
     };
 
     result
@@ -32,7 +32,7 @@ pub fn math_cos(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
     let result = match args.get_next(context).get_data_value() {
         DataValue::F64(value) => Value::from_f64(f64::cos(*value)),
         DataValue::I64(value) => Value::from_f64(f64::cos(*value as f64)),
-        d => panic!("math::cos() expects argument to be either float or integer was {:?}", d),
+        d => context.throw_error(&format!("Expects one argument that is either float or integer was {:?}", d)),
     };
 
     result
