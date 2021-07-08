@@ -186,6 +186,12 @@ impl Lexer {
             let token = lexer.pop_token()?;
 
             if token == TokenType::EndOfFile {
+                while let Some(token) = token_stream.next() {
+                    println!("{:?}", token);
+                }
+
+                token_stream.reset();
+
                 return Ok((Rc::from(file), token_stream));
             }
 
@@ -198,6 +204,7 @@ impl Lexer {
         let chars = &mut self.file[self.position..self.file.len()].chars();
 
         let mut is_string = false;
+        let mut is_comment = false;
         let mut saw_hyphen = false;
 
         let start_x = self.pos_x;
@@ -205,6 +212,7 @@ impl Lexer {
 
         loop {
             let char = chars.next();
+
 
             if char.is_none() {
                 return Ok(Token::new(TokenType::EndOfFile, CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y)));
@@ -224,6 +232,29 @@ impl Lexer {
                     }
 
                     is_string = true;
+                    continue;
+                } else if delimiter == Delimiter::Slash {
+                    if let Some(delimiter) = chars.nth(0) {
+                        if let Some(delimiter) = Lexer::char_to_delimiter(delimiter) {
+                            if delimiter == Delimiter::Slash {
+                                chars.next();
+                                is_comment = true;
+                                self.position += char.len_utf8();
+                                self.pos_x += 1;
+                                continue;
+                            }
+                        }
+                    }
+                }
+
+                if is_comment {
+                    self.position += char.len_utf8();
+                    match delimiter {
+                        Delimiter::LineFeed => {
+                            return self.pop_token();
+                        }
+                        _ => {}
+                    }
                     continue;
                 }
 
@@ -265,6 +296,7 @@ impl Lexer {
                         Delimiter::LineFeed => {
                             self.pos_y += 1;
                             self.pos_x = 1;
+
                             return self.pop_token();
                         }
                         Delimiter::CarriageReturn => return self.pop_token(),
@@ -278,8 +310,11 @@ impl Lexer {
             self.position += char.len_utf8();
             self.pos_x += 1;
 
-            word += &String::from(char);
+            if !is_comment {
+                word += &String::from(char);
+            }
         }
+
 
         if is_string {
             return Ok(Token::new(TokenType::String(word), CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y)));
