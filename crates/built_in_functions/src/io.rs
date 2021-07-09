@@ -15,7 +15,7 @@ pub fn fs_open(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
     let file_name = args.get_next_string(context);
 
     match std::fs::File::open(file_name.as_str()) {
-        Ok(file) => return Value::to_pointer(file),
+        Ok(file) => return Value::from_any(file),
         Err(e) => context.throw_error(&format!("Failed to open file `{}`", e))
     }
 }

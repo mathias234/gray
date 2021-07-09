@@ -212,6 +212,8 @@ impl ExecutionContext {
     }
 
     fn print_error_line(line: &str, line_nr: usize, from_col: usize, to_col: usize) {
+        let (trim_count, line) = ExecutionContext::trim_begin_with_count(line);
+
         let first_segment = format!("{:04}", line_nr);
         println!("{} |    {}", first_segment, line);
 
@@ -220,6 +222,8 @@ impl ExecutionContext {
         }
         print!(" |    ");
 
+        let from_col = from_col - trim_count;
+        let to_col = to_col - trim_count;
 
         for i in 0..line.len() {
             if i >= to_col - 1 {
@@ -231,6 +235,20 @@ impl ExecutionContext {
                 print!(" ");
             }
         }
+    }
+
+    fn trim_begin_with_count(string: &str) -> (usize, &str) {
+        let mut count = 0;
+
+        for c in string.chars() {
+            if c.is_whitespace() {
+                count += 1;
+                continue;
+            }
+            break;
+        }
+
+        (count, &string[count..string.len()])
     }
 }
 
@@ -334,7 +352,7 @@ impl<'interp> Interpreter<'interp> {
                         lines[frame.caller_segment.start_y - 1],
                         frame.caller_segment.start_y,
                         frame.caller_segment.start_x,
-                        frame.caller_segment.end_x,);
+                        frame.caller_segment.end_x, );
                     println!();
 
                     i -= 1;

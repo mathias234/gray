@@ -11,24 +11,21 @@ pub type FunctionPointer = fn(&ExecutionContext, FunctionArgs) -> Value;
 
 pub struct FunctionArgs {
     args: Vec<Value>,
-    index: usize,
 }
 
 impl FunctionArgs {
     pub fn new(args: Vec<Value>) -> FunctionArgs {
         FunctionArgs {
             args,
-            index: 0,
         }
     }
 
     pub fn get_next(&mut self, context: &ExecutionContext) -> Value {
-        if self.index >= self.len() {
-            return context.throw_error(&format!("Expected at least {} arguments got only {}", self.index + 1, self.args.len()));
+        if self.len() == 0 {
+            return context.throw_error(&format!("Expected more arguments"));
         }
 
-        let result = self.args.remove(self.index);
-        self.index += 1;
+        let result = self.args.remove(0);
         return result;
     }
 

@@ -55,7 +55,7 @@ impl Value {
         }
     }
 
-    pub fn to_pointer<T: Any>(value: T) -> Value {
+    pub fn from_any<T: Any>(value: T) -> Value {
         Value {
             value: DataValue::Pointer(Rc::from(RefCell::from(value))),
         }
