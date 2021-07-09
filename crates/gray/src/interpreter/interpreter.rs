@@ -12,6 +12,7 @@ use std::rc::Rc;
 use crate::interpreter::function_pointer::FunctionArgs;
 use crate::bytecode::code_block::CodeSegment;
 use std::cell::Cell;
+use std::mem;
 
 #[derive(Clone)]
 pub struct Scope {
@@ -405,9 +406,11 @@ impl<'interp> Interpreter<'interp> {
                 }
 
 
+                let old_context = mem::replace(&mut self.execution_context, ExecutionContext::new(self.code_text.clone()));
+
                 let current_frame = StackFrame {
                     pc: self.pc,
-                    execution_context: self.execution_context.clone(),
+                    execution_context: old_context,
                     active_block: self.active_block.clone(),
                     caller_segment: self.execution_context.code_segment,
                 };
@@ -418,8 +421,6 @@ impl<'interp> Interpreter<'interp> {
                 self.active_code_block = block_to_call;
 
                 len = self.active_code_block.unwrap().get_instructions().len();
-
-                self.execution_context = ExecutionContext::new(self.code_text.clone());
 
                 self.execution_context.block_arguments = block_args;
                 self.pc = 0;
