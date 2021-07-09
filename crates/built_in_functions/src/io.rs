@@ -21,7 +21,13 @@ pub fn fs_open(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
 }
 
 pub fn fs_read_to_string(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
-    let mut file = value_to_file(context, args.get_next_pointer(context));
+    let file = value_to_file(context, args.get_next_pointer(context));
+
+    if file.is_none() {
+        return Value::from_i64(-1);
+    }
+
+    let mut file = file.unwrap();
 
     let mut buffer = String::new();
 
@@ -40,11 +46,12 @@ pub fn io_read_line(context: &ExecutionContext, _: FunctionArgs) -> Value {
     }
 }
 
-fn value_to_file(context: &ExecutionContext, p: Pointer<dyn Any>) -> std::fs::File {
+fn value_to_file(context: &ExecutionContext, p: Pointer<dyn Any>) -> Option<std::fs::File> {
     let p = p.borrow();
     if let Some(file) = p.downcast_ref::<std::fs::File>() {
-        file.try_clone().unwrap()
+        Some(file.try_clone().unwrap())
     } else {
         context.throw_error("Expected pointer to a file object");
+        None
     }
 }

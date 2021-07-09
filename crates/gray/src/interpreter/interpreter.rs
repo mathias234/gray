@@ -103,7 +103,12 @@ impl ExecutionContext {
         self.registers[register.index].clone()
     }
 
-    pub fn get_argument(&self, arg: usize) -> Value { self.block_arguments[arg].clone() }
+    pub fn get_argument(&self, arg: usize) -> Value {
+        if self.block_arguments.len() <= arg {
+            return self.throw_error(&format!("Function expected at least {} arguments", arg + 1));
+        }
+        self.block_arguments[arg].clone()
+    }
 
     pub fn set_jump_target(&mut self, label: &Label) {
         self.jump_target = Some(*label);
@@ -146,6 +151,7 @@ impl ExecutionContext {
 
 
         self.throw_error(&format!("Failed to find variable `{}`", variable));
+        Value::from_i64(-1)
     }
 
     pub fn push_scope(&mut self) {
@@ -172,7 +178,7 @@ impl ExecutionContext {
     pub fn set_break(&mut self) { self.should_break = true; }
     pub fn set_continue(&mut self) { self.should_continue = true; }
 
-    pub fn throw_error(&self, message: &str) -> ! {
+    pub fn throw_error(&self, message: &str) -> Value {
         self.errored.set(true);
 
         println!("Runtime Error!");
@@ -202,17 +208,18 @@ impl ExecutionContext {
         }
 
         println!(" {}", message);
-        panic!()
+        Value::from_i64(-1)
     }
 
     fn print_error_line(line: &str, line_nr: usize, from_col: usize, to_col: usize) {
-        let first_segment = format!("{} |    ", line_nr);
-        println!("{}{}", first_segment, line);
+        let first_segment = format!("{:04}", line_nr);
+        println!("{} |    {}", first_segment, line);
 
-        print!("  |");
-        for _ in 0..first_segment.len() - 3 {
+        for _ in 0..first_segment.len() {
             print!(" ");
         }
+        print!(" |    ");
+
 
         for i in 0..line.len() {
             if i >= to_col - 1 {
@@ -231,6 +238,7 @@ pub struct StackFrame {
     pc: usize,
     execution_context: ExecutionContext,
     active_block: String,
+    caller_segment: CodeSegment,
 }
 
 pub struct Interpreter<'interp> {
@@ -313,7 +321,26 @@ impl<'interp> Interpreter<'interp> {
 
             if self.execution_context.errored.get() {
                 // The context errored, we will then stop the execution of the interpreter
-                return Value::from_i64(-1);
+
+                println!("Stacktrace");
+
+                let mut i = (self.call_stack.len() - 1) as isize;
+
+                while i >= 0 {
+                    let frame = &self.call_stack[i as usize];
+                    let lines: Vec<&str> = self.code_text.split('\n').collect();
+
+                    ExecutionContext::print_error_line(
+                        lines[frame.caller_segment.start_y - 1],
+                        frame.caller_segment.start_y,
+                        frame.caller_segment.start_x,
+                        frame.caller_segment.end_x,);
+                    println!();
+
+                    i -= 1;
+                }
+
+                panic!();
             }
 
             //self.dump();
@@ -364,6 +391,7 @@ impl<'interp> Interpreter<'interp> {
                     pc: self.pc,
                     execution_context: self.execution_context.clone(),
                     active_block: self.active_block.clone(),
+                    caller_segment: self.execution_context.code_segment,
                 };
 
                 self.call_stack.push(current_frame);

@@ -234,35 +234,53 @@ impl Value {
                 match &rhs_value.value {
                     DataValue::I64(rhs) => { *lhs == *rhs }
                     DataValue::F64(rhs) => { *lhs as f64 == *rhs }
-                    rhs => context.throw_error(&format!("Unable to compare {:?} to {:?}", lhs, rhs)),
+                    rhs => {
+                        context.throw_error(&format!("Unable to compare {:?} to {:?}", lhs, rhs));
+                        false
+                    }
                 }
             }
             DataValue::F64(lhs) => {
                 match &rhs_value.value {
                     DataValue::I64(rhs) => { *lhs == *rhs as f64 }
                     DataValue::F64(rhs) => { *lhs == *rhs }
-                    rhs => context.throw_error(&format!("Unable to compare {:?} to {:?}", lhs, rhs)),
+                    rhs => {
+                        context.throw_error(&format!("Unable to compare {:?} to {:?}", lhs, rhs));
+                        false
+                    }
                 }
             }
             DataValue::Object(_) => {
                 match &rhs_value.value {
-                    _ => context.throw_error("Equal operator is not implemented for objects"),
+                    _ => {
+                        context.throw_error("Equal operator is not implemented for objects");
+                        false
+                    }
                 }
             }
             DataValue::String(lhs) => {
                 match &rhs_value.value {
                     DataValue::String(rhs) => { lhs == rhs }
-                    _ => context.throw_error("Cannot compare a string to a basic value"),
+                    _ => {
+                        context.throw_error("Cannot compare a string to a basic value");
+                        false
+                    }
                 }
             }
             DataValue::Array(_) => {
                 match &rhs_value.value {
-                    _ => context.throw_error("Equal operator is not implemented for arrays"),
+                    _ => {
+                        context.throw_error("Equal operator is not implemented for arrays");
+                        false
+                    }
                 }
             }
             DataValue::Pointer(_) => {
                 match &rhs_value.value {
-                    _ => context.throw_error("Equal operator is not implemented for pointers"),
+                    _ => {
+                        context.throw_error("Equal operator is not implemented for pointers");
+                        false
+                    }
                 }
             }
         }
@@ -274,35 +292,53 @@ impl Value {
                 match &rhs_value.value {
                     DataValue::I64(rhs) => { lhs.partial_cmp(&rhs) }
                     DataValue::F64(rhs) => { (lhs as f64).partial_cmp(&rhs) }
-                    rhs => context.throw_error(&format!("Unable to compare {:?} to {:?}", lhs, rhs)),
+                    rhs => {
+                        context.throw_error(&format!("Unable to compare {:?} to {:?}", lhs, rhs));
+                        None
+                    }
                 }
             }
             DataValue::F64(lhs) => {
                 match &rhs_value.value {
                     DataValue::I64(rhs) => { lhs.partial_cmp(&(*rhs as f64)) }
                     DataValue::F64(rhs) => { lhs.partial_cmp(&rhs) }
-                    rhs => context.throw_error(&format!("Unable to compare {:?} to {:?}", lhs, rhs)),
+                    rhs => {
+                        context.throw_error(&format!("Unable to compare {:?} to {:?}", lhs, rhs));
+                        None
+                    }
                 }
             }
             DataValue::Object(_) => {
                 match &rhs_value.value {
-                    _ => context.throw_error("Compare operator is not implemented for objects"),
+                    _ => {
+                        context.throw_error("Compare operator is not implemented for objects");
+                        None
+                    }
                 }
             }
             DataValue::String(lhs) => {
                 match &rhs_value.value {
                     DataValue::String(rhs) => { lhs.partial_cmp(&rhs) }
-                    _ => context.throw_error("Cannot compare a string to with a basic value"),
+                    _ => {
+                        context.throw_error("Cannot compare a string to with a basic value");
+                        None
+                    }
                 }
             }
             DataValue::Array(_) => {
                 match &rhs_value.value {
-                    _ => context.throw_error("Compare operator is not implemented for arrays"),
+                    _ => {
+                        context.throw_error("Compare operator is not implemented for arrays");
+                        None
+                    }
                 }
             }
             DataValue::Pointer(_) => {
                 match &rhs_value.value {
-                    _ => context.throw_error("Compare operator is not implemented for pointers"),
+                    _ => {
+                        context.throw_error("Compare operator is not implemented for pointers");
+                        None
+                    }
                 }
             }
         }

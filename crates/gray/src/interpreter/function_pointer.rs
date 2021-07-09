@@ -3,6 +3,8 @@ use crate::interpreter::array::Array;
 use std::any::Any;
 use crate::interpreter::object::Object;
 use crate::interpreter::interpreter::ExecutionContext;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 pub type FunctionPointer = fn(&ExecutionContext, FunctionArgs) -> Value;
 
@@ -20,12 +22,12 @@ impl FunctionArgs {
         }
     }
 
-    pub fn get_next(&mut self, context: &ExecutionContext) -> &Value {
+    pub fn get_next(&mut self, context: &ExecutionContext) -> Value {
         if self.index >= self.len() {
-            context.throw_error(&format!("Expected at least {} arguments got only {}", self.index + 1, self.args.len()))
+            return context.throw_error(&format!("Expected at least {} arguments got only {}", self.index + 1, self.args.len()));
         }
 
-        let result = &self.args[self.index];
+        let result = self.args.remove(self.index);
         self.index += 1;
         return result;
     }
@@ -35,7 +37,10 @@ impl FunctionArgs {
 
         match value.get_data_value() {
             DataValue::I64(v) => *v,
-            v => context.throw_error(&format!("Expected next value to be integer was {:?}", v))
+            v => {
+                context.throw_error(&format!("Expected next value to be integer was {:?}", v));
+                -1
+            }
         }
     }
 
@@ -44,7 +49,10 @@ impl FunctionArgs {
 
         match value.get_data_value() {
             DataValue::F64(v) => *v,
-            v => context.throw_error(&format!("Expected next value to be float was {:?}", v))
+            v => {
+                context.throw_error(&format!("Expected next value to be float was {:?}", v));
+                0.0
+            }
         }
     }
 
@@ -53,7 +61,10 @@ impl FunctionArgs {
 
         match value.get_data_value() {
             DataValue::String(v) => v.to_string(),
-            v => context.throw_error(&format!("Expected next value to be string was {:?}", v))
+            v => {
+                context.throw_error(&format!("Expected next value to be string was {:?}", v));
+                String::new()
+            }
         }
     }
 
@@ -62,7 +73,10 @@ impl FunctionArgs {
 
         match value.get_data_value() {
             DataValue::Pointer(v) => v.clone(),
-            v => context.throw_error(&format!("Expected next value to be pointer was {:?}", v))
+            v => {
+                context.throw_error(&format!("Expected next value to be pointer was {:?}", v));
+                Rc::new(RefCell::new(-1))
+            }
         }
     }
 
@@ -71,7 +85,10 @@ impl FunctionArgs {
 
         match value.get_data_value() {
             DataValue::Object(v) => v.clone(),
-            v => context.throw_error(&format!("Expected next value to be object was {:?}", v))
+            v => {
+                context.throw_error(&format!("Expected next value to be object was {:?}", v));
+                Object::new()
+            }
         }
     }
 
@@ -80,7 +97,10 @@ impl FunctionArgs {
 
         match value.get_data_value() {
             DataValue::Array(v) => v.clone(),
-            v => context.throw_error(&format!("Expected next value to be array was {:?}", v))
+            v => {
+                context.throw_error(&format!("Expected next value to be array was {:?}", v));
+                Array::new()
+            }
         }
     }
 
