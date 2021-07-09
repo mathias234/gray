@@ -381,15 +381,14 @@ impl<'interp> Interpreter<'interp> {
                 }
                 */
 
-                let call_args = self.execution_context.call_arguments.clone();
+                let call_args = &self.execution_context.call_arguments;
                 let mut block_args = Vec::new();
 
                 if call_args.is_some() {
-                    for call_arg in &call_args.unwrap() {
+                    for call_arg in call_args.as_ref().unwrap() {
                         block_args.push(self.execution_context.get_register(call_arg));
                     }
                 }
-
 
                 let block_to_call = self.blocks.get(&call_block_id);
                 if block_to_call.is_none() {
@@ -404,7 +403,6 @@ impl<'interp> Interpreter<'interp> {
                         None => panic!("Unable to find function `{}`", call_block_id)
                     }
                 }
-
 
                 let old_context = mem::replace(&mut self.execution_context, ExecutionContext::new(self.code_text.clone()));
 
