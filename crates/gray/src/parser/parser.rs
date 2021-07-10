@@ -1,6 +1,7 @@
 use crate::parser::lexer::{TokenStream, Token, Keyword, TokenType};
 use crate::parser::lexer::Delimiter;
 use crate::bytecode::code_block::CodeSegment;
+use crate::error_printer;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum ExpressionOp {
@@ -55,7 +56,7 @@ pub enum ASTType {
 pub enum ParserError {
     UnexpectedEndOfProgram,
     UnexpectedKeywordInStream(Keyword),
-    UnexpectedDelimiterInStream(Delimiter, Delimiter),
+    UnexpectedDelimiterInStream(Delimiter, Token),
     UnexpectedTokenInStream(Token),
     UnexpectedTokenInStreamWithExpected(TokenType, Token),
     UnexpectedTokenInStreamExpectedIdentifier(Token),
@@ -97,14 +98,64 @@ pub struct Parser {
     token_stream: TokenStream,
 }
 
-
 impl Parser {
-    pub fn parse(token_stream: TokenStream) -> Result<ASTNode, ParserError> {
+    fn token_type_to_string(token_type: &TokenType) -> String {
+        match token_type {
+            TokenType::Identifier(i) => format!("identifier {}", i),
+            TokenType::Integer(v) => format!("integer {}", v),
+            TokenType::Float(v) => format!("float {}", v),
+            TokenType::String(s) => format!("string {}", s),
+            TokenType::Delimiter(d) => format!("delimiter {:?}", d),
+            TokenType::Keyword(k) => format!("keyword {:?}", k),
+            TokenType::EndOfFile => format!("End Of File"),
+        }
+    }
+
+    fn pretty_print_error(&self, error: &ParserError, code_string: &str) {
+        let lines: Vec<&str> = code_string.split('\n').collect();
+
+        let mut code_segment = CodeSegment::new(1, 1, 1, 1);
+
+        let error_message = match error {
+            ParserError::UnexpectedTokenInStreamWithExpected(t, v) => {
+                code_segment = v.position;
+                format!("Unexpected {}, expected {}", Parser::token_type_to_string(&v.token_type), Parser::token_type_to_string(t))
+            }
+            ParserError::UnexpectedTokenInStream(v) => {
+                code_segment = v.position;
+                format!("Unexpected {}", Parser::token_type_to_string(&v.token_type))
+            }
+            ParserError::UnexpectedTokenInStreamExpectedIdentifier(v) => {
+                code_segment = v.position;
+                format!("Unexpected {}, expected an identifier", Parser::token_type_to_string(&v.token_type))
+            }
+            ParserError::UnexpectedDelimiterInStream(d, v) => {
+                code_segment = v.position;
+                format!("Unexpected {}, expected {:?}", Parser::token_type_to_string(&v.token_type), d)
+            }
+            e => format!("Unknown error message {:?}", e)
+        };
+
+        error_printer::print_error_line(
+            lines[code_segment.start_y - 1],
+            code_segment.start_y,
+            code_segment.start_x,
+            code_segment.end_x, );
+
+
+        println!(" {}", error_message)
+    }
+
+    pub fn parse(token_stream: TokenStream, code_string: &str) -> Result<ASTNode, ParserError> {
         let mut parser = Parser { token_stream };
 
-        let root = parser.parse_scope()?;
+        let root = parser.parse_scope();
 
-        return Ok(root);
+        if root.is_err() {
+            parser.pretty_print_error(root.as_ref().unwrap_err(), code_string);
+        }
+
+        return root;
     }
 
     fn parse_scope(&mut self) -> Result<ASTNode, ParserError> {
@@ -172,7 +223,7 @@ impl Parser {
                             self.get_next_token()?;
                             return Ok(scope);
                         }
-                        _ => Err(ParserError::UnexpectedDelimiterInStream(Delimiter::CloseCurlyBracket, d.clone())),
+                        _ => Err(ParserError::UnexpectedDelimiterInStream(Delimiter::CloseCurlyBracket, token.clone())),
                     }
                 }
                 _ => {
@@ -762,8 +813,8 @@ impl Parser {
         match Parser::token_is_delimiter(token, delimiter.clone()) {
             true => Ok({}),
             false => match &token.token_type {
-                TokenType::Delimiter(unexpected_delimiter) => {
-                    Err(ParserError::UnexpectedDelimiterInStream(delimiter, unexpected_delimiter.clone()))
+                TokenType::Delimiter(_) => {
+                    Err(ParserError::UnexpectedDelimiterInStream(delimiter, token.clone()))
                 }
                 _ => {
                     Err(ParserError::UnexpectedTokenInStreamWithExpected(TokenType::Delimiter(delimiter), token.clone()))

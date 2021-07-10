@@ -1,11 +1,8 @@
-use crate::{
-    bytecode::{
-        register::Register,
-        label::Label,
-        code_block::CodeBlock,
-    },
-    interpreter::{value::Value, function_pointer::FunctionPointer},
-};
+use crate::{bytecode::{
+    register::Register,
+    label::Label,
+    code_block::CodeBlock,
+}, interpreter::{value::Value, function_pointer::FunctionPointer}, error_printer};
 
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -188,7 +185,7 @@ impl ExecutionContext {
         let line_count = self.code_segment.end_y - self.code_segment.start_y;
 
         if line_count == 0 {
-            ExecutionContext::print_error_line(
+            error_printer::print_error_line(
                 lines[self.code_segment.start_y - 1],
                 self.code_segment.start_y,
                 self.code_segment.start_x,
@@ -199,7 +196,7 @@ impl ExecutionContext {
                 let start_x = 0;
                 let end_x = lines[line].len();
 
-                ExecutionContext::print_error_line(
+                error_printer::print_error_line(
                     lines[line],
                     line + 1,
                     start_x,
@@ -212,45 +209,7 @@ impl ExecutionContext {
         Value::from_i64(-1)
     }
 
-    fn print_error_line(line: &str, line_nr: usize, from_col: usize, to_col: usize) {
-        let (trim_count, line) = ExecutionContext::trim_begin_with_count(line);
 
-        let first_segment = format!("{:04}", line_nr);
-        println!("{} |    {}", first_segment, line);
-
-        for _ in 0..first_segment.len() {
-            print!(" ");
-        }
-        print!(" |    ");
-
-        let from_col = from_col - trim_count;
-        let to_col = to_col - trim_count;
-
-        for i in 0..line.len() {
-            if i >= to_col - 1 {
-                break;
-            }
-            if i >= from_col - 1 {
-                print!("^");
-            } else {
-                print!(" ");
-            }
-        }
-    }
-
-    fn trim_begin_with_count(string: &str) -> (usize, &str) {
-        let mut count = 0;
-
-        for c in string.chars() {
-            if c.is_whitespace() {
-                count += 1;
-                continue;
-            }
-            break;
-        }
-
-        (count, &string[count..string.len()])
-    }
 }
 
 pub struct StackFrame {
@@ -349,7 +308,7 @@ impl<'interp> Interpreter<'interp> {
                     let frame = &self.call_stack[i as usize];
                     let lines: Vec<&str> = self.code_text.split('\n').collect();
 
-                    ExecutionContext::print_error_line(
+                    error_printer::print_error_line(
                         lines[frame.caller_segment.start_y - 1],
                         frame.caller_segment.start_y,
                         frame.caller_segment.start_x,

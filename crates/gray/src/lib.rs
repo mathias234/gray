@@ -2,6 +2,7 @@ pub mod bytecode;
 pub mod interpreter;
 pub mod parser;
 pub mod compiler;
+pub mod error_printer;
 
 use std::rc::Rc;
 use interpreter::interpreter::Interpreter;
@@ -50,7 +51,7 @@ pub fn load_file(file: &str) -> Result<Interpreter, GrayError> {
     token_stream.reset();
      */
 
-    let root_ast_node = Parser::parse(token_stream.1)?;
+    let root_ast_node = Parser::parse(token_stream.1, &token_stream.0)?;
 
     println!("\nParser AST Tree");
     root_ast_node.dump(0);
@@ -63,14 +64,14 @@ pub fn load_file(file: &str) -> Result<Interpreter, GrayError> {
     return Ok(interpreter);
 }
 
-pub fn load_string(file: &str) -> Result<Interpreter, GrayError> {
-    let token_stream = Lexer::lex_string(file)?;
+pub fn load_string(code: &str) -> Result<Interpreter, GrayError> {
+    let token_stream = Lexer::lex_string(code)?;
 
-    let root_ast_node = Parser::parse(token_stream)?;
+    let root_ast_node = Parser::parse(token_stream, code)?;
 
     let blocks = Compiler::compile(root_ast_node)?;
 
-    let interpreter = Interpreter::new(blocks, Rc::from(file.to_string()));
+    let interpreter = Interpreter::new(blocks, Rc::from(code.to_string()));
 
     return Ok(interpreter);
 }
