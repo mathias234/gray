@@ -12,7 +12,8 @@ fn array_push(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
     let mut array = args.get_next_array(context);
 
     let mut pushed = 0;
-    for _ in 1..args.len() {
+    for _ in 0..args.len() {
+        println!("Push, push push");
         array.push(args.get_next(context).clone());
         pushed += 1;
     }
