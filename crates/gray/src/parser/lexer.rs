@@ -233,8 +233,8 @@ impl Lexer {
 
                     is_string = true;
                     continue;
-                } else if delimiter == Delimiter::Slash {
-                    if let Some(delimiter) = chars.nth(0) {
+                } else if delimiter == Delimiter::Slash && !is_string {
+                    if let Some(delimiter) = chars.next_back() {
                         if let Some(delimiter) = Lexer::char_to_delimiter(delimiter) {
                             if delimiter == Delimiter::Slash {
                                 chars.next();
