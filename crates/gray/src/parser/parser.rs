@@ -55,14 +55,11 @@ pub enum ASTType {
 #[derive(Debug)]
 pub enum ParserError {
     UnexpectedEndOfProgram,
-    UnexpectedKeywordInStream(Keyword),
+    UnexpectedKeywordInStream(Keyword, Token),
     UnexpectedDelimiterInStream(Delimiter, Token),
     UnexpectedTokenInStream(Token),
     UnexpectedTokenInStreamWithExpected(TokenType, Token),
     UnexpectedTokenInStreamExpectedIdentifier(Token),
-    DelimiterIsNotMathOperation(Delimiter),
-    DelimiterIsNotComparisonOperation(Delimiter),
-    UnimplementedFeature(&'static str),
 }
 
 #[derive(Debug, Clone)]
@@ -133,7 +130,13 @@ impl Parser {
                 code_segment = v.position;
                 format!("Unexpected {}, expected {:?}", Parser::token_type_to_string(&v.token_type), d)
             }
-            e => format!("Unknown error message {:?}", e)
+            ParserError::UnexpectedKeywordInStream(k, v) => {
+                code_segment = v.position;
+                format!("Unexpected {}, expected {:?}", Parser::token_type_to_string(&v.token_type), k)
+            }
+            ParserError::UnexpectedEndOfProgram => {
+                format!("Unexpected end of program!")
+            }
         };
 
         error_printer::print_error_line(
@@ -214,7 +217,7 @@ impl Parser {
                             namespace.children.push(self.parse_scope()?);
                             Ok(namespace)
                         }
-                        _ => Err(ParserError::UnexpectedKeywordInStream(keyword.clone())),
+                        _ => Err(ParserError::UnexpectedKeywordInStream(keyword.clone(), token.clone())),
                     }
                 }
                 TokenType::Delimiter(d) => {
