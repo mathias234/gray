@@ -73,5 +73,6 @@ fn value_to_string(args: &Value) -> String {
         DataValue::String(string) => format!("{}", string),
         DataValue::Array(array) => format!("{}", array),
         DataValue::Pointer(_) => format!("Internal Pointer"),
+        DataValue::Undefined => format!("Undefined"),
     }
 }

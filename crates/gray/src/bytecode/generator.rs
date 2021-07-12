@@ -3,11 +3,15 @@ use crate::bytecode::label::Label;
 use crate::bytecode::instructions::other::Instruction;
 use crate::bytecode::register::Register;
 use crate::bytecode::instructions::object::NotAnInstruction;
+use crate::interpreter::interpreter::VariableHandle;
+use std::collections::HashMap;
 
 pub struct Generator {
     register_index: usize,
     released_registers: Vec<Register>,
     pub block: CodeBlock,
+    variable_handles: HashMap<String, VariableHandle>,
+    last_handle: VariableHandle
 }
 
 impl Generator {
@@ -16,6 +20,8 @@ impl Generator {
             register_index: 0,
             released_registers: Vec::new(),
             block: CodeBlock::new(),
+            variable_handles: HashMap::new(),
+            last_handle: 0
         }
     }
 
@@ -45,6 +51,18 @@ impl Generator {
         self.emit(NotAnInstruction::new_boxed(), CodeSegment::new(0, 0, 0, 0));
 
         return label;
+    }
+
+    pub fn next_variable_handle(&mut self, variable: &str) -> VariableHandle {
+        if self.variable_handles.contains_key(variable) {
+            return self.variable_handles[variable];
+        }
+
+        self.variable_handles.insert(variable.to_string(), self.last_handle);
+        let handle = self.last_handle;
+
+        self.last_handle += 1;
+        return handle;
     }
 
     pub fn emit(&mut self, instruction: Box<dyn Instruction>, segment: CodeSegment) {

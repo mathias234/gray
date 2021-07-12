@@ -1,11 +1,10 @@
 use std::fmt::Write as FmtWrite;
 use crate::{
     bytecode::{register::Register},
-    interpreter::{interpreter::ExecutionContext, value::Value},
+    interpreter::{interpreter::{ExecutionContext, VariableHandle}, value::Value},
 };
 use std::rc::Rc;
 use crate::bytecode::label::Label;
-
 
 pub trait Instruction {
     fn execute(&self, context: &mut ExecutionContext);
@@ -82,33 +81,33 @@ impl Return {
 }
 
 pub struct DeclareVariable {
-    variable: Rc<String>,
+    variable: VariableHandle,
 }
 
 impl DeclareVariable {
-    pub fn new_boxed(variable: String) -> Box<DeclareVariable> {
-        Box::new(DeclareVariable { variable: Rc::from(variable) })
+    pub fn new_boxed(variable: VariableHandle) -> Box<DeclareVariable> {
+        Box::new(DeclareVariable { variable })
     }
 }
 
 pub struct SetVariable {
-    variable: Rc<String>,
+    variable: VariableHandle,
 }
 
 impl SetVariable {
-    pub fn new_boxed(variable: String) -> Box<SetVariable> {
-        Box::new(SetVariable { variable: Rc::from(variable) })
+    pub fn new_boxed(variable: VariableHandle) -> Box<SetVariable> {
+        Box::new(SetVariable { variable })
     }
 }
 
 
 pub struct GetVariable {
-    variable: Rc<String>,
+    variable: VariableHandle,
 }
 
 impl GetVariable {
-    pub fn new_boxed(variable: String) -> Box<GetVariable> {
-        Box::new(GetVariable { variable: Rc::from(variable) })
+    pub fn new_boxed(variable: VariableHandle) -> Box<GetVariable> {
+        Box::new(GetVariable { variable })
     }
 }
 
@@ -242,7 +241,7 @@ impl Instruction for Return {
 
 impl Instruction for DeclareVariable {
     fn execute(&self, context: &mut ExecutionContext) {
-        context.declare_variable(self.variable.clone(), &context.get_accumulator());
+        context.declare_variable(self.variable, &context.get_accumulator());
     }
 
     fn to_string(&self) -> String {
@@ -252,7 +251,7 @@ impl Instruction for DeclareVariable {
 
 impl Instruction for SetVariable {
     fn execute(&self, context: &mut ExecutionContext) {
-        context.set_variable(self.variable.clone(), &context.get_accumulator());
+        context.set_variable(self.variable, &context.get_accumulator());
     }
 
     fn to_string(&self) -> String {
@@ -263,7 +262,7 @@ impl Instruction for SetVariable {
 
 impl Instruction for GetVariable {
     fn execute(&self, context: &mut ExecutionContext) {
-        let value = context.get_variable(self.variable.clone());
+        let value = context.get_variable(self.variable);
         context.set_accumulator(value);
     }
 

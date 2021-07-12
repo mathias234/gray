@@ -44,7 +44,8 @@ impl Compiler {
                 ASTType::Scope => self.compile_scope(namespace, &mut generator, child, true)?,
                 ASTType::Identifier(parameter) => {
                     generator.emit(LoadArgument::new_boxed(argument_index), child.code_segment);
-                    generator.emit(DeclareVariable::new_boxed(parameter.clone()), child.code_segment);
+                    let parameter_handle = generator.next_variable_handle(parameter);
+                    generator.emit(DeclareVariable::new_boxed(parameter_handle), child.code_segment);
                     argument_index += 1;
                 }
                 _ => return Err(CompilerError::UnexpectedASTNode(child.clone()))
@@ -109,6 +110,7 @@ impl Compiler {
         if push_scope {
             generator.emit(PopScope::new_boxed(), node.code_segment);
         }
+
         Ok({})
     }
 
@@ -139,7 +141,8 @@ impl Compiler {
 
     fn compile_variable_declaration(&mut self, variable: &String, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
         self.compile_expression(generator, &node.children[0])?;
-        generator.emit(DeclareVariable::new_boxed(variable.clone()), node.code_segment);
+        let variable_handle = generator.next_variable_handle(variable);
+        generator.emit(DeclareVariable::new_boxed(variable_handle), node.code_segment);
 
         Ok({})
     }
@@ -288,7 +291,8 @@ impl Compiler {
             ASTType::CreateArray => self.compile_create_array(generator, node),
             ASTType::Expression => self.compile_expression(generator, node),
             ASTType::Subscript(name) => {
-                generator.emit(GetVariable::new_boxed(name.clone()), node.code_segment);
+                let variable_handle = generator.next_variable_handle(name);
+                generator.emit(GetVariable::new_boxed(variable_handle), node.code_segment);
                 let array_register = generator.next_free_register();
                 generator.emit(Store::new_boxed(array_register), node.code_segment);
 
@@ -301,7 +305,8 @@ impl Compiler {
                 Ok({})
             }
             ASTType::ObjectAccess(name) => {
-                generator.emit(GetVariable::new_boxed(name.clone()), node.code_segment);
+                let variable_handle = generator.next_variable_handle(name);
+                generator.emit(GetVariable::new_boxed(variable_handle), node.code_segment);
                 let object_register = generator.next_free_register();
                 generator.emit(Store::new_boxed(object_register), node.code_segment);
                 self.compile_object_get(generator, node, object_register)?;
@@ -393,17 +398,20 @@ impl Compiler {
     fn compile_access(&mut self, generator: &mut Generator, node: &ASTNode, rhs_register: Register) -> Result<(), CompilerError> {
         match &node.ast_type {
             ASTType::Identifier(i) => {
-                generator.emit(SetVariable::new_boxed(i.clone()), node.code_segment);
+                let variable_handle = generator.next_variable_handle(i);
+                generator.emit(SetVariable::new_boxed(variable_handle), node.code_segment);
             }
             ASTType::ObjectAccess(i) => {
-                generator.emit(GetVariable::new_boxed(i.clone()), node.code_segment);
+                let variable_handle = generator.next_variable_handle(i);
+                generator.emit(GetVariable::new_boxed(variable_handle), node.code_segment);
                 let object_register = generator.next_free_register();
                 generator.emit(Store::new_boxed(object_register), node.code_segment);
 
                 self.compile_object_access(generator, &node, object_register, rhs_register)?;
             }
             ASTType::Subscript(i) => {
-                generator.emit(GetVariable::new_boxed(i.clone()), node.code_segment);
+                let variable_handle = generator.next_variable_handle(i);
+                generator.emit(GetVariable::new_boxed(variable_handle), node.code_segment);
                 let array_register = generator.next_free_register();
                 generator.emit(Store::new_boxed(array_register), node.code_segment);
 
@@ -505,7 +513,8 @@ impl Compiler {
                 Ok(generator.emit(LoadImmediate::new_boxed(Value::from_f64(*value)), node.code_segment))
             }
             ASTType::Identifier(identifier) => {
-                Ok(generator.emit(GetVariable::new_boxed(identifier.clone()), node.code_segment))
+                let variable_handle = generator.next_variable_handle(identifier);
+                Ok(generator.emit(GetVariable::new_boxed(variable_handle), node.code_segment))
             }
             _ => Err(CompilerError::UnexpectedASTNode(node.clone())),
         }?;

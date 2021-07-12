@@ -17,6 +17,7 @@ pub enum DataValue {
     String(Rc<String>),
     Array(Array),
     Pointer(Pointer<dyn Any>),
+    Undefined,
 }
 
 #[derive(Clone, Debug)]
@@ -58,6 +59,19 @@ impl Value {
     pub fn from_any<T: Any>(value: T) -> Value {
         Value {
             value: DataValue::Pointer(Rc::from(RefCell::from(value))),
+        }
+    }
+
+    pub fn from_undefined() -> Value {
+        Value {
+            value: DataValue::Undefined
+        }
+    }
+
+    pub fn is_undefined(&self) -> bool {
+        match self.get_data_value() {
+            DataValue::Undefined => true,
+            _ => false,
         }
     }
 
@@ -108,6 +122,11 @@ impl Value {
                     _ => context.throw_error("Add operator is not implemented for pointers"),
                 }
             }
+            DataValue::Undefined => {
+                match &rhs_value.value {
+                    _ => context.throw_error("Add operator is not implemented for undefined"),
+                }
+            }
         }
     }
 
@@ -145,6 +164,11 @@ impl Value {
             DataValue::Pointer(_) => {
                 match &rhs_value.value {
                     _ => context.throw_error("Subtract operator is not implemented for pointers"),
+                }
+            }
+            DataValue::Undefined => {
+                match &rhs_value.value {
+                    _ => context.throw_error("Subtract operator is not implemented for undefined"),
                 }
             }
         }
@@ -186,6 +210,11 @@ impl Value {
                     _ => context.throw_error("Multiply operator is not implemented for pointers"),
                 }
             }
+            DataValue::Undefined => {
+                match &rhs_value.value {
+                    _ => context.throw_error("Multiply operator is not implemented for undefined"),
+                }
+            }
         }
     }
 
@@ -223,6 +252,11 @@ impl Value {
             DataValue::Pointer(_) => {
                 match &rhs_value.value {
                     _ => context.throw_error("Divide operator is not implemented for pointers"),
+                }
+            }
+            DataValue::Undefined => {
+                match &rhs_value.value {
+                    _ => context.throw_error("Divide operator is not implemented for undefined"),
                 }
             }
         }
@@ -279,6 +313,14 @@ impl Value {
                 match &rhs_value.value {
                     _ => {
                         context.throw_error("Equal operator is not implemented for pointers");
+                        false
+                    }
+                }
+            }
+            DataValue::Undefined => {
+                match &rhs_value.value {
+                    _ => {
+                        context.throw_error("Equal operator is not implemented for undefined");
                         false
                     }
                 }
@@ -341,6 +383,14 @@ impl Value {
                     }
                 }
             }
+            DataValue::Undefined => {
+                match &rhs_value.value {
+                    _ => {
+                        context.throw_error("Compare operator is not implemented for undefined");
+                        None
+                    }
+                }
+            }
         }
     }
 }
@@ -355,6 +405,7 @@ impl fmt::Display for Value {
             DataValue::String(v) => write!(f, "({}: String)", v.clone()),
             DataValue::Array(v) => write!(f, "({}: Array)", v.clone()),
             DataValue::Pointer(_) => write!(f, "(Internal Pointer)"),
+            DataValue::Undefined => write!(f, "(Undefined)"),
         }
     }
 }

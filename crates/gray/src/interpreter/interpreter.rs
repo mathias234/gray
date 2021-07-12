@@ -11,15 +11,17 @@ use crate::bytecode::code_block::CodeSegment;
 use std::cell::Cell;
 use std::mem;
 
+pub type VariableHandle = usize;
+
 #[derive(Clone)]
 pub struct Scope {
-    variables: HashMap<Rc<String>, Value>,
+    variables: Vec<Value>,
 }
 
 impl Scope {
     pub fn new() -> Scope {
         Scope {
-            variables: HashMap::new(),
+            variables: Vec::new(),
         }
     }
 }
@@ -120,41 +122,51 @@ impl ExecutionContext {
         self.call_return = true;
     }
 
-    pub fn declare_variable(&mut self, variable: Rc<String>, value: &Value) {
-        self.scope_stack[0].variables.insert(variable, value.clone());
+    pub fn declare_variable(&mut self, variable: VariableHandle, value: &Value) {
+        if self.scope_stack[0].variables.len() <= variable {
+            for _ in self.scope_stack[0].variables.len()..variable + 1 {
+                self.scope_stack[0].variables.push(Value::from_undefined());
+            }
+        }
+
+        self.scope_stack[0].variables[variable] = value.clone();
     }
 
-    pub fn set_variable(&mut self, variable: Rc<String>, value: &Value) {
+    pub fn set_variable(&mut self, variable: VariableHandle, value: &Value) {
         let mut found_variable = false;
         for scope in &mut self.scope_stack {
-            if scope.variables.contains_key(&variable) {
-                scope.variables.insert(variable.clone(), value.clone());
+            if scope.variables.len() > variable && !scope.variables[variable].is_undefined() {
+                scope.variables[variable] = value.clone();
                 found_variable = true;
                 break;
             }
         }
 
         if !found_variable {
-            self.throw_error(&format!("Failed to find variable `{}`", variable));
+            self.throw_error(&format!("Failed to find variable"));
         }
     }
 
-    pub fn get_variable(&self, variable: Rc<String>) -> Value {
+    pub fn get_variable(&self, variable: VariableHandle) -> Value {
         for scope in &self.scope_stack {
-            let variable = scope.variables.get(&variable);
-            if variable.is_some() {
-                return variable.unwrap().clone();
+            if scope.variables.len() <= variable {
+                continue;
+            }
+
+            let variable = &scope.variables[variable];
+
+            if !variable.is_undefined() {
+                return variable.clone();
             }
         }
 
 
-        self.throw_error(&format!("Failed to find variable `{}`", variable));
+        self.throw_error(&format!("Failed to find variable"));
         Value::from_i64(-1)
     }
 
     pub fn push_scope(&mut self) {
-        let scope = Scope::new();
-        self.scope_stack.insert(0, scope);
+        self.scope_stack.insert(0, Scope::new());
     }
 
     pub fn pop_scope(&mut self) {
@@ -208,8 +220,6 @@ impl ExecutionContext {
         println!(" {}", message);
         Value::from_i64(-1)
     }
-
-
 }
 
 pub struct StackFrame {
@@ -280,8 +290,7 @@ impl<'interp> Interpreter<'interp> {
 
             println!();
         }
-         */
-
+*/
 
         self.active_code_block = Some(&self.blocks[&self.active_block]);
 
@@ -299,6 +308,9 @@ impl<'interp> Interpreter<'interp> {
 
             if self.execution_context.errored.get() {
                 // The context errored, we will then stop the execution of the interpreter
+                if self.call_stack.len() == 0 {
+                    break;
+                }
 
                 println!("Stacktrace");
 
