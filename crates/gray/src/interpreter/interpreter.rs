@@ -253,7 +253,7 @@ impl<'interp> Interpreter<'interp> {
             None => String::from("ProgramMain"),
         };
 
-
+        /*
         println!("Compiled code");
         for (name, block) in &self.blocks {
             println!("\tBlock {}", name);
@@ -280,8 +280,8 @@ impl<'interp> Interpreter<'interp> {
 
             println!();
         }
+         */
 
-        println!("Starting execution");
 
         self.active_code_block = Some(&self.blocks[&self.active_block]);
 

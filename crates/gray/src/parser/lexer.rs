@@ -186,12 +186,6 @@ impl Lexer {
             let token = lexer.pop_token()?;
 
             if token == TokenType::EndOfFile {
-                while let Some(token) = token_stream.next() {
-                    println!("{:?}", token);
-                }
-
-                token_stream.reset();
-
                 return Ok((Rc::from(file), token_stream));
             }
 
