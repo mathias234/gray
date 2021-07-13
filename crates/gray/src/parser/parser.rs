@@ -47,6 +47,7 @@ pub enum ASTType {
     CreateObject,
     CreateArray,
     ObjectMember(String),
+    ObjectAccess2,
     ObjectAccess(String),
     Subscript(String),
     Trait(String),
@@ -452,21 +453,35 @@ impl Parser {
         let first_delimiter = self.peek_next_token(0)?;
         let delimiter = self.peek_next_token(1)?;
 
-        return if Parser::token_is_delimiter(delimiter, Delimiter::OpenParen) || Parser::token_is_delimiter(&delimiter, Delimiter::Colon) {
-            Ok(self.parse_function_call()?)
+        let result = if Parser::token_is_delimiter(delimiter, Delimiter::OpenParen) || Parser::token_is_delimiter(&delimiter, Delimiter::Colon) {
+            self.parse_function_call()?
         } else if Parser::token_is_delimiter(first_delimiter, Delimiter::OpenCurlyBracket) {
-            Ok(self.parse_object_declaration()?)
+            self.parse_object_declaration()?
         } else if Parser::token_is_delimiter(first_delimiter, Delimiter::OpenBracket) {
-            Ok(self.parse_array_declaration()?)
+            self.parse_array_declaration()?
         } else if Parser::token_is_delimiter(delimiter, Delimiter::Dot) {
-            Ok(self.parse_member_expression()?)
+            self.parse_member_expression()?
         } else if Parser::token_is_delimiter(delimiter, Delimiter::OpenBracket) {
-            Ok(self.parse_subscript_expression()?)
+            self.parse_subscript_expression()?
         } else {
             // Very simple single token expression
             let token = self.get_next_token()?;
-            Ok(Parser::token_to_simple_ast_node(&token)?)
+            Parser::token_to_simple_ast_node(&token)?
         };
+
+        let delimiter = self.peek_next_token(0)?;
+        if Parser::token_is_delimiter(delimiter, Delimiter::Dot) {
+            let delimiter = self.get_next_token()?;
+
+            let mut member = ASTNode::new(ASTType::ObjectAccess2, delimiter.position);
+            let mut expr = ASTNode::new(ASTType::Expression, delimiter.position);
+            expr.children.push(result);
+            member.children.push(self.parse_sub_expression()?);
+            member.children.push(expr);
+            return Ok(member);
+        }
+
+        return Ok(result);
     }
 
     fn parse_array_declaration(&mut self) -> Result<ASTNode, ParserError> {

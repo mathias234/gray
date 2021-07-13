@@ -304,6 +304,16 @@ impl Compiler {
 
                 Ok({})
             }
+            ASTType::ObjectAccess2 => {
+                self.compile_expression(generator, &node.children[1])?;
+                let object_register = generator.next_free_register();
+                generator.emit(Store::new_boxed(object_register), node.code_segment);
+
+                self.compile_object_get(generator, node, object_register)?;
+
+
+                Ok({})
+            }
             ASTType::ObjectAccess(name) => {
                 let variable_handle = generator.next_variable_handle(name);
                 generator.emit(GetVariable::new_boxed(variable_handle), node.code_segment);

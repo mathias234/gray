@@ -54,7 +54,7 @@ pub fn load_file(file: &str) -> Result<Interpreter, GrayError> {
     let root_ast_node = Parser::parse(token_stream.1, &token_stream.0)?;
 
     //println!("\nParser AST Tree");
-    //root_ast_node.dump(0);
+    root_ast_node.dump(0);
 
     let blocks = Compiler::compile(root_ast_node)?;
 
