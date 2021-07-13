@@ -2,6 +2,8 @@ use gray::interpreter::interpreter::{Interpreter, ExecutionContext};
 use gray::interpreter::function_pointer::FunctionArgs;
 use gray::interpreter::value::Value;
 use std::time::Instant;
+use gray::interpreter::object::Object;
+use std::rc::Rc;
 
 pub fn load_functions(interpreter: &mut Interpreter) {
     interpreter.set_native_function(vec!["debug"], String::from("start_watch"), start_watch);
@@ -17,7 +19,24 @@ fn stop_watch(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
     let pointer = args.get_next_pointer(context);
     let p = pointer.borrow();
     if let Some(file) = p.downcast_ref::<Instant>() {
-        Value::from_i64(file.elapsed().as_millis() as i64)
+        let mut time_result = Object::new();
+        time_result.declare(
+            Rc::from("nanos".to_string()),
+            &Value::from_i64(file.elapsed().as_nanos() as i64)
+        );
+
+        time_result.declare(
+            Rc::from("millis".to_string()),
+            &Value::from_i64(file.elapsed().as_millis() as i64)
+        );
+
+        time_result.declare(
+            Rc::from("secs".to_string()),
+            &Value::from_i64(file.elapsed().as_secs() as i64)
+        );
+
+
+        Value::from_object(time_result)
     } else {
         context.throw_error("Expected pointer to a watch object");
         Value::from_i64(-1)
