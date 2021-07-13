@@ -2,6 +2,7 @@ mod math;
 mod array;
 mod io;
 mod gray_interp;
+mod debug;
 
 use gray::interpreter::interpreter::{Interpreter, ExecutionContext};
 use gray::interpreter::value::{Value, DataValue};
@@ -17,6 +18,7 @@ pub fn declare_functions(interpreter: &mut Interpreter) {
     array::load_functions(interpreter);
     io::load_functions(interpreter);
     gray_interp::load_functions(interpreter);
+    debug::load_functions(interpreter);
 }
 
 fn assert_eq(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
