@@ -222,6 +222,11 @@ impl Parser {
                 }
                 TokenType::Delimiter(d) => {
                     match d {
+                        Delimiter::OpenCurlyBracket => {
+                            self.get_next_token()?;
+                            scope.children.push(self.parse_scope()?);
+                            return Ok(scope);
+                        }
                         Delimiter::CloseCurlyBracket => {
                             self.get_next_token()?;
                             return Ok(scope);

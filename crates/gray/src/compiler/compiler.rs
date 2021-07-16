@@ -102,6 +102,9 @@ impl Compiler {
 
                     self.compile_scope(&new_namespace, generator, &child.children[0], false)?;
                 }
+                ASTType::Scope => {
+                    self.compile_scope("", generator, child, true)?;
+                }
                 ASTType::Function(name) => self.compile_function(namespace, name, child)?,
                 _ => return Err(CompilerError::UnexpectedASTNode(child.clone())),
             }
