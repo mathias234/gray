@@ -224,8 +224,8 @@ impl Parser {
                     match d {
                         Delimiter::OpenCurlyBracket => {
                             self.get_next_token()?;
-                            scope.children.push(self.parse_scope()?);
-                            return Ok(scope);
+
+                            self.parse_scope()
                         }
                         Delimiter::CloseCurlyBracket => {
                             self.get_next_token()?;

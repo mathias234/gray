@@ -10,6 +10,7 @@ use crate::bytecode::instructions::math::{Add, Subtract, Multiply, Divide};
 use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember, GetObjectMember, CreateEmptyArray, PushArray, GetArray, SetArray};
 use crate::bytecode::instructions::comparison::{CompareGreaterThan, CompareLessThan, CompareNotEq, CompareEq, CompareLessThanOrEqual, CompareGreaterThanOrEqual, And, Or};
 use std::rc::Rc;
+use crate::compiler::compiler::CompilerError::UnexpectedASTNode;
 
 #[derive(Debug)]
 pub enum CompilerError {
@@ -240,7 +241,29 @@ impl Compiler {
         if node.children.len() > 1 {
             match &node.children[1].ast_type {
                 ASTType::Subscript => {
+                    if parent_is_object {
+                        let parent_accessor = match &node.children[2].ast_type {
+                            ASTType::Identifier(identifier) => {
+                                generator.emit(LoadImmediate::new_boxed(Value::from_string(Rc::new(identifier.clone()))), node.children[2].code_segment);
+                                let accessor_register = generator.next_free_register();
+                                generator.emit(Store::new_boxed(accessor_register), node.children[2].code_segment);
+                                accessor_register
+                            }
+                            _ => return Err(UnexpectedASTNode(node.children[2].clone())),
+                        };
+
+
+                        generator.emit(GetObjectMember::new_boxed(parent.unwrap(), parent_accessor), all_segments(node));
+                        array = generator.next_free_register();
+                        generator.emit(Store::new_boxed(array), all_segments(node));
+                    }
+
+
                     let register = generator.next_free_register();
+
+                    generator.emit(LoadRegister::new_boxed(index), node.code_segment);
+
+                    generator.emit(GetArray::new_boxed(array), node.code_segment);
                     generator.emit(Store::new_boxed(register), node.code_segment);
 
                     let (idx, arr) = self.compile_subscript(generator, &node.children[1], Some(register), false)?;
@@ -252,7 +275,6 @@ impl Compiler {
                     array = arr;
 
                     generator.release_register(register);
-
                 }
                 ASTType::ObjectAccess => {
                     let (object, accessor, _) = self.compile_assign_object(generator, node, parent.unwrap())?;
@@ -527,15 +549,16 @@ impl Compiler {
                     }
                 }
 
-                generator.emit(LoadRegister::new_boxed(rhs_register), node.code_segment);
+                /* FIXME: SetObjectMember has it's value in the accumulator, while SetArray has the accessor in the accumulator.
+                       Should make this more consistent */
 
                 if !is_array {
+                    generator.emit(LoadRegister::new_boxed(rhs_register), node.code_segment);
                     generator.emit(SetObjectMember::new_boxed(object_register, accessor_register), all_segments(node));
                 } else {
                     generator.emit(LoadRegister::new_boxed(accessor_register), node.code_segment);
                     generator.emit(SetArray::new_boxed(object_register, rhs_register), node.code_segment);
                 }
-
 
                 generator.release_register(object_register);
                 generator.release_register(accessor_register);

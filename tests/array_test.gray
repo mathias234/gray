@@ -29,3 +29,11 @@ let obj = {
 assert_eq(obj.a[1], 20);
 obj.a[1] = 25;
 assert_eq(obj.a[1], 25);
+
+let obj = {
+    array: [[-10, [0, -22]], 20, 2],
+};
+
+obj.array[0][1][1] = 15;
+
+assert_eq(obj.array[0][1][1], 15);

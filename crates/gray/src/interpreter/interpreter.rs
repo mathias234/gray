@@ -306,26 +306,24 @@ impl<'interp> Interpreter<'interp> {
 
             if self.execution_context.errored.get() {
                 // The context errored, we will then stop the execution of the interpreter
-                if self.call_stack.len() == 0 {
-                    break;
-                }
+                if self.call_stack.len() != 0 {
+                    println!("Stacktrace");
 
-                println!("Stacktrace");
+                    let mut i = (self.call_stack.len() - 1) as isize;
 
-                let mut i = (self.call_stack.len() - 1) as isize;
+                    while i >= 0 {
+                        let frame = &self.call_stack[i as usize];
+                        let lines: Vec<&str> = self.code_text.split('\n').collect();
 
-                while i >= 0 {
-                    let frame = &self.call_stack[i as usize];
-                    let lines: Vec<&str> = self.code_text.split('\n').collect();
+                        error_printer::print_error_line(
+                            lines[frame.caller_segment.start_y - 1],
+                            frame.caller_segment.start_y,
+                            frame.caller_segment.start_x,
+                            frame.caller_segment.end_x, );
+                        println!();
 
-                    error_printer::print_error_line(
-                        lines[frame.caller_segment.start_y - 1],
-                        frame.caller_segment.start_y,
-                        frame.caller_segment.start_x,
-                        frame.caller_segment.end_x, );
-                    println!();
-
-                    i -= 1;
+                        i -= 1;
+                    }
                 }
 
                 println!("Registers");

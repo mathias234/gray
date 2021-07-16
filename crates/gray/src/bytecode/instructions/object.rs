@@ -188,10 +188,12 @@ impl Instruction for PushArray {
 
 impl Instruction for GetArray {
     fn execute(&self, context: &mut ExecutionContext) {
-        let value = context.get_accumulator();
+        let index = context.get_accumulator();
         let mut array = context.get_register(&self.array);
 
-        let index = match value.get_data_value() {
+        //println!("Get Array variables is\n\tArray {:?}\n\tIndex {:?}", array, index);
+
+        let index = match index.get_data_value() {
             DataValue::I64(v) => *v as usize,
             d => {
                 context.throw_error(&format!("Array can only be indexed with an integer {:?}", d));
@@ -218,6 +220,8 @@ impl Instruction for SetArray {
         let index = context.get_accumulator();
         let mut array = context.get_register(&self.array);
 
+        //println!("Set Array variables is\n\tArray {:?}\n\tIndex {:?}\n\tValue {:?}", array, index, context.get_accumulator());
+
         let index = match index.get_data_value() {
             DataValue::I64(v) => *v as usize,
             d => {
@@ -231,7 +235,7 @@ impl Instruction for SetArray {
                 a.set(index, context.get_register(&self.value));
             }
             _ => {
-                context.throw_error("Error getting value from object that is not an array");
+                context.throw_error("Error setting value to object that is not an array");
                 return;
             }
         }
