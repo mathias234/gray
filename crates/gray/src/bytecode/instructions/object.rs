@@ -3,7 +3,6 @@ use crate::bytecode::instructions::other::Instruction;
 use crate::interpreter::value::{Value, DataValue};
 use crate::interpreter::object::Object;
 use crate::interpreter::array::Array;
-use std::rc::Rc;
 use crate::bytecode::register::Register;
 
 pub struct CreateEmptyObject {}
@@ -114,7 +113,7 @@ impl Instruction for SetObjectMember {
             DataValue::Object(object) => object.clone(),
             _ => {
                 context.throw_error("Trying to set a member value of something that is not an object");
-                Object::new()
+                return;
             }
         };
 
@@ -122,8 +121,8 @@ impl Instruction for SetObjectMember {
         let accessor_value = match context.get_register(&self.accessor_value).get_data_value() {
             DataValue::String(name) => name.clone(),
             _ => {
-                context.throw_error("Expected something else");
-                Rc::from(String::new())
+                context.throw_error("Expected object accessor to be an identifier");
+                return;
             }
         };
 
@@ -140,8 +139,8 @@ impl Instruction for GetObjectMember {
         let obj = match context.get_register(&self.object_register).get_data_value() {
             DataValue::Object(object) => object.clone(),
             _ => {
-                context.throw_error("Trying to set a member value of something that is not an object");
-                Object::new()
+                context.throw_error("Trying to get a member value of something that is not an object");
+                return;
             }
         };
 
@@ -149,8 +148,8 @@ impl Instruction for GetObjectMember {
         let accessor_value = match context.get_register(&self.accessor_value).get_data_value() {
             DataValue::String(name) => name.clone(),
             _ => {
-                context.throw_error("Expected something else");
-                Rc::from(String::new())
+                context.throw_error("Expected object accessor to be an identifier");
+                return;
             }
         };
 
@@ -177,7 +176,10 @@ impl Instruction for PushArray {
             DataValue::Array(a) => {
                 a.push(value);
             }
-            _ => panic!("Error pushing to value that is not an array"),
+            _ => {
+                context.throw_error("Error pushing to value that is not an array");
+                return;
+            }
         }
     }
 
@@ -193,7 +195,7 @@ impl Instruction for GetArray {
             DataValue::I64(v) => *v as usize,
             d => {
                 context.throw_error(&format!("Array can only be indexed with an integer {:?}", d));
-                0
+                return;
             }
         };
 
@@ -201,7 +203,10 @@ impl Instruction for GetArray {
             DataValue::Array(a) => {
                 context.set_accumulator(a.get(index));
             }
-            _ => { context.throw_error("Error getting value from object that is not an array"); }
+            _ => {
+                context.throw_error("Error getting value from object that is not an array");
+                return;
+            }
         }
     }
 
@@ -213,13 +218,11 @@ impl Instruction for SetArray {
         let index = context.get_accumulator();
         let mut array = context.get_register(&self.array);
 
-        println!("Set Array: {:?}[{:?}] = {:?}", array, index, context.get_register(&self.value));
-
         let index = match index.get_data_value() {
             DataValue::I64(v) => *v as usize,
             d => {
                 context.throw_error(&format!("Array can only be indexed with an integer {:?}", d));
-                0
+                return;
             }
         };
 
@@ -227,7 +230,10 @@ impl Instruction for SetArray {
             DataValue::Array(a) => {
                 a.set(index, context.get_register(&self.value));
             }
-            _ => { context.throw_error("Error getting value from object that is not an array"); }
+            _ => {
+                context.throw_error("Error getting value from object that is not an array");
+                return;
+            }
         }
     }
 
