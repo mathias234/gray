@@ -47,9 +47,8 @@ pub enum ASTType {
     CreateObject,
     CreateArray,
     ObjectMember(String),
-    ObjectAccess2,
-    ObjectAccess(String),
-    Subscript(String),
+    ObjectAccess,
+    Subscript,
     Trait(String),
 }
 
@@ -163,7 +162,7 @@ impl Parser {
     }
 
     fn parse_scope(&mut self) -> Result<ASTNode, ParserError> {
-        let mut scope = ASTNode::new(ASTType::Scope, CodeSegment::new(0, 0, 0, 0));
+        let mut scope = ASTNode::new(ASTType::Scope, CodeSegment::new(1, 1, 1, 1));
 
         let mut token;
 
@@ -459,12 +458,7 @@ impl Parser {
             self.parse_object_declaration()?
         } else if Parser::token_is_delimiter(first_delimiter, Delimiter::OpenBracket) {
             self.parse_array_declaration()?
-        } else if Parser::token_is_delimiter(delimiter, Delimiter::Dot) {
-            self.parse_member_expression()?
-        } else if Parser::token_is_delimiter(delimiter, Delimiter::OpenBracket) {
-            self.parse_subscript_expression()?
         } else {
-            // Very simple single token expression
             let token = self.get_next_token()?;
             Parser::token_to_simple_ast_node(&token)?
         };
@@ -473,19 +467,25 @@ impl Parser {
         if Parser::token_is_delimiter(delimiter, Delimiter::Dot) {
             let delimiter = self.get_next_token()?;
 
-            let mut member = ASTNode::new(ASTType::ObjectAccess2, delimiter.position);
+            let mut member = ASTNode::new(ASTType::ObjectAccess, delimiter.position);
             let mut expr = ASTNode::new(ASTType::Expression, delimiter.position);
             expr.children.push(result);
             member.children.push(self.parse_sub_expression()?);
             member.children.push(expr);
             return Ok(member);
+        } else if Parser::token_is_delimiter(delimiter, Delimiter::OpenBracket) {
+            let mut subscript = self.parse_subscript_expression()?;
+
+            subscript.children.push(result);
+
+            return Ok(subscript);
         }
 
         return Ok(result);
     }
 
     fn parse_array_declaration(&mut self) -> Result<ASTNode, ParserError> {
-        let mut array_node = ASTNode::new(ASTType::CreateArray, CodeSegment::new(0, 0, 0, 0));
+        let mut array_node = ASTNode::new(ASTType::CreateArray, CodeSegment::new(1, 1, 1, 1));
 
         Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenBracket)?;
 
@@ -510,7 +510,7 @@ impl Parser {
     }
 
     fn parse_object_declaration(&mut self) -> Result<ASTNode, ParserError> {
-        let mut object_node = ASTNode::new(ASTType::CreateObject, CodeSegment::new(0, 0, 0, 0));
+        let mut object_node = ASTNode::new(ASTType::CreateObject, CodeSegment::new(1, 1, 1, 1));
 
         Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenCurlyBracket)?;
         while !Parser::token_is_delimiter(self.peek_next_token(0)?, Delimiter::CloseCurlyBracket) {
@@ -544,65 +544,28 @@ impl Parser {
         Ok(object_node)
     }
 
-    fn parse_member_expression(&mut self) -> Result<ASTNode, ParserError> {
-        let name_token = self.get_next_token()?;
-        let name = match &name_token.token_type {
-            TokenType::Identifier(n) => Ok(n.clone()),
-            _ => Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(name_token.clone()))
-        }?;
-
-
-        let mut node = ASTNode::new(ASTType::ObjectAccess(name), name_token.position);
-
-        self.get_next_token()?;
-
-        if Parser::token_is_delimiter(self.peek_next_token(1)?, Delimiter::Dot) {
-            node.children.push(self.parse_member_expression()?);
-        } else {
-            node.children.push(self.parse_sub_expression()?);
-        }
-
-        Ok(node)
-    }
-
     fn parse_subscript_expression(&mut self) -> Result<ASTNode, ParserError> {
-        let name_token = self.get_next_token()?;
-        let name = match &name_token.token_type {
-            TokenType::Identifier(n) => Ok(n.clone()),
-            _ => Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(name_token.clone()))
-        }?;
+        let token = self.get_next_token()?;
 
-        let mut node = ASTNode::new(ASTType::Subscript(name), name_token.position);
+        Parser::validate_token_is_delimiter(token, Delimiter::OpenBracket)?;
+        let mut node = ASTNode::new(ASTType::Subscript, token.position);
 
-        Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenBracket)?;
-
-        node.children.push(self.parse_expression()?);
+        let result = self.parse_expression()?;
 
         Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::CloseBracket)?;
 
-        Ok(node)
-    }
 
-    /*
-    fn parse_variable_assignment(&mut self) -> Result<ASTNode, ParserError> {
-        let lhs;
+        if Parser::token_is_delimiter(self.peek_next_token(0)?, Delimiter::OpenBracket) {
+            let next = self.parse_subscript_expression()?;
+            node.children.push(result);
+            node.children.push(next);
 
-        if Parser::token_is_delimiter(self.peek_next_token(1)?, Delimiter::Dot) {
-            lhs = self.parse_member_expression()?;
-        } else {
-            lhs = Parser::token_to_simple_ast_node(self.get_next_token()?)?;
+            return Ok(node);
         }
 
-        Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Equal)?;
-
-        let mut assigment_node = ASTNode::new(ASTType::VariableAssignment);
-        assigment_node.children.push(lhs);
-
-        assigment_node.children.push(self.parse_expression()?);
-
-        Ok(assigment_node)
+        node.children.push(result);
+        Ok(node)
     }
-     */
 
     fn parse_function_call(&mut self) -> Result<ASTNode, ParserError> {
         let mut namespace = String::new();

@@ -79,7 +79,7 @@ impl ExecutionContext {
             should_continue: false,
             break_continue_scope_stack: Vec::new(),
 
-            code_segment: CodeSegment::new(0, 0, 0, 0),
+            code_segment: CodeSegment::new(1, 1, 1, 1),
             code_text,
             errored: Cell::from(false),
         }
@@ -327,6 +327,9 @@ impl<'interp> Interpreter<'interp> {
 
                     i -= 1;
                 }
+
+                println!("Registers");
+                self.dump();
 
                 panic!();
             }

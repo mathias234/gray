@@ -11,7 +11,7 @@ pub struct Generator {
     released_registers: Vec<Register>,
     pub block: CodeBlock,
     variable_handles: HashMap<String, VariableHandle>,
-    last_handle: VariableHandle
+    last_handle: VariableHandle,
 }
 
 impl Generator {
@@ -21,7 +21,7 @@ impl Generator {
             released_registers: Vec::new(),
             block: CodeBlock::new(),
             variable_handles: HashMap::new(),
-            last_handle: 0
+            last_handle: 0,
         }
     }
 
@@ -48,13 +48,15 @@ impl Generator {
     pub fn make_instruction_holder(&mut self) -> Label {
         let label = self.make_label();
 
-        self.emit(NotAnInstruction::new_boxed(), CodeSegment::new(0, 0, 0, 0));
+        self.emit(NotAnInstruction::new_boxed(), CodeSegment::new(1, 1, 1, 1));
 
         return label;
     }
 
     pub fn next_variable_handle(&mut self, variable: &str) -> VariableHandle {
         if self.variable_handles.contains_key(variable) {
+            //println!("Getting variable handle for {:?} = {}", variable, self.variable_handles[variable]);
+
             return self.variable_handles[variable];
         }
 
@@ -62,6 +64,9 @@ impl Generator {
         let handle = self.last_handle;
 
         self.last_handle += 1;
+
+        //println!("Getting variable handle for {:?} = {}", variable, handle);
+
         return handle;
     }
 

@@ -1,5 +1,5 @@
 use crate::parser::parser::{ASTNode, ASTType, ExpressionOp};
-use crate::bytecode::code_block::CodeBlock;
+use crate::bytecode::code_block::{CodeBlock, CodeSegment};
 use crate::bytecode::generator::Generator;
 use std::collections::HashMap;
 use crate::bytecode::register::Register;
@@ -7,7 +7,7 @@ use crate::interpreter::value::Value;
 use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument, LoadRegister, Break, Continue, PopBreakContinueScope, PushBreakContinueScope};
 use crate::bytecode::instructions::jump::{JumpZero, Jump};
 use crate::bytecode::instructions::math::{Add, Subtract, Multiply, Divide};
-use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember, GetObjectMember, CreateEmptyArray, PushArray, GetArray, ArraySet};
+use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember, GetObjectMember, CreateEmptyArray, PushArray, GetArray, SetArray};
 use crate::bytecode::instructions::comparison::{CompareGreaterThan, CompareLessThan, CompareNotEq, CompareEq, CompareLessThanOrEqual, CompareGreaterThanOrEqual, And, Or};
 use std::rc::Rc;
 
@@ -147,66 +147,6 @@ impl Compiler {
         Ok({})
     }
 
-    fn compile_object_get(&mut self, generator: &mut Generator, node: &ASTNode, previous: Register) -> Result<(), CompilerError> {
-        match &node.children[0].ast_type {
-            ASTType::ObjectAccess(name) => {
-                generator.emit(GetObjectMember::new_boxed(previous, name.clone()), node.children[0].code_segment);
-                let object_register = generator.next_free_register();
-
-                generator.emit(Store::new_boxed(object_register), node.children[0].code_segment);
-                self.compile_object_get(generator, &node.children[0], object_register)?;
-                generator.release_register(object_register);
-            }
-            ASTType::Identifier(name) => {
-                generator.emit(GetObjectMember::new_boxed(previous, name.clone()), node.children[0].code_segment);
-            }
-            ASTType::Subscript(name) => {
-                generator.emit(GetObjectMember::new_boxed(previous, name.clone()), node.children[0].code_segment);
-                let array_register = generator.next_free_register();
-                generator.emit(Store::new_boxed(array_register), node.children[0].code_segment);
-
-                self.compile_expression(generator, &node.children[0])?;
-
-                generator.emit(GetArray::new_boxed(array_register), node.children[0].code_segment);
-            }
-            _ => return Err(CompilerError::ExpectedIdentifier(node.children[0].clone()))
-        }
-
-        Ok({})
-    }
-
-    fn compile_object_access(&mut self, generator: &mut Generator, node: &ASTNode, previous: Register, expression_result: Register) -> Result<(), CompilerError> {
-        match &node.children[0].ast_type {
-            ASTType::ObjectAccess(name) => {
-                generator.emit(GetObjectMember::new_boxed(previous, name.clone()), node.children[0].code_segment);
-                let object_register = generator.next_free_register();
-
-                generator.emit(Store::new_boxed(object_register), node.children[0].code_segment);
-                self.compile_object_access(generator, &node.children[0], object_register, expression_result)?;
-
-                generator.release_register(object_register);
-            }
-            ASTType::Identifier(name) => {
-                generator.emit(LoadRegister::new_boxed(expression_result), node.children[0].code_segment);
-                generator.emit(SetObjectMember::new_boxed(previous, name.clone()), node.children[0].code_segment);
-            }
-            ASTType::Subscript(name) => {
-                generator.emit(GetObjectMember::new_boxed(previous, name.clone()), node.children[0].code_segment);
-                let object_register = generator.next_free_register();
-                generator.emit(Store::new_boxed(object_register), node.children[0].code_segment);
-
-                self.compile_expression(generator, &node.children[0])?;
-
-                generator.emit(ArraySet::new_boxed(object_register, expression_result), node.children[0].code_segment);
-                generator.release_register(object_register);
-            }
-            _ => {}
-        }
-
-
-        Ok({})
-    }
-
     fn compile_if_statement(&mut self, namespace: &str, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
         self.compile_expression(generator, &node.children[0])?;
 
@@ -280,6 +220,70 @@ impl Compiler {
         Ok({})
     }
 
+    fn compile_subscript(&mut self, generator: &mut Generator, node: &ASTNode, mut parent: Option<Register>, parent_is_object: bool) -> Result<(Register, Register), CompilerError> {
+        if parent.is_none() {
+            self.compile_sub_expression(generator, node.children.last().unwrap())?;
+            let array_register = generator.next_free_register();
+            generator.emit(Store::new_boxed(array_register), node.code_segment);
+            parent = Some(array_register);
+        }
+
+        self.compile_expression(generator, &node.children[0])?;
+        let mut index = generator.next_free_register();
+        generator.emit(Store::new_boxed(index), node.code_segment);
+        let mut array = parent.unwrap();
+
+
+        if node.children.len() > 1 {
+            match &node.children[1].ast_type {
+                ASTType::Subscript => {
+                    let register = generator.next_free_register();
+                    generator.emit(Store::new_boxed(register), node.code_segment);
+
+                    let (idx, arr) = self.compile_subscript(generator, &node.children[1], Some(register), false)?;
+
+                    generator.release_register(array);
+                    generator.release_register(index);
+
+                    index = idx;
+                    array = arr;
+
+                    generator.release_register(register);
+
+                }
+                ASTType::ObjectAccess => {
+                    let (object, accessor, _) = self.compile_assign_object(generator, node, parent.unwrap())?;
+
+                    generator.release_register(array);
+                    generator.release_register(index);
+
+                    index = accessor;
+                    array = object;
+                }
+                ASTType::Identifier(identifier) => {
+                    if parent_is_object {
+                        let identifier_register = generator.next_free_register();
+                        generator.emit(LoadImmediate::new_boxed(Value::from_string(Rc::new(identifier.clone()))), node.children[1].code_segment);
+                        generator.emit(Store::new_boxed(identifier_register), node.code_segment);
+
+                        generator.emit(GetObjectMember::new_boxed(parent.unwrap(), identifier_register), node.children[1].code_segment);
+
+                        generator.release_register(array);
+
+                        array = generator.next_free_register();
+                        generator.emit(Store::new_boxed(array), node.children[1].code_segment);
+
+                        generator.release_register(identifier_register);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+
+        Ok((index, array))
+    }
+
     fn compile_sub_expression(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
         match &node.ast_type {
             ASTType::IntegerValue(_) => self.compile_value_to_accumulator(generator, node),
@@ -290,37 +294,51 @@ impl Compiler {
             ASTType::CreateObject => self.compile_create_object(generator, node),
             ASTType::CreateArray => self.compile_create_array(generator, node),
             ASTType::Expression => self.compile_expression(generator, node),
-            ASTType::Subscript(name) => {
-                let variable_handle = generator.next_variable_handle(name);
-                generator.emit(GetVariable::new_boxed(variable_handle), node.code_segment);
-                let array_register = generator.next_free_register();
-                generator.emit(Store::new_boxed(array_register), node.code_segment);
+            ASTType::Subscript => {
+                let (index, array) = self.compile_subscript(generator, node, None, false)?;
+                generator.emit(LoadRegister::new_boxed(index), all_segments(node));
+                generator.emit(GetArray::new_boxed(array), all_segments(node));
 
-                self.compile_expression(generator, &node.children[0])?;
-
-                generator.emit(GetArray::new_boxed(array_register), node.code_segment);
-
-                generator.release_register(array_register);
-
+                generator.release_register(index);
+                generator.release_register(array);
                 Ok({})
             }
-            ASTType::ObjectAccess2 => {
-                self.compile_expression(generator, &node.children[1])?;
-                let object_register = generator.next_free_register();
+            ASTType::ObjectAccess => {
+                let value_accessed = &node.children[1];
+
+                self.compile_expression(generator, value_accessed)?;
+                let mut object_register = generator.next_free_register();
                 generator.emit(Store::new_boxed(object_register), node.code_segment);
 
-                self.compile_object_get(generator, node, object_register)?;
+                let accessor = &node.children[0];
 
+                let accessor_register;
+                let mut is_array = false;
 
-                Ok({})
-            }
-            ASTType::ObjectAccess(name) => {
-                let variable_handle = generator.next_variable_handle(name);
-                generator.emit(GetVariable::new_boxed(variable_handle), node.code_segment);
-                let object_register = generator.next_free_register();
-                generator.emit(Store::new_boxed(object_register), node.code_segment);
-                self.compile_object_get(generator, node, object_register)?;
+                match &accessor.ast_type {
+                    ASTType::Identifier(identifier) => {
+                        generator.emit(LoadImmediate::new_boxed(Value::from_string(Rc::new(identifier.clone()))), accessor.code_segment);
+                        accessor_register = generator.next_free_register();
+                        generator.emit(Store::new_boxed(accessor_register), accessor.code_segment);
+                    }
+                    _ => {
+                        let (obj, acc, arr) = self.compile_assign_object(generator, accessor, object_register)?;
+                        object_register = obj;
+                        accessor_register = acc;
+                        is_array = arr;
+                    }
+                }
+
+                if !is_array {
+                    generator.emit(GetObjectMember::new_boxed(object_register, accessor_register), all_segments(node));
+                } else {
+                    generator.emit(LoadRegister::new_boxed(accessor_register), all_segments(node));
+                    generator.emit(GetArray::new_boxed(object_register), all_segments(node));
+                }
+
                 generator.release_register(object_register);
+                generator.release_register(accessor_register);
+
                 Ok({})
             }
             _ => Err(CompilerError::UnexpectedASTNode(node.clone())),
@@ -338,62 +356,77 @@ impl Compiler {
             generator.emit(Store::new_boxed(rhs_register), node.children[2].code_segment);
 
             let child = &node.children[0];
-            self.compile_sub_expression(generator, child)?;
 
             let operator = &node.children[1];
 
             match &operator.ast_type {
                 ASTType::ExpressionOp(op) => match op {
                     ExpressionOp::Add => {
+                        self.compile_sub_expression(generator, child)?;
                         generator.emit(Add::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::Subtract => {
+                        self.compile_sub_expression(generator, child)?;
                         generator.emit(Subtract::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::Multiply => {
+                        self.compile_sub_expression(generator, child)?;
                         generator.emit(Multiply::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::Divide => {
+                        self.compile_sub_expression(generator, child)?;
                         generator.emit(Divide::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::Equal => {
+                        self.compile_sub_expression(generator, child)?;
                         generator.emit(CompareEq::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::NotEqual => {
+                        self.compile_sub_expression(generator, child)?;
                         generator.emit(CompareNotEq::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::LessThan => {
+                        self.compile_sub_expression(generator, child)?;
                         generator.emit(CompareLessThan::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::GreaterThan => {
+                        self.compile_sub_expression(generator, child)?;
                         generator.emit(CompareGreaterThan::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::LessThanOrEqual => {
+                        self.compile_sub_expression(generator, child)?;
                         generator.emit(CompareLessThanOrEqual::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::GreaterThanOrEqual => {
+                        self.compile_sub_expression(generator, child)?;
                         generator.emit(CompareGreaterThanOrEqual::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::And => {
+                        self.compile_sub_expression(generator, child)?;
                         generator.emit(And::new_boxed(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::Or => {
+                        self.compile_sub_expression(generator, child)?;
                         generator.emit(Or::new_boxed(rhs_register), node.children[1].code_segment);
                     }
-                    ExpressionOp::Assign => {
-                        self.compile_assign(generator, op, &node.children[0], rhs_register)?;
-                    }
                     ExpressionOp::AddAssign => {
-                        self.compile_assign(generator, op, &node.children[0], rhs_register)?;
+                        self.compile_sub_expression(generator, child)?;
+                        self.compile_assign_expression(generator, op, &node.children[0], rhs_register)?;
                     }
                     ExpressionOp::SubtractAssign => {
-                        self.compile_assign(generator, op, &node.children[0], rhs_register)?;
+                        self.compile_sub_expression(generator, child)?;
+                        self.compile_assign_expression(generator, op, &node.children[0], rhs_register)?;
                     }
                     ExpressionOp::MultiplyAssign => {
-                        self.compile_assign(generator, op, &node.children[0], rhs_register)?;
+                        self.compile_sub_expression(generator, child)?;
+                        self.compile_assign_expression(generator, op, &node.children[0], rhs_register)?;
                     }
                     ExpressionOp::DivideAssign => {
-                        self.compile_assign(generator, op, &node.children[0], rhs_register)?;
+                        self.compile_sub_expression(generator, child)?;
+                        self.compile_assign_expression(generator, op, &node.children[0], rhs_register)?;
+                    }
+                    ExpressionOp::Assign => {
+                        self.compile_assign_expression(generator, op, &node.children[0], rhs_register)?;
                     }
                 }
                 _ => return Err(CompilerError::UnexpectedASTNode(operator.clone())),
@@ -405,29 +438,110 @@ impl Compiler {
         Ok({})
     }
 
-    fn compile_access(&mut self, generator: &mut Generator, node: &ASTNode, rhs_register: Register) -> Result<(), CompilerError> {
+    fn compile_assign_object(&mut self, generator: &mut Generator, node: &ASTNode, object: Register) -> Result<(Register, Register, bool), CompilerError> {
+        match &node.ast_type {
+            ASTType::ObjectAccess => {
+                let value_accessed = &node.children[1].children[0];
+
+                let obj = match &value_accessed.ast_type {
+                    ASTType::Identifier(identifier) => {
+                        let identifier_register = generator.next_free_register();
+                        generator.emit(LoadImmediate::new_boxed(Value::from_string(Rc::new(identifier.clone()))), value_accessed.code_segment);
+                        generator.emit(Store::new_boxed(identifier_register), node.code_segment);
+
+                        generator.emit(GetObjectMember::new_boxed(object, identifier_register), value_accessed.code_segment);
+
+                        generator.release_register(identifier_register);
+
+                        let register = generator.next_free_register();
+                        generator.emit(Store::new_boxed(register), value_accessed.code_segment);
+                        Ok(register)
+                    }
+                    _ => { Err(CompilerError::UnexpectedASTNode(value_accessed.clone())) }
+                }?;
+
+                let accessor = &node.children[0];
+
+                match &accessor.ast_type {
+                    ASTType::Identifier(identifier) => {
+                        let register = generator.next_free_register();
+                        generator.emit(LoadImmediate::new_boxed(Value::from_string(Rc::new(identifier.clone()))), accessor.code_segment);
+                        generator.emit(Store::new_boxed(register), node.code_segment);
+
+                        generator.release_register(object);
+
+                        Ok((obj, register, false))
+                    }
+                    _ => {
+                        let result = self.compile_assign_object(generator, accessor, obj)?;
+
+                        generator.release_register(obj);
+                        generator.release_register(object);
+
+                        Ok(result)
+                    }
+                }
+            }
+            ASTType::Subscript => {
+                let (index, array) = self.compile_subscript(generator, node, Some(object), true)?;
+
+                Ok((array, index, true))
+            }
+            _ => Err(CompilerError::UnexpectedASTNode(node.clone())),
+        }
+    }
+
+    fn compile_assign(&mut self, generator: &mut Generator, node: &ASTNode, rhs_register: Register) -> Result<(), CompilerError> {
         match &node.ast_type {
             ASTType::Identifier(i) => {
                 let variable_handle = generator.next_variable_handle(i);
                 generator.emit(SetVariable::new_boxed(variable_handle), node.code_segment);
             }
-            ASTType::ObjectAccess(i) => {
-                let variable_handle = generator.next_variable_handle(i);
-                generator.emit(GetVariable::new_boxed(variable_handle), node.code_segment);
-                let object_register = generator.next_free_register();
+            ASTType::ObjectAccess => {
+                let value_accessed = &node.children[1];
+
+                self.compile_expression(generator, value_accessed)?;
+                let mut object_register = generator.next_free_register();
                 generator.emit(Store::new_boxed(object_register), node.code_segment);
 
-                self.compile_object_access(generator, &node, object_register, rhs_register)?;
+                let accessor = &node.children[0];
+
+                let accessor_register;
+
+                let mut is_array = false;
+
+                match &accessor.ast_type {
+                    ASTType::Identifier(identifier) => {
+                        generator.emit(LoadImmediate::new_boxed(Value::from_string(Rc::new(identifier.clone()))), accessor.code_segment);
+                        accessor_register = generator.next_free_register();
+                        generator.emit(Store::new_boxed(accessor_register), accessor.code_segment);
+                    }
+                    _ => {
+                        let (obj, acc, arr) = self.compile_assign_object(generator, accessor, object_register)?;
+                        object_register = obj;
+                        accessor_register = acc;
+                        is_array = arr;
+                    }
+                }
+
+                generator.emit(LoadRegister::new_boxed(rhs_register), node.code_segment);
+
+                if !is_array {
+                    generator.emit(SetObjectMember::new_boxed(object_register, accessor_register), all_segments(node));
+                } else {
+                    generator.emit(LoadRegister::new_boxed(accessor_register), node.code_segment);
+                    generator.emit(SetArray::new_boxed(object_register, rhs_register), node.code_segment);
+                }
+
+
+                generator.release_register(object_register);
+                generator.release_register(accessor_register);
             }
-            ASTType::Subscript(i) => {
-                let variable_handle = generator.next_variable_handle(i);
-                generator.emit(GetVariable::new_boxed(variable_handle), node.code_segment);
-                let array_register = generator.next_free_register();
-                generator.emit(Store::new_boxed(array_register), node.code_segment);
+            ASTType::Subscript => {
+                let (index, array) = self.compile_subscript(generator, node, None, false)?;
 
-                self.compile_expression(generator, &node.children[0])?;
-
-                generator.emit(ArraySet::new_boxed(array_register, rhs_register), node.code_segment);
+                generator.emit(LoadRegister::new_boxed(index), all_segments(node));
+                generator.emit(SetArray::new_boxed(array, rhs_register), all_segments(node));
             }
             _ => return Err(CompilerError::ExpectedIdentifier(node.clone())),
         };
@@ -435,34 +549,34 @@ impl Compiler {
         Ok({})
     }
 
-    fn compile_assign(&mut self, generator: &mut Generator, op: &ExpressionOp, node: &ASTNode, rhs_register: Register) -> Result<(), CompilerError> {
+    fn compile_assign_expression(&mut self, generator: &mut Generator, op: &ExpressionOp, node: &ASTNode, rhs_register: Register) -> Result<(), CompilerError> {
         match op {
             ExpressionOp::Assign => {
                 generator.emit(LoadRegister::new_boxed(rhs_register), node.code_segment);
-                self.compile_access(generator, node, rhs_register)?;
+                self.compile_assign(generator, node, rhs_register)?;
             }
             ExpressionOp::AddAssign => {
                 generator.emit(Add::new_boxed(rhs_register), node.code_segment);
                 let rhs_register = generator.next_free_register();
-                self.compile_access(generator, node, rhs_register)?;
+                self.compile_assign(generator, node, rhs_register)?;
                 generator.release_register(rhs_register);
             }
             ExpressionOp::SubtractAssign => {
                 generator.emit(Subtract::new_boxed(rhs_register), node.code_segment);
                 let rhs_register = generator.next_free_register();
-                self.compile_access(generator, node, rhs_register)?;
+                self.compile_assign(generator, node, rhs_register)?;
                 generator.release_register(rhs_register);
             }
             ExpressionOp::MultiplyAssign => {
                 generator.emit(Multiply::new_boxed(rhs_register), node.code_segment);
                 let rhs_register = generator.next_free_register();
-                self.compile_access(generator, node, rhs_register)?;
+                self.compile_assign(generator, node, rhs_register)?;
                 generator.release_register(rhs_register);
             }
             ExpressionOp::DivideAssign => {
                 generator.emit(Divide::new_boxed(rhs_register), node.code_segment);
                 let rhs_register = generator.next_free_register();
-                self.compile_access(generator, node, rhs_register)?;
+                self.compile_assign(generator, node, rhs_register)?;
                 generator.release_register(rhs_register);
             }
             _ => {}
@@ -496,8 +610,16 @@ impl Compiler {
         for member in &node.children {
             match &member.ast_type {
                 ASTType::ObjectMember(name) => {
+                    let accessor = &node.children[0];
+
+                    let accessor_register = generator.next_free_register();
+                    generator.emit(LoadImmediate::new_boxed(Value::from_string(Rc::new(name.clone()))), accessor.code_segment);
+                    generator.emit(Store::new_boxed(accessor_register), accessor.code_segment);
+
                     self.compile_expression(generator, &member.children[0])?;
-                    generator.emit(SetObjectMember::new_boxed(object_register.clone(), name.clone()), member.code_segment)
+                    generator.emit(SetObjectMember::new_boxed(object_register.clone(), accessor_register), member.code_segment);
+
+                    generator.release_register(accessor_register);
                 }
                 _ => return Err(CompilerError::UnexpectedASTNode(member.clone()))
             }
@@ -531,4 +653,30 @@ impl Compiler {
 
         Ok({})
     }
+}
+
+fn all_segments(node: &ASTNode) -> CodeSegment {
+    let mut segment = node.code_segment;
+
+    for child in &node.children {
+        let child_segment = all_segments(child);
+
+        if child_segment.start_x <= segment.start_x {
+            segment.start_x = child_segment.start_x;
+        }
+
+        if child_segment.start_y <= segment.start_y {
+            segment.start_y = child_segment.start_y;
+        }
+
+        if child_segment.end_x >= segment.end_x {
+            segment.end_x = child_segment.end_x;
+        }
+
+        if child_segment.end_x >= segment.end_x {
+            segment.end_x = child_segment.end_x;
+        }
+    }
+
+    segment
 }
