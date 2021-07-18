@@ -17,6 +17,7 @@ pub enum DataValue {
     String(Rc<String>),
     Array(Array),
     Pointer(Pointer<dyn Any>),
+    FunctionPointer(Rc<String>),
     Undefined,
 }
 
@@ -99,11 +100,6 @@ impl Value {
                     rhs => context.throw_error(&format!("Cannot convert {:?} to float", rhs)),
                 }
             }
-            DataValue::Object(_) => {
-                match &rhs_value.value {
-                    _ => context.throw_error("Add operator is not implemented for objects"),
-                }
-            }
             DataValue::String(lhs) => {
                 match &rhs_value.value {
                     DataValue::String(rhs) => {
@@ -112,20 +108,9 @@ impl Value {
                     rhs => context.throw_error(&format!("Cannot convert {:?} to string", rhs)),
                 }
             }
-            DataValue::Array(_) => {
-                match &rhs_value.value {
-                    _ => context.throw_error("Add operator is not implemented for arrays"),
-                }
-            }
-            DataValue::Pointer(_) => {
-                match &rhs_value.value {
-                    _ => context.throw_error("Add operator is not implemented for pointers"),
-                }
-            }
-            DataValue::Undefined => {
-                match &rhs_value.value {
-                    _ => context.throw_error("Add operator is not implemented for undefined"),
-                }
+            rhs => {
+                context.throw_error(&format!("Add operator is not implemented for {:?}", rhs));
+                Value::from_i64(-1)
             }
         }
     }
@@ -146,30 +131,9 @@ impl Value {
                     rhs => context.throw_error(&format!("Cannot convert {:?} to float", rhs)),
                 }
             }
-            DataValue::Object(_) => {
-                match &rhs_value.value {
-                    _ => context.throw_error("Subtract operator is not implemented for objects"),
-                }
-            }
-            DataValue::String(_) => {
-                match &rhs_value.value {
-                    _ => context.throw_error("Subtract operator is not implemented for strings"),
-                }
-            }
-            DataValue::Array(_) => {
-                match &rhs_value.value {
-                    _ => context.throw_error("Subtract operator is not implemented for arrays"),
-                }
-            }
-            DataValue::Pointer(_) => {
-                match &rhs_value.value {
-                    _ => context.throw_error("Subtract operator is not implemented for pointers"),
-                }
-            }
-            DataValue::Undefined => {
-                match &rhs_value.value {
-                    _ => context.throw_error("Subtract operator is not implemented for undefined"),
-                }
+            rhs => {
+                context.throw_error(&format!("Subtract operator is not implemented for {:?}", rhs));
+                Value::from_i64(-1)
             }
         }
     }
@@ -190,30 +154,9 @@ impl Value {
                     rhs => context.throw_error(&format!("Cannot convert {:?} to float", rhs)),
                 }
             }
-            DataValue::Object(_) => {
-                match &rhs_value.value {
-                    _ => context.throw_error("Multiply operator is not implemented for object"),
-                }
-            }
-            DataValue::String(_) => {
-                match &rhs_value.value {
-                    _ => context.throw_error("Multiply operator is not implemented for strings"),
-                }
-            }
-            DataValue::Array(_) => {
-                match &rhs_value.value {
-                    _ => context.throw_error("Multiply operator is not implemented for arrays"),
-                }
-            }
-            DataValue::Pointer(_) => {
-                match &rhs_value.value {
-                    _ => context.throw_error("Multiply operator is not implemented for pointers"),
-                }
-            }
-            DataValue::Undefined => {
-                match &rhs_value.value {
-                    _ => context.throw_error("Multiply operator is not implemented for undefined"),
-                }
+            rhs => {
+                context.throw_error(&format!("Multiply operator is not implemented for {:?}", rhs));
+                Value::from_i64(-1)
             }
         }
     }
@@ -234,30 +177,9 @@ impl Value {
                     rhs => context.throw_error(&format!("Cannot convert {:?} to float", rhs)),
                 }
             }
-            DataValue::Object(_) => {
-                match &rhs_value.value {
-                    _ => context.throw_error("Divide operator is not implemented for objects"),
-                }
-            }
-            DataValue::String(_) => {
-                match &rhs_value.value {
-                    _ => context.throw_error("Divide operator is not implemented for strings"),
-                }
-            }
-            DataValue::Array(_) => {
-                match &rhs_value.value {
-                    _ => context.throw_error("Divide operator is not implemented for arrays"),
-                }
-            }
-            DataValue::Pointer(_) => {
-                match &rhs_value.value {
-                    _ => context.throw_error("Divide operator is not implemented for pointers"),
-                }
-            }
-            DataValue::Undefined => {
-                match &rhs_value.value {
-                    _ => context.throw_error("Divide operator is not implemented for undefined"),
-                }
+            rhs => {
+                context.throw_error(&format!("Divide operator is not implemented for {:?}", rhs));
+                Value::from_i64(-1)
             }
         }
     }
@@ -284,46 +206,9 @@ impl Value {
                     }
                 }
             }
-            DataValue::Object(_) => {
-                match &rhs_value.value {
-                    _ => {
-                        context.throw_error("Equal operator is not implemented for objects");
-                        false
-                    }
-                }
-            }
-            DataValue::String(lhs) => {
-                match &rhs_value.value {
-                    DataValue::String(rhs) => { lhs == rhs }
-                    _ => {
-                        context.throw_error("Cannot compare a string to a basic value");
-                        false
-                    }
-                }
-            }
-            DataValue::Array(_) => {
-                match &rhs_value.value {
-                    _ => {
-                        context.throw_error("Equal operator is not implemented for arrays");
-                        false
-                    }
-                }
-            }
-            DataValue::Pointer(_) => {
-                match &rhs_value.value {
-                    _ => {
-                        context.throw_error("Equal operator is not implemented for pointers");
-                        false
-                    }
-                }
-            }
-            DataValue::Undefined => {
-                match &rhs_value.value {
-                    _ => {
-                        context.throw_error("Equal operator is not implemented for undefined");
-                        false
-                    }
-                }
+            rhs => {
+                context.throw_error(&format!("Equal operator is not implemented for {:?}", rhs));
+                false
             }
         }
     }
@@ -350,47 +235,23 @@ impl Value {
                     }
                 }
             }
-            DataValue::Object(_) => {
-                match &rhs_value.value {
-                    _ => {
-                        context.throw_error("Compare operator is not implemented for objects");
-                        None
-                    }
-                }
+            rhs => {
+                context.throw_error(&format!("Compare operator is not implemented for {:?}", rhs));
+                None
             }
-            DataValue::String(lhs) => {
-                match &rhs_value.value {
-                    DataValue::String(rhs) => { lhs.partial_cmp(&rhs) }
-                    _ => {
-                        context.throw_error("Cannot compare a string to with a basic value");
-                        None
-                    }
-                }
-            }
-            DataValue::Array(_) => {
-                match &rhs_value.value {
-                    _ => {
-                        context.throw_error("Compare operator is not implemented for arrays");
-                        None
-                    }
-                }
-            }
-            DataValue::Pointer(_) => {
-                match &rhs_value.value {
-                    _ => {
-                        context.throw_error("Compare operator is not implemented for pointers");
-                        None
-                    }
-                }
-            }
-            DataValue::Undefined => {
-                match &rhs_value.value {
-                    _ => {
-                        context.throw_error("Compare operator is not implemented for undefined");
-                        None
-                    }
-                }
-            }
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        match self.get_data_value() {
+            DataValue::F64(float_value) => format!("{}", float_value),
+            DataValue::I64(int_value) => format!("{}", int_value),
+            DataValue::Object(object) => format!("{:?}", object),
+            DataValue::String(string) => format!("{}", string),
+            DataValue::Array(array) => format!("{}", array),
+            DataValue::FunctionPointer(function_pointer) => format!("fn {}", function_pointer),
+            DataValue::Pointer(_) => format!("Internal Pointer"),
+            DataValue::Undefined => format!("Undefined")
         }
     }
 }
@@ -404,8 +265,12 @@ impl fmt::Display for Value {
             DataValue::Object(v) => write!(f, "({:?}: Object)", v.clone()),
             DataValue::String(v) => write!(f, "({}: String)", v.clone()),
             DataValue::Array(v) => write!(f, "({}: Array)", v.clone()),
+            DataValue::FunctionPointer(v) => write!(f, "({}: FunctionPointer)", v.clone()),
             DataValue::Pointer(_) => write!(f, "(Internal Pointer)"),
             DataValue::Undefined => write!(f, "(Undefined)"),
         }
     }
 }
+
+
+

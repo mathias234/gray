@@ -5,7 +5,7 @@ mod gray_interp;
 mod debug;
 
 use gray::interpreter::interpreter::{Interpreter, ExecutionContext};
-use gray::interpreter::value::{Value, DataValue};
+use gray::interpreter::value::{Value};
 use std::rc::Rc;
 use gray::interpreter::function_pointer::FunctionArgs;
 
@@ -34,7 +34,7 @@ fn assert_eq(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
 
 
 fn print_function(context: &ExecutionContext, args: FunctionArgs) -> Value {
-    println!("{}", value_to_string(&format_to_value(context, args)));
+    println!("{}", format_to_value(context, args).to_string());
 
     Value::from_i64(0)
 }
@@ -55,7 +55,7 @@ fn format_to_value(context: &ExecutionContext, mut args: FunctionArgs) -> Value 
             '{' => {
                 chars.next();
 
-                let value_formatted = value_to_string(&args.get_next(context));
+                let value_formatted = args.get_next(context).to_string();
                 formatted_string.push_str(&value_formatted);
             }
             c => {
@@ -67,14 +67,3 @@ fn format_to_value(context: &ExecutionContext, mut args: FunctionArgs) -> Value 
     Value::from_string(Rc::from(formatted_string))
 }
 
-fn value_to_string(args: &Value) -> String {
-    match args.get_data_value() {
-        DataValue::F64(float_value) => format!("{}", float_value),
-        DataValue::I64(int_value) => format!("{}", int_value),
-        DataValue::Object(object) => format!("{:?}", object),
-        DataValue::String(string) => format!("{}", string),
-        DataValue::Array(array) => format!("{}", array),
-        DataValue::Pointer(_) => format!("Internal Pointer"),
-        DataValue::Undefined => format!("Undefined"),
-    }
-}
