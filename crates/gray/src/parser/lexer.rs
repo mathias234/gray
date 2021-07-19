@@ -40,6 +40,8 @@ pub enum Keyword {
     IfStatement,
     ElseStatement,
     WhileStatement,
+    ForStatement,
+    In,
     Return,
     Namespace,
     Break,
@@ -380,6 +382,8 @@ impl Lexer {
             "namespace" => Some(Keyword::Namespace),
             "break" => Some(Keyword::Break),
             "continue" => Some(Keyword::Continue),
+            "for" => Some(Keyword::ForStatement),
+            "in" => Some(Keyword::In),
             _ => None,
         }
     }

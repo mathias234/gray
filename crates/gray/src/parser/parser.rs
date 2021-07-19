@@ -35,6 +35,7 @@ pub enum ASTType {
     BreakExpresssion,
     IfStatement,
     WhileStatement,
+    ForStatement,
     Namespace(String),
     ExpressionOp(ExpressionOp),
     Function(String),
@@ -185,6 +186,7 @@ impl Parser {
                         Keyword::VariableDeclaration => self.parse_variable_declaration(),
                         Keyword::IfStatement => self.parse_if_statement(),
                         Keyword::WhileStatement => self.parse_while_statement(),
+                        Keyword::ForStatement => self.parse_for_statement(),
                         Keyword::Return => {
                             let token = self.get_next_token()?;
                             let mut return_node = ASTNode::new(ASTType::ReturnExpression, token.position);
@@ -390,6 +392,39 @@ impl Parser {
         let condition = self.parse_expression()?;
 
         node.children.push(condition);
+
+        let open_curly = self.get_next_token()?;
+        Parser::validate_token_is_delimiter(open_curly, Delimiter::OpenCurlyBracket)?;
+
+        node.children.push(self.parse_scope()?);
+
+        Ok(node)
+    }
+
+    fn parse_for_statement(&mut self) -> Result<ASTNode, ParserError> {
+        let token = self.get_next_token()?;
+
+        let mut node = ASTNode::new(ASTType::ForStatement, token.position);
+
+        let identifier = Parser::token_to_simple_ast_node(self.get_next_token()?)?;
+
+        node.children.push(identifier);
+
+        let in_keyword = self.get_next_token()?;
+        match &in_keyword.token_type {
+            TokenType::Keyword(kv) => {
+                match kv {
+                    Keyword::In => {},
+                    kv => return Err(ParserError::UnexpectedKeywordInStream(kv.clone(), in_keyword.clone())),
+                }
+            }
+            _ => return Err(ParserError::UnexpectedTokenInStream(in_keyword.clone()))
+        };
+
+        let expression = self.parse_expression()?;
+
+        node.children.push(expression);
+
 
         let open_curly = self.get_next_token()?;
         Parser::validate_token_is_delimiter(open_curly, Delimiter::OpenCurlyBracket)?;

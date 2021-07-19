@@ -7,7 +7,7 @@ use crate::interpreter::value::Value;
 use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument, LoadRegister, Break, Continue, PopBreakContinueScope, PushBreakContinueScope, ParamsList};
 use crate::bytecode::instructions::jump::{JumpZero, Jump};
 use crate::bytecode::instructions::math::{Add, Subtract, Multiply, Divide};
-use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember, GetObjectMember, CreateEmptyArray, PushArray, GetArray, SetArray};
+use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember, GetObjectMember, CreateEmptyArray, PushArray, GetArray, SetArray, GetArrayLength};
 use crate::bytecode::instructions::comparison::{CompareGreaterThan, CompareLessThan, CompareNotEq, CompareEq, CompareLessThanOrEqual, CompareGreaterThanOrEqual, And, Or};
 use std::rc::Rc;
 use crate::compiler::compiler::CompilerError::UnexpectedASTNode;
@@ -23,7 +23,7 @@ pub enum CompilerError {
 
 pub struct Compiler {
     blocks: HashMap<String, CodeBlock>,
-    native_functions: Vec<NativeFunction>
+    native_functions: Vec<NativeFunction>,
 }
 
 
@@ -41,7 +41,7 @@ impl NativeFunction {
         NativeFunction {
             namespace,
             name,
-            pointer
+            pointer,
         }
     }
 
@@ -60,7 +60,7 @@ impl Compiler {
     pub fn compile(root_node: ASTNode, native_functions: Vec<NativeFunction>) -> Result<HashMap<String, CodeBlock>, CompilerError> {
         let mut compiler = Compiler {
             blocks: HashMap::new(),
-            native_functions
+            native_functions,
         };
 
 
@@ -88,7 +88,6 @@ impl Compiler {
                     generator.emit(ParamsList::new_boxed(argument_index), child.code_segment);
                     let parameter_handle = generator.next_variable_handle("params");
                     generator.emit(DeclareVariable::new_boxed(parameter_handle), child.code_segment);
-
                 }
                 _ => return Err(CompilerError::UnexpectedASTNode(child.clone()))
             }
@@ -146,6 +145,9 @@ impl Compiler {
                 }
                 ASTType::WhileStatement => {
                     self.compile_while_statement(namespace, generator, child)?;
+                }
+                ASTType::ForStatement => {
+                    self.compile_for_statement(namespace, generator, child)?;
                 }
                 ASTType::BreakExpresssion => {
                     generator.emit(Break::new_boxed(), node.code_segment);
@@ -275,6 +277,63 @@ impl Compiler {
         generator.emit(PopBreakContinueScope::new_boxed(), node.code_segment);
 
         generator.emit_at(PushBreakContinueScope::new_boxed(break_label, continue_label), &push_break_continue_holder, node.code_segment);
+
+        Ok({})
+    }
+
+    fn compile_for_statement(&mut self, namespace: &str, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
+        let push_break_continue_holder = generator.make_instruction_holder();
+
+        generator.emit(PushScope::new_boxed(), all_segments(node));
+
+        self.compile_expression(generator, &node.children[1])?;
+        let array_register = generator.next_free_register();
+        generator.emit(Store::new_boxed(array_register), all_segments(node));
+
+        let iterator_register = generator.next_free_register();
+        generator.emit(LoadImmediate::new_boxed(Value::from_i64(-1)), all_segments(node));
+        generator.emit(Store::new_boxed(iterator_register), all_segments(node));
+
+
+        let for_start = generator.make_label();
+
+        generator.emit(LoadImmediate::new_boxed(Value::from_i64(1)), node.code_segment);
+        generator.emit(Add::new_boxed(iterator_register), node.code_segment);
+        generator.emit(Store::new_boxed(iterator_register), node.code_segment);
+
+        generator.emit(LoadRegister::new_boxed(array_register), node.children[1].code_segment);
+        generator.emit(GetArrayLength::new_boxed(), node.children[1].code_segment);
+        generator.emit(CompareNotEq::new_boxed(iterator_register), node.children[1].code_segment);
+
+        let scope_start = generator.make_instruction_holder();
+
+        let identifier_handle = match &node.children[0].ast_type {
+            ASTType::Identifier(ident) => generator.next_variable_handle(ident),
+            _ => return Err(CompilerError::ExpectedIdentifier(node.children[0].clone()))
+        };
+
+        generator.emit(LoadRegister::new_boxed(iterator_register), all_segments(node));
+        generator.emit(GetArray::new_boxed(array_register), all_segments(&node.children[1]));
+        generator.emit(DeclareVariable::new_boxed(identifier_handle), all_segments(&node.children[0]));
+
+        self.compile_scope(namespace, generator, &node.children[2], true)?;
+
+
+        generator.emit(Jump::new_boxed(for_start), node.code_segment);
+
+        let scope_end = generator.make_label();
+
+        generator.emit_at(JumpZero::new_boxed(scope_end), &scope_start, node.code_segment);
+
+        let break_label = generator.make_label();
+
+        generator.emit(PopBreakContinueScope::new_boxed(), node.code_segment);
+        generator.emit_at(PushBreakContinueScope::new_boxed(break_label, for_start), &push_break_continue_holder, node.code_segment);
+
+        generator.release_register(array_register);
+        generator.release_register(iterator_register);
+
+        generator.emit(PopScope::new_boxed(), all_segments(node));
 
         Ok({})
     }

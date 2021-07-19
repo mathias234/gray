@@ -76,6 +76,16 @@ impl GetArray {
     }
 }
 
+pub struct GetArrayLength {
+}
+
+#[allow(dead_code)]
+impl GetArrayLength {
+    pub fn new_boxed() -> Box<GetArrayLength> {
+        Box::new(GetArrayLength { })
+    }
+}
+
 pub struct SetArray {
     array: Register,
     value: Register,
@@ -184,6 +194,27 @@ impl Instruction for PushArray {
     }
 
     fn to_string(&self) -> String { format!("PushArray {}", self.array) }
+}
+
+impl Instruction for GetArrayLength {
+    fn execute(&self, context: &mut ExecutionContext) {
+        let array = context.get_accumulator();
+
+        let len = match &array.get_data_value() {
+            DataValue::Array(array) => {
+                array.len() as i64
+            }
+            _ => {
+                context.throw_error("Expected array");
+                -1
+            }
+        };
+
+        context.set_accumulator(Value::from_i64(len));
+    }
+
+    fn to_string(&self) -> String { "GetArrayLength".to_string() }
+
 }
 
 impl Instruction for GetArray {

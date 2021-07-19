@@ -22,3 +22,27 @@ while i < 5 {
 }
 
 assert_eq(i, 2);
+
+let array = [0, 1, 2];
+
+let sum = 0;
+
+for v in array {
+    if v == 1 {
+        continue;
+    }
+    sum += 1;
+}
+
+assert_eq(sum, 2);
+
+let sum = 0;
+
+for v in array {
+    if v == 1 {
+        break;
+    }
+    sum += 1;
+}
+
+assert_eq(sum, 1);

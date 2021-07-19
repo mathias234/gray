@@ -61,3 +61,8 @@ fn functions_handles_test() {
 fn variable_arguments_test() {
     run_file("./tests/variable_arguments_test.gray");
 }
+
+#[test]
+fn loops_test() {
+    run_file("./tests/loops_test.gray");
+}
