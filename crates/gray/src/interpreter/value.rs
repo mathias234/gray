@@ -206,6 +206,15 @@ impl Value {
                     }
                 }
             }
+            DataValue::String(lhs) => {
+                match &rhs_value.value {
+                    DataValue::String(rhs) => { lhs == rhs }
+                    rhs_type => {
+                        context.throw_error(&format!("Cannot compare a string to {:?}", rhs_type));
+                        false
+                    }
+                }
+            }
             rhs => {
                 context.throw_error(&format!("Equal operator is not implemented for {:?}", rhs));
                 false
