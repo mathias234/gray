@@ -3,7 +3,6 @@ use crate::{
     bytecode::{register::Register},
     interpreter::{interpreter::{ExecutionContext, VariableHandle}, value::Value},
 };
-use std::rc::Rc;
 use crate::bytecode::label::Label;
 
 pub trait Instruction {
@@ -58,17 +57,17 @@ impl Store {
 }
 
 pub struct Call {
-    block_id: Rc<str>,
+    block_id: VariableHandle,
     arguments: Vec<Register>,
 }
 
 impl Call {
-    pub fn new_boxed(block_id: &str, args: Option<Vec<Register>>) -> Box<Call> {
+    pub fn new_boxed(block_id: VariableHandle, args: Option<Vec<Register>>) -> Box<Call> {
         if args.is_some() {
-            return Box::new(Call { block_id: Rc::from(block_id), arguments: args.unwrap() });
+            return Box::new(Call { block_id, arguments: args.unwrap() });
         }
 
-        Box::new(Call { block_id: Rc::from(block_id), arguments: Vec::new() })
+        Box::new(Call { block_id, arguments: Vec::new() })
     }
 }
 
@@ -208,7 +207,7 @@ impl Instruction for Store {
 impl Instruction for Call {
     fn execute(&self, context: &mut ExecutionContext) {
         context.set_call_arguments(Some(self.arguments.clone()));
-        context.set_call(&self.block_id);
+        context.set_call(self.block_id);
     }
 
     fn to_string(&self) -> String {

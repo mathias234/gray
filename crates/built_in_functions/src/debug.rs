@@ -1,13 +1,14 @@
-use gray::interpreter::interpreter::{Interpreter, ExecutionContext};
+use gray::interpreter::interpreter::ExecutionContext;
 use gray::interpreter::function_pointer::FunctionArgs;
 use gray::interpreter::value::Value;
 use std::time::Instant;
 use gray::interpreter::object::Object;
 use std::rc::Rc;
+use gray::compiler::compiler::NativeFunction;
 
-pub fn load_functions(interpreter: &mut Interpreter) {
-    interpreter.set_native_function(vec!["debug"], String::from("start_watch"), start_watch);
-    interpreter.set_native_function(vec!["debug"], String::from("stop_watch"), stop_watch);
+pub fn load_functions(functions: &mut Vec<NativeFunction>) {
+    functions.push(NativeFunction::new(vec!["debug".to_string()], String::from("start_watch"), start_watch));
+    functions.push(NativeFunction::new(vec!["debug".to_string()], String::from("stop_watch"), stop_watch));
 }
 
 fn start_watch(_: &ExecutionContext, _: FunctionArgs) -> Value {

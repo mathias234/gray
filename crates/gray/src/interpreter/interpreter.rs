@@ -2,7 +2,7 @@ use crate::{bytecode::{
     register::Register,
     label::Label,
     code_block::CodeBlock,
-}, interpreter::{value::Value, function_pointer::FunctionPointer}, error_printer};
+}, interpreter::{value::Value}, error_printer};
 
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -10,6 +10,8 @@ use crate::interpreter::function_pointer::FunctionArgs;
 use crate::bytecode::code_block::CodeSegment;
 use std::cell::Cell;
 use std::mem;
+use crate::interpreter::value::DataValue;
+use crate::compiler::compiler::{FunctionPointer, NativeFunction};
 
 pub type VariableHandle = usize;
 
@@ -48,7 +50,7 @@ pub struct ExecutionContext {
     block_arguments: Vec<Value>,
     jump_target: Option<Label>,
 
-    call_block_id: Option<String>,
+    call_block_id: Option<VariableHandle>,
     call_arguments: Option<Vec<Register>>,
     call_return: bool,
 
@@ -114,8 +116,8 @@ impl ExecutionContext {
         self.jump_target = Some(*label);
     }
 
-    pub fn set_call(&mut self, block_id: &str) {
-        self.call_block_id = Some(String::from(block_id))
+    pub fn set_call(&mut self, block_id: VariableHandle) {
+        self.call_block_id = Some(block_id)
     }
     pub fn set_call_arguments(&mut self, args: Option<Vec<Register>>) { self.call_arguments = args; }
     pub fn set_return(&mut self) {
@@ -147,7 +149,7 @@ impl ExecutionContext {
         }
     }
 
-    pub fn get_variable(&self, variable: VariableHandle) -> Value {
+    pub fn get_variable_no_error(&self, variable: VariableHandle) -> Option<Value> {
         for scope in &self.scope_stack {
             if scope.variables.len() <= variable {
                 continue;
@@ -156,10 +158,19 @@ impl ExecutionContext {
             let variable = &scope.variables[variable];
 
             if !variable.is_undefined() {
-                return variable.clone();
+                return Some(variable.clone());
             }
         }
 
+        None
+    }
+
+    pub fn get_variable(&self, variable: VariableHandle) -> Value {
+        let variable = self.get_variable_no_error(variable);
+
+        if let Some(variable) = variable {
+            return variable;
+        }
 
         self.throw_error(&format!("Failed to find variable"));
         Value::from_i64(-1)
@@ -244,8 +255,8 @@ pub struct Interpreter<'interp> {
 }
 
 impl<'interp> Interpreter<'interp> {
-    pub fn new(blocks: HashMap<String, CodeBlock>, code_text: Rc<String>) -> Interpreter<'interp> {
-        Interpreter {
+    pub fn new(blocks: HashMap<String, CodeBlock>, code_text: Rc<String>, native_functions: Vec<NativeFunction>) -> Interpreter<'interp> {
+        let mut interp = Interpreter {
             active_block: String::from(""),
             active_code_block: None,
             execution_context: ExecutionContext::new(code_text.clone()),
@@ -254,7 +265,13 @@ impl<'interp> Interpreter<'interp> {
             call_stack: Vec::new(),
             native_functions: HashMap::new(),
             code_text,
+        };
+
+        for func in native_functions {
+            interp.set_native_function(func.namespace, func.name, func.pointer);
         }
+
+        interp
     }
 
     pub fn run(&'interp mut self, start_block: Option<String>) -> Value {
@@ -360,9 +377,28 @@ impl<'interp> Interpreter<'interp> {
                     }
                 }
 
-                let block_to_call = self.blocks.get(&call_block_id);
+
+                let variable = self.execution_context.get_variable_no_error(call_block_id);
+
+                if variable.is_none() {
+                    self.execution_context.throw_error("Failed to find variable");
+                    continue;
+                }
+
+                let handle = match variable.unwrap().get_data_value() {
+                    DataValue::FunctionPointer(handle) => {
+                        handle.clone()
+                    }
+                    _ => {
+                        self.execution_context.throw_error("Expected value to be a function handle");
+                        continue;
+                    }
+                };
+
+                let block_to_call = self.blocks.get(&*handle);
+
                 if block_to_call.is_none() {
-                    let native_function = self.native_functions.get(&call_block_id);
+                    let native_function = self.native_functions.get(&*handle);
                     match native_function {
                         Some(func) => {
                             let returned_value = func(&self.execution_context, FunctionArgs::new(block_args));
@@ -370,8 +406,8 @@ impl<'interp> Interpreter<'interp> {
                             self.pc += 1;
                             continue;
                         }
-                        None => panic!("Unable to find function `{}`", call_block_id)
-                    }
+                        None => self.execution_context.throw_error(&format!("Unable to find function {:?}", call_block_id))
+                    };
                 }
 
                 let old_context = mem::replace(&mut self.execution_context, ExecutionContext::new(self.code_text.clone()));
@@ -385,7 +421,7 @@ impl<'interp> Interpreter<'interp> {
 
                 self.call_stack.push(current_frame);
 
-                self.active_block = call_block_id;
+                self.active_block = handle.to_string();
                 self.active_code_block = block_to_call;
 
                 len = self.active_code_block.unwrap().get_instructions().len();
@@ -443,7 +479,7 @@ impl<'interp> Interpreter<'interp> {
         self.get_last_accumulator_value()
     }
 
-    pub fn set_native_function(&mut self, namespace: Vec<&str>, name: String, function: FunctionPointer) {
+    fn set_native_function(&mut self, namespace: Vec<String>, name: String, function: FunctionPointer) {
         let mut full_name = String::new();
         for n in namespace {
             full_name += &format!("{}::", n);

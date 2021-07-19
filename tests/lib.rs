@@ -1,8 +1,9 @@
 use built_in_functions::declare_functions;
 
 fn run_file(file: &str) {
-    let mut interpreter = gray::load_file(file).unwrap();
-    declare_functions(&mut interpreter);
+    let functions = declare_functions();
+
+    let mut interpreter = gray::load_file(file, functions).unwrap();
     interpreter.run(None);
 }
 
@@ -49,4 +50,9 @@ fn io_test() {
 #[test]
 fn break_continue_test() {
     run_file("./tests/break_continue_test.gray");
+}
+
+#[test]
+fn functions_handles_test() {
+    run_file("./tests/functions_handles_test.gray");
 }

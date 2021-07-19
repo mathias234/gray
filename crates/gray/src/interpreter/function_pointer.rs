@@ -6,7 +6,6 @@ use crate::interpreter::interpreter::ExecutionContext;
 use std::rc::Rc;
 use std::cell::RefCell;
 
-pub type FunctionPointer = fn(&ExecutionContext, FunctionArgs) -> Value;
 
 
 pub struct FunctionArgs {

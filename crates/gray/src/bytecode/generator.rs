@@ -1,10 +1,13 @@
 use crate::bytecode::code_block::{CodeBlock, CodeSegment};
 use crate::bytecode::label::Label;
-use crate::bytecode::instructions::other::Instruction;
+use crate::bytecode::instructions::other::{Instruction, DeclareVariable, LoadImmediate};
 use crate::bytecode::register::Register;
 use crate::bytecode::instructions::object::NotAnInstruction;
 use crate::interpreter::interpreter::VariableHandle;
 use std::collections::HashMap;
+use crate::compiler::compiler::NativeFunction;
+use crate::interpreter::value::Value;
+use std::rc::Rc;
 
 pub struct Generator {
     register_index: usize,
@@ -15,14 +18,22 @@ pub struct Generator {
 }
 
 impl Generator {
-    pub fn new() -> Generator {
-        Generator {
+    pub fn new(native_functions: &Vec<NativeFunction>) -> Generator {
+        let mut generator = Generator {
             register_index: 0,
             released_registers: Vec::new(),
             block: CodeBlock::new(),
             variable_handles: HashMap::new(),
             last_handle: 0,
+        };
+
+        for func in native_functions {
+            let handle = generator.next_variable_handle(&func.full_name());
+            generator.emit(LoadImmediate::new_boxed(Value::from_function(Rc::new(func.full_name()))), CodeSegment::new(1, 1, 1, 1));
+            generator.emit(DeclareVariable::new_boxed(handle), CodeSegment::new(1, 1, 1, 1));
         }
+
+        generator
     }
 
     pub fn next_free_register(&mut self) -> Register {
@@ -55,8 +66,6 @@ impl Generator {
 
     pub fn next_variable_handle(&mut self, variable: &str) -> VariableHandle {
         if self.variable_handles.contains_key(variable) {
-            //println!("Getting variable handle for {:?} = {}", variable, self.variable_handles[variable]);
-
             return self.variable_handles[variable];
         }
 
@@ -64,8 +73,6 @@ impl Generator {
         let handle = self.last_handle;
 
         self.last_handle += 1;
-
-        //println!("Getting variable handle for {:?} = {}", variable, handle);
 
         return handle;
     }

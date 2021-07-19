@@ -1,0 +1,11 @@
+fn test_member(nr) {
+    return nr;
+}
+
+let a = {
+    member: test_member,
+};
+
+let func = a.member;
+
+assert_eq(func(555), 555);

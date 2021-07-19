@@ -1,11 +1,12 @@
-use gray::interpreter::interpreter::{Interpreter, ExecutionContext};
+use gray::interpreter::interpreter::ExecutionContext;
 use gray::interpreter::value::Value;
 use gray::interpreter::function_pointer::FunctionArgs;
+use gray::compiler::compiler::NativeFunction;
 
-pub fn load_functions(interpreter: &mut Interpreter) {
-    interpreter.set_native_function(vec!["array"], String::from("push"), array_push);
-    interpreter.set_native_function(vec!["array"], String::from("get"), array_get);
-    interpreter.set_native_function(vec!["array"], String::from("len"), array_len);
+pub fn load_functions(functions: &mut Vec<NativeFunction>) {
+    functions.push(NativeFunction::new(vec!["array".to_string()], String::from("push"), array_push));
+    functions.push(NativeFunction::new(vec!["array".to_string()], String::from("get"), array_get));
+    functions.push(NativeFunction::new(vec!["array".to_string()], String::from("len"), array_len));
 }
 
 fn array_push(context: &ExecutionContext, mut args: FunctionArgs) -> Value {

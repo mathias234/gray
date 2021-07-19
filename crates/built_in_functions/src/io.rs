@@ -1,14 +1,15 @@
-use gray::interpreter::interpreter::{Interpreter, ExecutionContext};
+use gray::interpreter::interpreter::ExecutionContext;
 use gray::interpreter::value::{Value, Pointer};
 use std::rc::Rc;
 use std::io::Read;
 use gray::interpreter::function_pointer::FunctionArgs;
 use std::any::Any;
+use gray::compiler::compiler::NativeFunction;
 
-pub fn load_functions(interpreter: &mut Interpreter) {
-    interpreter.set_native_function(vec!["fs"], String::from("open"), fs_open);
-    interpreter.set_native_function(vec!["fs"], String::from("read_to_string"), fs_read_to_string);
-    interpreter.set_native_function(vec!["io"], String::from("read_line"), io_read_line);
+pub fn load_functions(functions: &mut Vec<NativeFunction>) {
+    functions.push(NativeFunction::new(vec!["fs".to_string()], String::from("open"), fs_open));
+    functions.push(NativeFunction::new(vec!["fs".to_string()], String::from("read_to_string"), fs_read_to_string));
+    functions.push(NativeFunction::new(vec!["io".to_string()], String::from("read_line"), io_read_line));
 }
 
 pub fn fs_open(context: &ExecutionContext, mut args: FunctionArgs) -> Value {

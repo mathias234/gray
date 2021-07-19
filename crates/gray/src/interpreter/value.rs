@@ -69,6 +69,12 @@ impl Value {
         }
     }
 
+    pub fn from_function(name: Rc<String>) -> Value {
+        Value {
+            value: DataValue::FunctionPointer(name)
+        }
+    }
+
     pub fn is_undefined(&self) -> bool {
         match self.get_data_value() {
             DataValue::Undefined => true,

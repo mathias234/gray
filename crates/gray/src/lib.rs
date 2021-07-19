@@ -8,7 +8,7 @@ use std::rc::Rc;
 use interpreter::interpreter::Interpreter;
 use crate::parser::parser::{Parser, ParserError};
 use crate::parser::lexer::{Lexer, LexerError};
-use crate::compiler::compiler::{Compiler, CompilerError};
+use crate::compiler::compiler::{Compiler, CompilerError, NativeFunction};
 
 #[derive(Debug)]
 pub enum GrayError {
@@ -35,7 +35,7 @@ impl From<CompilerError> for GrayError {
     }
 }
 
-pub fn load_file(file: &str) -> Result<Interpreter, GrayError> {
+pub fn load_file(file: &str, native_functions: Vec<NativeFunction>) -> Result<Interpreter, GrayError> {
     let token_stream = Lexer::lex_file(file)?;
 
     /*
@@ -56,22 +56,22 @@ pub fn load_file(file: &str) -> Result<Interpreter, GrayError> {
     //println!("\nParser AST Tree");
     root_ast_node.dump(0);
 
-    let blocks = Compiler::compile(root_ast_node)?;
+    let blocks = Compiler::compile(root_ast_node, native_functions.clone())?;
 
-    let interpreter = Interpreter::new(blocks, token_stream.0);
+    let interpreter = Interpreter::new(blocks, token_stream.0, native_functions);
 
 
     return Ok(interpreter);
 }
 
-pub fn load_string(code: &str) -> Result<Interpreter, GrayError> {
+pub fn load_string(code: &str, native_functions: Vec<NativeFunction>) -> Result<Interpreter, GrayError> {
     let token_stream = Lexer::lex_string(code)?;
 
     let root_ast_node = Parser::parse(token_stream, code)?;
 
-    let blocks = Compiler::compile(root_ast_node)?;
+    let blocks = Compiler::compile(root_ast_node, native_functions.clone())?;
 
-    let interpreter = Interpreter::new(blocks, Rc::from(code.to_string()));
+    let interpreter = Interpreter::new(blocks, Rc::from(code.to_string()), native_functions);
 
     return Ok(interpreter);
 }

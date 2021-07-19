@@ -41,16 +41,17 @@ fn main() -> Result<(), GrayError> {
             println!("Running file {:?}", file);
 
             let now = Instant::now();
-            let mut interpreter = gray::load_file(&file)?;
+
+            let functions = declare_functions();
+
+            let mut interpreter = gray::load_file(&file, functions)?;
             println! {"Compilation took {}ms", now.elapsed().as_millis()}
 
-            declare_functions(&mut interpreter);
 
             let now = Instant::now();
             println!("Starting execution");
             interpreter.run(None);
             println! {"Execution took {}ms", now.elapsed().as_millis()}
-
         }
     }
 

@@ -4,21 +4,25 @@ mod io;
 mod gray_interp;
 mod debug;
 
-use gray::interpreter::interpreter::{Interpreter, ExecutionContext};
+use gray::interpreter::interpreter::ExecutionContext;
 use gray::interpreter::value::{Value};
 use std::rc::Rc;
 use gray::interpreter::function_pointer::FunctionArgs;
+use gray::compiler::compiler::NativeFunction;
 
-pub fn declare_functions(interpreter: &mut Interpreter) {
-    interpreter.set_native_function(Vec::new(), String::from("print"), print_function);
-    interpreter.set_native_function(Vec::new(), String::from("format"), format_to_value);
-    interpreter.set_native_function(Vec::new(), String::from("assert_eq"), assert_eq);
+pub fn declare_functions() -> Vec<NativeFunction> {
+    let mut functions = Vec::new();
+    functions.push(NativeFunction::new(Vec::new(), String::from("print"), print_function));
+    functions.push(NativeFunction::new(Vec::new(), String::from("format"), format_to_value));
+    functions.push(NativeFunction::new(Vec::new(), String::from("assert_eq"), assert_eq));
 
-    math::load_functions(interpreter);
-    array::load_functions(interpreter);
-    io::load_functions(interpreter);
-    gray_interp::load_functions(interpreter);
-    debug::load_functions(interpreter);
+     math::load_functions(&mut functions);
+     array::load_functions(&mut functions);
+     io::load_functions(&mut functions);
+     gray_interp::load_functions(&mut functions);
+     debug::load_functions(&mut functions);
+
+    functions
 }
 
 fn assert_eq(context: &ExecutionContext, mut args: FunctionArgs) -> Value {

@@ -12,6 +12,9 @@ use crate::bytecode::instructions::comparison::{CompareGreaterThan, CompareLessT
 use std::rc::Rc;
 use crate::compiler::compiler::CompilerError::UnexpectedASTNode;
 
+use crate::interpreter::interpreter::ExecutionContext;
+use crate::interpreter::function_pointer::FunctionArgs;
+
 #[derive(Debug)]
 pub enum CompilerError {
     UnexpectedASTNode(ASTNode),
@@ -20,16 +23,48 @@ pub enum CompilerError {
 
 pub struct Compiler {
     blocks: HashMap<String, CodeBlock>,
+    native_functions: Vec<NativeFunction>
+}
+
+
+pub type FunctionPointer = fn(&ExecutionContext, FunctionArgs) -> Value;
+
+#[derive(Clone)]
+pub struct NativeFunction {
+    pub namespace: Vec<String>,
+    pub name: String,
+    pub pointer: FunctionPointer,
+}
+
+impl NativeFunction {
+    pub fn new(namespace: Vec<String>, name: String, pointer: FunctionPointer) -> NativeFunction {
+        NativeFunction {
+            namespace,
+            name,
+            pointer
+        }
+    }
+
+    pub fn full_name(&self) -> String {
+        let mut full_name = String::new();
+        for n in &self.namespace {
+            full_name += &format!("{}::", n);
+        }
+        full_name += &self.name;
+
+        full_name
+    }
 }
 
 impl Compiler {
-    pub fn compile(root_node: ASTNode) -> Result<HashMap<String, CodeBlock>, CompilerError> {
+    pub fn compile(root_node: ASTNode, native_functions: Vec<NativeFunction>) -> Result<HashMap<String, CodeBlock>, CompilerError> {
         let mut compiler = Compiler {
             blocks: HashMap::new(),
+            native_functions
         };
 
 
-        let mut generator = Generator::new();
+        let mut generator = Generator::new(&compiler.native_functions);
         compiler.compile_scope("", &mut generator, &root_node, true)?;
         compiler.blocks.insert(String::from("ProgramMain"), generator.block);
 
@@ -37,7 +72,7 @@ impl Compiler {
     }
 
     fn compile_function(&mut self, namespace: &str, name: &str, node: &ASTNode) -> Result<(), CompilerError> {
-        let mut generator = Generator::new();
+        let mut generator = Generator::new(&self.native_functions);
 
         let mut argument_index = 0;
         for child in &node.children {
@@ -70,6 +105,28 @@ impl Compiler {
         if push_scope {
             generator.emit(PushScope::new_boxed(), node.code_segment);
         }
+
+        // Hoist all the scope's function declarations to the top
+        for child in &node.children {
+            match &child.ast_type {
+                ASTType::Function(name) => {
+                    let full_name;
+                    if !namespace.is_empty() {
+                        full_name = format!("{}::{}", namespace, name);
+                    } else {
+                        full_name = String::from(name);
+                    }
+
+
+                    generator.emit(LoadImmediate::new_boxed(Value::from_function(Rc::from(full_name.clone()))), all_segments(child));
+
+                    let variable = generator.next_variable_handle(&full_name);
+                    generator.emit(DeclareVariable::new_boxed(variable), all_segments(child));
+                }
+                _ => {}
+            }
+        }
+
         for child in &node.children {
             match &child.ast_type {
                 ASTType::Expression => {
@@ -106,7 +163,9 @@ impl Compiler {
                 ASTType::Scope => {
                     self.compile_scope("", generator, child, true)?;
                 }
-                ASTType::Function(name) => self.compile_function(namespace, name, child)?,
+                ASTType::Function(name) => {
+                    self.compile_function(namespace, name, child)?
+                }
                 _ => return Err(CompilerError::UnexpectedASTNode(child.clone())),
             }
         }
@@ -119,8 +178,10 @@ impl Compiler {
     }
 
     fn compile_function_call(&mut self, call: &String, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
+        let handle = generator.next_variable_handle(call);
+
         if node.children.len() == 0 {
-            generator.emit(Call::new_boxed(&*call, None), node.code_segment);
+            generator.emit(Call::new_boxed(handle, None), node.code_segment);
             return Ok({});
         }
 
@@ -133,7 +194,7 @@ impl Compiler {
             argument_registers.push(register);
         }
 
-        generator.emit(Call::new_boxed(&call, Some(argument_registers.clone())), node.code_segment);
+        generator.emit(Call::new_boxed(handle, Some(argument_registers.clone())), node.code_segment);
 
         for register in argument_registers {
             generator.release_register(register);
