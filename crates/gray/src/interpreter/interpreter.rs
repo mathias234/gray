@@ -112,6 +112,10 @@ impl ExecutionContext {
         self.block_arguments[arg].clone()
     }
 
+    pub fn get_argument_count(&self) -> usize {
+        self.block_arguments.len()
+    }
+
     pub fn set_jump_target(&mut self, label: &Label) {
         self.jump_target = Some(*label);
     }
@@ -125,13 +129,15 @@ impl ExecutionContext {
     }
 
     pub fn declare_variable(&mut self, variable: VariableHandle, value: &Value) {
-        if self.scope_stack[0].variables.len() <= variable {
-            for _ in self.scope_stack[0].variables.len()..variable + 1 {
-                self.scope_stack[0].variables.push(Value::from_undefined());
+        let scope_stack = &mut self.scope_stack[0];
+        let var_count = scope_stack.variables.len();
+        if var_count <= variable {
+            for _ in var_count..variable + 1 {
+                scope_stack.variables.push(Value::from_undefined());
             }
         }
 
-        self.scope_stack[0].variables[variable] = value.clone();
+        scope_stack.variables[variable] = value.clone();
     }
 
     pub fn set_variable(&mut self, variable: VariableHandle, value: &Value) {

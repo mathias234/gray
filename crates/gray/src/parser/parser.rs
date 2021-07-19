@@ -50,6 +50,7 @@ pub enum ASTType {
     ObjectAccess,
     Subscript,
     Trait(String),
+    ParamsList,
 }
 
 #[derive(Debug)]
@@ -269,6 +270,11 @@ impl Parser {
             match &token.token_type {
                 TokenType::Identifier(identifier) => {
                     let identifier = identifier.clone();
+                    if identifier == "params" {
+                        node.children.push(ASTNode::new(ASTType::ParamsList, token.position));
+                        Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::CloseParen)?;
+                        break;
+                    }
                     node.children.push(ASTNode::new(ASTType::Identifier(identifier), token.position));
                 }
                 TokenType::Delimiter(d) => match d {

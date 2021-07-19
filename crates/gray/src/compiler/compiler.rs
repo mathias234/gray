@@ -4,7 +4,7 @@ use crate::bytecode::generator::Generator;
 use std::collections::HashMap;
 use crate::bytecode::register::Register;
 use crate::interpreter::value::Value;
-use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument, LoadRegister, Break, Continue, PopBreakContinueScope, PushBreakContinueScope};
+use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument, LoadRegister, Break, Continue, PopBreakContinueScope, PushBreakContinueScope, ParamsList};
 use crate::bytecode::instructions::jump::{JumpZero, Jump};
 use crate::bytecode::instructions::math::{Add, Subtract, Multiply, Divide};
 use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember, GetObjectMember, CreateEmptyArray, PushArray, GetArray, SetArray};
@@ -83,6 +83,12 @@ impl Compiler {
                     let parameter_handle = generator.next_variable_handle(parameter);
                     generator.emit(DeclareVariable::new_boxed(parameter_handle), child.code_segment);
                     argument_index += 1;
+                }
+                ASTType::ParamsList => {
+                    generator.emit(ParamsList::new_boxed(argument_index), child.code_segment);
+                    let parameter_handle = generator.next_variable_handle("params");
+                    generator.emit(DeclareVariable::new_boxed(parameter_handle), child.code_segment);
+
                 }
                 _ => return Err(CompilerError::UnexpectedASTNode(child.clone()))
             }

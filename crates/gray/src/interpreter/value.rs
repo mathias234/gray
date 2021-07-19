@@ -82,6 +82,10 @@ impl Value {
         }
     }
 
+    pub fn make_undefined(&mut self) {
+        self.value = DataValue::Undefined;
+    }
+
     pub fn get_data_value(&self) -> &DataValue {
         &self.value
     }

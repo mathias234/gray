@@ -56,3 +56,8 @@ fn break_continue_test() {
 fn functions_handles_test() {
     run_file("./tests/functions_handles_test.gray");
 }
+
+#[test]
+fn variable_arguments_test() {
+    run_file("./tests/variable_arguments_test.gray");
+}

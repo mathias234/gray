@@ -1,0 +1,18 @@
+let a = test(123, 456, 789);
+
+assert_eq(a, 1368);
+
+fn test(params) {
+    let sum = 0;
+
+    let len = array::len(params);
+    let idx = 0;
+
+    while idx < len {
+        sum += params[idx];
+
+        idx += 1;
+    }
+
+    return sum;
+}

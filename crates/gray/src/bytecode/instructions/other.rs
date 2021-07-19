@@ -4,6 +4,7 @@ use crate::{
     interpreter::{interpreter::{ExecutionContext, VariableHandle}, value::Value},
 };
 use crate::bytecode::label::Label;
+use crate::interpreter::array::Array;
 
 pub trait Instruction {
     fn execute(&self, context: &mut ExecutionContext);
@@ -44,6 +45,20 @@ impl LoadArgument {
         })
     }
 }
+
+pub struct ParamsList {
+    start: usize,
+}
+
+#[allow(dead_code)]
+impl ParamsList {
+    pub fn new_boxed(start: usize) -> Box<ParamsList> {
+        Box::new(ParamsList {
+            start
+        })
+    }
+}
+
 
 pub struct Store {
     register: Register,
@@ -191,6 +206,22 @@ impl Instruction for LoadArgument {
 
     fn to_string(&self) -> String {
         format!("LoadArgument argument: {}", self.argument)
+    }
+}
+
+impl Instruction for ParamsList {
+    fn execute(&self, context: &mut ExecutionContext) {
+        let mut array = Array::new();
+
+        for arg in self.start..context.get_argument_count() {
+            array.push(context.get_argument(arg));
+        }
+
+        context.set_accumulator(Value::from_array(array));
+    }
+
+    fn to_string(&self) -> String {
+        format!("ParamsList argument: {}", self.start)
     }
 }
 
