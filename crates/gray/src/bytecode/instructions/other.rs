@@ -1,7 +1,7 @@
 use std::fmt::Write as FmtWrite;
 use crate::{
     bytecode::{register::Register},
-    interpreter::{interpreter::{ExecutionContext, VariableHandle}, value::Value},
+    interpreter::{interpreter::{ExecutionContext, VariableHandle}, value::Value, value::DataValue},
 };
 use crate::bytecode::label::Label;
 use crate::interpreter::array::Array;
@@ -174,6 +174,16 @@ pub struct Continue {}
 impl Continue {
     pub fn new_boxed() -> Box<Continue> {
         Box::new(Continue {})
+    }
+}
+
+pub struct Range {
+    rhs_register: Register,
+}
+
+impl Range {
+    pub fn new_boxed(rhs_register: Register) -> Box<Range> {
+        Box::new(Range { rhs_register })
     }
 }
 
@@ -359,5 +369,45 @@ impl Instruction for Continue {
 
     fn to_string(&self) -> String {
         format!("Continue")
+    }
+}
+
+impl Instruction for Range {
+    fn execute(&self, context: &mut ExecutionContext) {
+        let lhs_value = context.get_accumulator();
+        let rhs_value = context.get_register(&self.rhs_register);
+
+        let lhs_integer = match lhs_value.get_data_value() {
+            DataValue::I64(v) => {
+                *v
+            }
+            _ => {
+                context.throw_error("Expected integer");
+                return;
+            },
+        };
+
+        let rhs_integer = match rhs_value.get_data_value() {
+            DataValue::I64(v) => {
+                *v
+            }
+            _ => {
+                context.throw_error("Expected integer");
+                return;
+            },
+        };
+
+
+        let mut array = Array::new();
+
+        for i in lhs_integer..rhs_integer {
+            array.push(Value::from_i64(i));
+        }
+
+        context.set_accumulator(Value::from_array(array));
+    }
+
+    fn to_string(&self) -> String {
+        format!("Range")
     }
 }

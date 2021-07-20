@@ -24,6 +24,8 @@ pub enum ExpressionOp {
     GreaterThanOrEqual,
     And,
     Or,
+
+    Range,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -510,7 +512,10 @@ impl Parser {
         };
 
         let delimiter = self.peek_next_token(0)?;
-        if Parser::token_is_delimiter(delimiter, Delimiter::Dot) {
+        let delimiter1 = self.peek_next_token(1);
+
+        if Parser::token_is_delimiter(delimiter, Delimiter::Dot) &&
+            (delimiter1.is_err() || !Parser::token_is_delimiter(delimiter1.unwrap(), Delimiter::Dot)) {
             let delimiter = self.get_next_token()?;
 
             let mut member = ASTNode::new(ASTType::ObjectAccess, delimiter.position);
@@ -689,6 +694,8 @@ impl Parser {
 
                     ExpressionOp::Multiply => 2,
                     ExpressionOp::Divide => 2,
+
+                    ExpressionOp::Range => 3,
                 }
             }
             _ => -1,
@@ -763,6 +770,8 @@ impl Parser {
             Err(_) => None,
         };
 
+        println!("Token 1 {:?}, Token 2 {:?}", token, token2);
+
         if token2.is_some() {
             if Parser::token_is_delimiter(token2.unwrap(), Delimiter::Equal) {
                 if Parser::token_is_delimiter(&token, Delimiter::Equal) {
@@ -806,6 +815,12 @@ impl Parser {
                 let token1 = self.get_next_token()?.clone();
                 let token2 = self.get_next_token()?;
                 return Ok(Some((ExpressionOp::Or, Parser::combine_code_segments(token1.position, token2.position))));
+            }
+            else if Parser::token_is_delimiter(&token, Delimiter::Dot) && Parser::token_is_delimiter(&token2.unwrap(), Delimiter::Dot) {
+                let token1 = self.get_next_token()?.clone();
+                let token2 = self.get_next_token()?;
+                println!("Range expression");
+                return Ok(Some((ExpressionOp::Range, Parser::combine_code_segments(token1.position, token2.position))));
             }
         }
 

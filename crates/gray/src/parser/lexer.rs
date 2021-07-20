@@ -188,6 +188,12 @@ impl Lexer {
             let token = lexer.pop_token()?;
 
             if token == TokenType::EndOfFile {
+                while let Some(t) = token_stream.next() {
+                    println!("{:?}", t);
+                }
+                token_stream.reset();
+
+
                 return Ok((Rc::from(file), token_stream));
             }
 
@@ -267,6 +273,12 @@ impl Lexer {
                 } else if delimiter == Delimiter::Dot && Lexer::word_to_integer(&word).is_some() {
                     // Seems like a float, as we have a full integer before then a dot
                     // Lets try and pop another token to get the fractional portion
+
+                    let nx_ch = chars.nth(0).unwrap();
+
+                    if nx_ch == '.' {
+                        break;
+                    }
 
                     self.position += char.len_utf8();
 

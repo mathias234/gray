@@ -4,7 +4,7 @@ use crate::bytecode::generator::Generator;
 use std::collections::HashMap;
 use crate::bytecode::register::Register;
 use crate::interpreter::value::Value;
-use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument, LoadRegister, Break, Continue, PopBreakContinueScope, PushBreakContinueScope, ParamsList};
+use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument, LoadRegister, Break, Continue, PopBreakContinueScope, PushBreakContinueScope, ParamsList, Range};
 use crate::bytecode::instructions::jump::{JumpZero, Jump};
 use crate::bytecode::instructions::math::{Add, Subtract, Multiply, Divide};
 use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember, GetObjectMember, CreateEmptyArray, PushArray, GetArray, SetArray, GetArrayLength};
@@ -578,6 +578,14 @@ impl Compiler {
                     }
                     ExpressionOp::Assign => {
                         self.compile_assign_expression(generator, op, &node.children[0], rhs_register)?;
+                    }
+                    ExpressionOp::Range => {
+                        self.compile_sub_expression(generator, child)?;
+                        let lhs_register = generator.next_free_register();
+
+                        generator.emit(Range::new_boxed(rhs_register), all_segments(node));
+
+                        generator.release_register(lhs_register);
                     }
                 }
                 _ => return Err(CompilerError::UnexpectedASTNode(operator.clone())),
