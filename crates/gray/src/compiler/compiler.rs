@@ -616,6 +616,29 @@ impl Compiler {
                         generator.emit(Store::new_boxed(register), value_accessed.code_segment);
                         Ok(register)
                     }
+                    ASTType::FunctionCall(identifier) => {
+                        let identifier_register = generator.next_free_register();
+                        generator.emit(LoadImmediate::new_boxed(Value::from_string(Rc::new(identifier.clone()))), value_accessed.code_segment);
+                        generator.emit(Store::new_boxed(identifier_register), node.code_segment);
+
+                        generator.emit(GetObjectMember::new_boxed(object, identifier_register), value_accessed.code_segment);
+
+                        generator.release_register(identifier_register);
+
+                        // FIXME: Implement a better system so we don't need to store a temporary variable for the function handle
+                        let temp_handle = "__TemporaryFunctionHandle";
+
+                        let handle = generator.next_variable_handle(temp_handle);
+                        generator.emit(DeclareVariable::new_boxed(handle), value_accessed.code_segment);
+
+                        self.compile_function_call(&temp_handle.to_string(), generator, value_accessed)?;
+
+                        let register = generator.next_free_register();
+
+                        generator.emit(Store::new_boxed(register), value_accessed.code_segment);
+
+                        Ok(register)
+                    }
                     _ => { Err(CompilerError::UnexpectedASTNode(value_accessed.clone())) }
                 }?;
 

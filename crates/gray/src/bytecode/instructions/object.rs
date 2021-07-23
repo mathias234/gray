@@ -148,8 +148,8 @@ impl Instruction for GetObjectMember {
     fn execute(&self, context: &mut ExecutionContext) {
         let obj = match context.get_register(&self.object_register).get_data_value() {
             DataValue::Object(object) => object.clone(),
-            _ => {
-                context.throw_error("Trying to get a member value of something that is not an object");
+            value => {
+                context.throw_error(&format!("Trying to get a member value of something that is not an object {:?}", value));
                 return;
             }
         };
@@ -164,7 +164,15 @@ impl Instruction for GetObjectMember {
         };
 
 
-        context.set_accumulator(obj.get(accessor_value).unwrap());
+        let value = if let Some(value) = obj.get(accessor_value) {
+            value
+        }
+        else {
+            context.throw_error("Could not find member on object");
+            return;
+        };
+
+        context.set_accumulator(value);
     }
 
     fn to_string(&self) -> String { format!("GetObjectMember {} {}", self.object_register, self.accessor_value) }
