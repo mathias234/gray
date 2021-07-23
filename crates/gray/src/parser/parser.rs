@@ -516,14 +516,12 @@ impl Parser {
 
         if Parser::token_is_delimiter(delimiter, Delimiter::Dot) &&
             (delimiter1.is_err() || !Parser::token_is_delimiter(delimiter1.unwrap(), Delimiter::Dot)) {
-            let delimiter = self.get_next_token()?;
 
-            let mut member = ASTNode::new(ASTType::ObjectAccess, delimiter.position);
-            let mut expr = ASTNode::new(ASTType::Expression, delimiter.position);
-            expr.children.push(result);
-            member.children.push(self.parse_sub_expression()?);
-            member.children.push(expr);
-            return Ok(member);
+            let mut object_access = self.parse_object_access()?;
+
+            object_access.children.push(result);
+
+            return Ok(object_access);
         } else if Parser::token_is_delimiter(delimiter, Delimiter::OpenBracket) {
             let mut subscript = self.parse_subscript_expression()?;
 
@@ -595,6 +593,16 @@ impl Parser {
         Ok(object_node)
     }
 
+    fn parse_object_access(&mut self) -> Result<ASTNode, ParserError> {
+        let delimiter = self.get_next_token()?;
+
+        let mut member = ASTNode::new(ASTType::ObjectAccess, delimiter.position);
+        member.children.push(self.parse_sub_expression()?);
+
+        Ok(member)
+    }
+
+
     fn parse_subscript_expression(&mut self) -> Result<ASTNode, ParserError> {
         let token = self.get_next_token()?;
 
@@ -605,16 +613,22 @@ impl Parser {
 
         Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::CloseBracket)?;
 
+        let next_token = self.peek_next_token(0)?;
+        node.children.push(result);
 
-        if Parser::token_is_delimiter(self.peek_next_token(0)?, Delimiter::OpenBracket) {
+        if Parser::token_is_delimiter(next_token, Delimiter::OpenBracket) {
             let next = self.parse_subscript_expression()?;
-            node.children.push(result);
+            node.children.push(next);
+
+            return Ok(node);
+        } else if Parser::token_is_delimiter(next_token, Delimiter::Dot) {
+            let next = self.parse_object_access()?;
+
             node.children.push(next);
 
             return Ok(node);
         }
 
-        node.children.push(result);
         Ok(node)
     }
 

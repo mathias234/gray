@@ -19,6 +19,7 @@ use crate::interpreter::function_pointer::FunctionArgs;
 pub enum CompilerError {
     UnexpectedASTNode(ASTNode),
     ExpectedIdentifier(ASTNode),
+    UnimplementedFeature(String),
 }
 
 pub struct Compiler {
@@ -403,13 +404,7 @@ impl Compiler {
                     generator.release_register(register);
                 }
                 ASTType::ObjectAccess => {
-                    let (object, accessor, _) = self.compile_assign_object(generator, node, parent.unwrap())?;
-
-                    generator.release_register(array);
-                    generator.release_register(index);
-
-                    index = accessor;
-                    array = object;
+                    return Err(CompilerError::UnimplementedFeature("Accessing an object returned from an array subscript is not implemented".to_string()));
                 }
                 ASTType::Identifier(identifier) => {
                     if parent_is_object {
@@ -457,7 +452,7 @@ impl Compiler {
             ASTType::ObjectAccess => {
                 let value_accessed = &node.children[1];
 
-                self.compile_expression(generator, value_accessed)?;
+                self.compile_sub_expression(generator, value_accessed)?;
                 let mut object_register = generator.next_free_register();
                 generator.emit(Store::new_boxed(object_register), node.code_segment);
 
@@ -600,7 +595,7 @@ impl Compiler {
     fn compile_assign_object(&mut self, generator: &mut Generator, node: &ASTNode, object: Register) -> Result<(Register, Register, bool), CompilerError> {
         match &node.ast_type {
             ASTType::ObjectAccess => {
-                let value_accessed = &node.children[1].children[0];
+                let value_accessed = &node.children[1];
 
                 let obj = match &value_accessed.ast_type {
                     ASTType::Identifier(identifier) => {
@@ -682,7 +677,7 @@ impl Compiler {
             ASTType::ObjectAccess => {
                 let value_accessed = &node.children[1];
 
-                self.compile_expression(generator, value_accessed)?;
+                self.compile_sub_expression(generator, value_accessed)?;
                 let mut object_register = generator.next_free_register();
                 generator.emit(Store::new_boxed(object_register), node.code_segment);
 
