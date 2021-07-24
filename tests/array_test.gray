@@ -37,3 +37,8 @@ let obj = {
 obj.array[0][1][1] = 15;
 
 assert_eq(obj.array[0][1][1], 15);
+
+let obj = { a: { b: [{ a: [-5]}] }};
+let a = obj.a.b[0].a[0];
+assert_eq(a, -5);
+

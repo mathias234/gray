@@ -244,8 +244,8 @@ impl Instruction for GetArray {
             DataValue::Array(a) => {
                 context.set_accumulator(a.get(index));
             }
-            _ => {
-                context.throw_error("Error getting value from object that is not an array");
+            v => {
+                context.throw_error(&format!("Error getting value from object that is not an array {:?}", v));
                 return;
             }
         }

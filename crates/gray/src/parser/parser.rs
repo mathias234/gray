@@ -416,7 +416,7 @@ impl Parser {
         match &in_keyword.token_type {
             TokenType::Keyword(kv) => {
                 match kv {
-                    Keyword::In => {},
+                    Keyword::In => {}
                     kv => return Err(ParserError::UnexpectedKeywordInStream(kv.clone(), in_keyword.clone())),
                 }
             }
@@ -516,16 +516,11 @@ impl Parser {
 
         if Parser::token_is_delimiter(delimiter, Delimiter::Dot) &&
             (delimiter1.is_err() || !Parser::token_is_delimiter(delimiter1.unwrap(), Delimiter::Dot)) {
-
-            let mut object_access = self.parse_object_access()?;
-
-            object_access.children.push(result);
+            let object_access = self.parse_object_access(result)?;
 
             return Ok(object_access);
         } else if Parser::token_is_delimiter(delimiter, Delimiter::OpenBracket) {
-            let mut subscript = self.parse_subscript_expression()?;
-
-            subscript.children.push(result);
+            let subscript = self.parse_subscript_expression(result)?;
 
             return Ok(subscript);
         }
@@ -593,43 +588,65 @@ impl Parser {
         Ok(object_node)
     }
 
-    fn parse_object_access(&mut self) -> Result<ASTNode, ParserError> {
+    fn parse_object_access(&mut self, object: ASTNode) -> Result<ASTNode, ParserError> {
         let delimiter = self.get_next_token()?;
+        Parser::validate_token_is_delimiter(delimiter, Delimiter::Dot)?;
 
-        let mut member = ASTNode::new(ASTType::ObjectAccess, delimiter.position);
-        member.children.push(self.parse_sub_expression()?);
+        let mut node = ASTNode::new(ASTType::ObjectAccess, delimiter.position);
 
-        Ok(member)
+        let identifier = Parser::token_to_simple_ast_node(self.get_next_token()?)?;
+        node.children.push(identifier);
+        node.children.push(object);
+
+        let next_token = self.peek_next_token(0)?;
+        if Parser::token_is_delimiter(next_token, Delimiter::Dot) {
+            let next = self.parse_object_access(node)?;
+
+            return Ok(next);
+        } else if Parser::token_is_delimiter(next_token, Delimiter::OpenBracket) {
+            let next = self.parse_subscript_expression(node)?;
+
+            return Ok(next);
+        }
+
+        Ok(node)
     }
 
 
-    fn parse_subscript_expression(&mut self) -> Result<ASTNode, ParserError> {
+    fn parse_subscript_expression(&mut self, object: ASTNode) -> Result<ASTNode, ParserError> {
         let token = self.get_next_token()?;
 
         Parser::validate_token_is_delimiter(token, Delimiter::OpenBracket)?;
         let mut node = ASTNode::new(ASTType::Subscript, token.position);
-
         let result = self.parse_expression()?;
+        node.children.push(result);
 
         Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::CloseBracket)?;
 
+        node.children.push(object);
         let next_token = self.peek_next_token(0)?;
-        node.children.push(result);
-
         if Parser::token_is_delimiter(next_token, Delimiter::OpenBracket) {
-            let next = self.parse_subscript_expression()?;
-            node.children.push(next);
+            let next = self.parse_subscript_expression(node)?;
 
-            return Ok(node);
+            return Ok(next);
         } else if Parser::token_is_delimiter(next_token, Delimiter::Dot) {
+            let next = self.parse_object_access(node)?;
+
+            return Ok(next);
+        }
+
+
+        Ok(node)
+
+        /*
+        else if Parser::token_is_delimiter(next_token, Delimiter::Dot) {
             let next = self.parse_object_access()?;
 
             node.children.push(next);
 
             return Ok(node);
         }
-
-        Ok(node)
+        */
     }
 
     fn parse_function_call(&mut self) -> Result<ASTNode, ParserError> {
@@ -829,8 +846,7 @@ impl Parser {
                 let token1 = self.get_next_token()?.clone();
                 let token2 = self.get_next_token()?;
                 return Ok(Some((ExpressionOp::Or, Parser::combine_code_segments(token1.position, token2.position))));
-            }
-            else if Parser::token_is_delimiter(&token, Delimiter::Dot) && Parser::token_is_delimiter(&token2.unwrap(), Delimiter::Dot) {
+            } else if Parser::token_is_delimiter(&token, Delimiter::Dot) && Parser::token_is_delimiter(&token2.unwrap(), Delimiter::Dot) {
                 let token1 = self.get_next_token()?.clone();
                 let token2 = self.get_next_token()?;
                 println!("Range expression");
