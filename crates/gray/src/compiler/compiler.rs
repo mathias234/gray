@@ -491,22 +491,22 @@ impl Compiler {
         let index = generator.next_free_register();
         generator.emit(Store::new_boxed(index), all_segments(&node.children[0]));
 
-        let accessor = &node.children[1];
+        let accessed = &node.children[1];
 
-        return match &accessor.ast_type {
+        return match &accessed.ast_type {
             ASTType::Subscript => {
-                let (idx, arr) = self.compile_subscript(generator, accessor)?;
-                generator.emit(LoadRegister::new_boxed(idx), all_segments(accessor));
-                generator.emit(GetArray::new_boxed(arr), all_segments(accessor));
+                let (idx, arr) = self.compile_subscript(generator, accessed)?;
+                generator.emit(LoadRegister::new_boxed(idx), all_segments(accessed));
+                generator.emit(GetArray::new_boxed(arr), all_segments(accessed));
                 generator.release_register(arr);
                 generator.release_register(idx);
                 let array = generator.next_free_register();
-                generator.emit(Store::new_boxed(array), all_segments(accessor));
+                generator.emit(Store::new_boxed(array), all_segments(accessed));
 
                 Ok((index, array))
             }
             ASTType::ObjectAccess => {
-                let (object_register, accessor_register) = self.compile_object_access(generator, accessor)?;
+                let (object_register, accessor_register) = self.compile_object_access(generator, accessed)?;
 
                 generator.emit(GetObjectMember::new_boxed(object_register, accessor_register), all_segments(node));
 
@@ -521,28 +521,36 @@ impl Compiler {
             }
             ASTType::Identifier(id) => {
                 let handle = generator.next_variable_handle(id);
-                generator.emit(GetVariable::new_boxed(handle), all_segments(accessor));
+                generator.emit(GetVariable::new_boxed(handle), all_segments(accessed));
 
                 let array = generator.next_free_register();
-                generator.emit(Store::new_boxed(array), all_segments(accessor));
+                generator.emit(Store::new_boxed(array), all_segments(accessed));
 
                 Ok((index, array))
             }
-            _ => Err(UnexpectedASTNode(accessor.clone()))
-        }
+            ASTType::FunctionCall(id) => {
+                self.compile_function_call(&id, generator, accessed)?;
+
+                let array = generator.next_free_register();
+                generator.emit(Store::new_boxed(array), all_segments(accessed));
+
+                Ok((index, array))
+            }
+            _ => Err(UnexpectedASTNode(accessed.clone()))
+        };
     }
 
     fn compile_object_access(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(Register, Register), CompilerError> {
-        let accessor = match &node.children[0].ast_type {
+        let accessor_register = generator.next_free_register();
+        let accessor = &node.children[0];
+        match &accessor.ast_type {
             ASTType::Identifier(id) => {
-                id
+                generator.emit(LoadImmediate::new_boxed(Value::from_string(Rc::new(id.clone()))), all_segments(accessor));
+                generator.emit(Store::new_boxed(accessor_register), all_segments(&node.children[0]));
             }
             _ => return Err(UnexpectedASTNode(node.children[0].clone()))
         };
 
-        generator.emit(LoadImmediate::new_boxed(Value::from_string(Rc::new(accessor.clone()))), all_segments(&node.children[0]));
-        let accessor_register = generator.next_free_register();
-        generator.emit(Store::new_boxed(accessor_register), all_segments(&node.children[0]));
 
         let object_register = generator.next_free_register();
 
@@ -568,6 +576,11 @@ impl Compiler {
 
                 generator.emit(LoadRegister::new_boxed(index), all_segments(object));
                 generator.emit(GetArray::new_boxed(obj), all_segments(object));
+
+                generator.emit(Store::new_boxed(object_register), all_segments(object));
+            }
+            ASTType::FunctionCall(id) => {
+                self.compile_function_call(&id, generator, object)?;
 
                 generator.emit(Store::new_boxed(object_register), all_segments(object));
             }
