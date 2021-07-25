@@ -205,6 +205,15 @@ impl IteratorGetNext {
         Box::new(IteratorGetNext {})
     }
 }
+
+pub struct IteratorEmpty {}
+
+impl IteratorEmpty {
+    pub fn new_boxed() -> Box<IteratorEmpty> {
+        Box::new(IteratorEmpty {})
+    }
+}
+
 // Instruction implementations
 
 impl Instruction for LoadImmediate {
@@ -463,7 +472,6 @@ impl Instruction for CreateIterator {
     }
 }
 
-
 impl Instruction for IteratorGetNext {
     fn execute(&self, context: &mut ExecutionContext) {
         let mut iterator = context.get_accumulator();
@@ -486,5 +494,30 @@ impl Instruction for IteratorGetNext {
 
     fn to_string(&self) -> String {
         format!("IteratorGetNext")
+    }
+}
+
+impl Instruction for IteratorEmpty {
+    fn execute(&self, context: &mut ExecutionContext) {
+        let mut iterator = context.get_accumulator();
+        let iterator = &mut iterator.get_data_value_mut();
+        let iterator = match iterator {
+            DataValue::Iterator(iterator) => iterator,
+            _ => {
+                context.throw_error("Expected an iterator");
+                return;
+            }
+        };
+
+        if iterator.iterator.borrow_mut().empty() {
+            context.set_accumulator(Value::from_i64(1));
+            return;
+        }
+
+        context.set_accumulator(Value::from_i64(0));
+    }
+
+    fn to_string(&self) -> String {
+        format!("IteratorEmpty")
     }
 }

@@ -4,8 +4,8 @@ use crate::bytecode::generator::Generator;
 use std::collections::HashMap;
 use crate::bytecode::register::Register;
 use crate::interpreter::value::Value;
-use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument, LoadRegister, Break, Continue, PopBreakContinueScope, PushBreakContinueScope, ParamsList, Range, IteratorGetNext, CreateIterator};
-use crate::bytecode::instructions::jump::{JumpZero, Jump, JumpUndefined};
+use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument, LoadRegister, Break, Continue, PopBreakContinueScope, PushBreakContinueScope, ParamsList, Range, IteratorGetNext, CreateIterator, IteratorEmpty};
+use crate::bytecode::instructions::jump::{JumpZero, Jump, JumpNotZero};
 use crate::bytecode::instructions::math::{Add, Subtract, Multiply, Divide};
 use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember, GetObjectMember, CreateEmptyArray, PushArray, GetArray, SetArray };
 use crate::bytecode::instructions::comparison::{CompareGreaterThan, CompareLessThan, CompareNotEq, CompareEq, CompareLessThanOrEqual, CompareGreaterThanOrEqual, And, Or};
@@ -297,9 +297,12 @@ impl Compiler {
         let for_start = generator.make_label();
 
         generator.emit(LoadRegister::new_boxed(iterator_register), all_segments(node));
-        generator.emit(IteratorGetNext::new_boxed(), all_segments(&node.children[1]));
+        generator.emit(IteratorEmpty::new_boxed(), all_segments(&node.children[1]));
 
         let scope_start = generator.make_instruction_holder();
+
+        generator.emit(LoadRegister::new_boxed(iterator_register), all_segments(node));
+        generator.emit(IteratorGetNext::new_boxed(), all_segments(&node.children[1]));
 
         let identifier_handle = match &node.children[0].ast_type {
             ASTType::Identifier(ident) => generator.next_variable_handle(ident),
@@ -315,7 +318,7 @@ impl Compiler {
 
         let scope_end = generator.make_label();
 
-        generator.emit_at(JumpUndefined::new_boxed(scope_end), &scope_start, node.code_segment);
+        generator.emit_at(JumpNotZero::new_boxed(scope_end), &scope_start, node.code_segment);
 
         let break_label = generator.make_label();
 

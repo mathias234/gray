@@ -36,17 +36,6 @@ impl JumpZero {
     }
 }
 
-pub struct JumpUndefined {
-    target: Label,
-}
-
-#[allow(dead_code)]
-impl JumpUndefined {
-    pub fn new_boxed(target: Label) -> Box<JumpUndefined> {
-        Box::new(JumpUndefined { target })
-    }
-}
-
 impl Instruction for Jump {
     fn execute(&self, context: &mut ExecutionContext) {
         context.set_jump_target(&self.target)
@@ -68,16 +57,6 @@ impl Instruction for JumpNotZero {
 impl Instruction for JumpZero {
     fn execute(&self, context: &mut ExecutionContext) {
         if context.get_accumulator().eq(context, &Value::from_i64(0)) {
-            context.set_jump_target(&self.target)
-        }
-    }
-
-    fn to_string(&self) -> String { format!("JumpZero {}", self.target) }
-}
-
-impl Instruction for JumpUndefined {
-    fn execute(&self, context: &mut ExecutionContext) {
-        if context.get_accumulator().is_undefined() {
             context.set_jump_target(&self.target)
         }
     }

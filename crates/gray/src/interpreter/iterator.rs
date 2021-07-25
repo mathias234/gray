@@ -7,6 +7,7 @@ use std::rc::Rc;
 
 pub trait Iterator {
     fn pop_next(&mut self) -> Option<Value>;
+    fn empty(&self) -> bool;
 }
 
 #[derive(Clone)]
@@ -44,6 +45,14 @@ impl Iterator for RangeIterator {
 
         result
     }
+
+    fn empty(&self) -> bool {
+        if self.index >= self.to {
+            return true;
+        }
+
+        return false;
+    }
 }
 
 impl Iterator for ArrayIterator {
@@ -56,5 +65,13 @@ impl Iterator for ArrayIterator {
         self.index += 1;
 
         result
+    }
+
+    fn empty(&self) -> bool {
+        if self.index >= self.array.len() as i64 {
+            return true;
+        }
+
+        return false;
     }
 }
