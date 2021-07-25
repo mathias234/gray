@@ -1,14 +1,14 @@
-use gray::interpreter::interpreter::ExecutionContext;
-use gray::interpreter::function_pointer::FunctionArgs;
-use gray::interpreter::value::Value;
+use crate::interpreter::interpreter::ExecutionContext;
+use crate::interpreter::function_pointer::FunctionArgs;
+use crate::interpreter::value::Value;
 use std::time::Instant;
-use gray::interpreter::object::Object;
+use crate::interpreter::object::Object;
 use std::rc::Rc;
-use gray::compiler::compiler::NativeFunction;
+use crate::compiler::compiler::NativeFunction;
 
 pub fn load_functions(functions: &mut Vec<NativeFunction>) {
-    functions.push(NativeFunction::new(vec!["debug".to_string()], String::from("start_watch"), start_watch));
-    functions.push(NativeFunction::new(vec!["debug".to_string()], String::from("stop_watch"), stop_watch));
+    functions.push(NativeFunction::new_rs(vec!["debug".to_string()], String::from("start_watch"), start_watch));
+    functions.push(NativeFunction::new_rs(vec!["debug".to_string()], String::from("stop_watch"), stop_watch));
 }
 
 fn start_watch(_: &ExecutionContext, _: FunctionArgs) -> Value {

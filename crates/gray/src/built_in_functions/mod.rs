@@ -4,18 +4,18 @@ mod io;
 mod gray_interp;
 mod debug;
 
-use gray::interpreter::interpreter::ExecutionContext;
-use gray::interpreter::value::{Value};
+use crate::interpreter::interpreter::ExecutionContext;
+use crate::interpreter::value::{Value};
 use std::rc::Rc;
-use gray::interpreter::function_pointer::FunctionArgs;
-use gray::compiler::compiler::NativeFunction;
+use crate::interpreter::function_pointer::FunctionArgs;
+use crate::compiler::compiler::NativeFunction;
 
 pub fn declare_functions() -> Vec<NativeFunction> {
     let mut functions = Vec::new();
-    functions.push(NativeFunction::new(Vec::new(), String::from("print"), print_function));
-    functions.push(NativeFunction::new(Vec::new(), String::from("println"), println_function));
-    functions.push(NativeFunction::new(Vec::new(), String::from("format"), format_to_value));
-    functions.push(NativeFunction::new(Vec::new(), String::from("assert_eq"), assert_eq));
+    functions.push(NativeFunction::new_rs(Vec::new(), String::from("print"), print_function));
+    functions.push(NativeFunction::new_rs(Vec::new(), String::from("println"), println_function));
+    functions.push(NativeFunction::new_rs(Vec::new(), String::from("format"), format_to_value));
+    functions.push(NativeFunction::new_rs(Vec::new(), String::from("assert_eq"), assert_eq));
 
      math::load_functions(&mut functions);
      array::load_functions(&mut functions);

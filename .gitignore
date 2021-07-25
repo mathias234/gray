@@ -1,5 +1,5 @@
 /target
 /gray/target
-/crates/c_api/target
+/crates/gray/target
 .idea
 temp.gray

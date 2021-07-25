@@ -1,9 +1,9 @@
 use gray::GrayError;
-use built_in_functions::declare_functions;
 use std::time::Instant;
 use std::env;
 use std::fs::{metadata, read_dir};
 use std::path::Path;
+use gray::built_in_functions::declare_functions;
 
 fn get_dir(dir: &Path) -> Vec<String> {
     let mut result = Vec::new();

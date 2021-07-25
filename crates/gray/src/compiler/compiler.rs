@@ -7,7 +7,7 @@ use crate::interpreter::value::Value;
 use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument, LoadRegister, Break, Continue, PopBreakContinueScope, PushBreakContinueScope, ParamsList, Range, IteratorGetNext, CreateIterator, IteratorEmpty};
 use crate::bytecode::instructions::jump::{JumpZero, Jump, JumpNotZero};
 use crate::bytecode::instructions::math::{Add, Subtract, Multiply, Divide};
-use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember, GetObjectMember, CreateEmptyArray, PushArray, GetArray, SetArray };
+use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember, GetObjectMember, CreateEmptyArray, PushArray, GetArray, SetArray};
 use crate::bytecode::instructions::comparison::{CompareGreaterThan, CompareLessThan, CompareNotEq, CompareEq, CompareLessThanOrEqual, CompareGreaterThanOrEqual, And, Or};
 use std::rc::Rc;
 use crate::compiler::compiler::CompilerError::UnexpectedASTNode;
@@ -27,22 +27,46 @@ pub struct Compiler {
     native_functions: Vec<NativeFunction>,
 }
 
+pub type RustFunctionPointer = fn(&ExecutionContext, FunctionArgs) -> Value;
+pub type CFunctionPointer = fn(&ExecutionContext, FunctionArgs) -> Value;
 
-pub type FunctionPointer = fn(&ExecutionContext, FunctionArgs) -> Value;
+#[derive(Copy, Clone)]
+pub union FunctionPointer {
+    pub rs: RustFunctionPointer,
+    pub c: CFunctionPointer,
+}
+
 
 #[derive(Clone)]
 pub struct NativeFunction {
     pub namespace: Vec<String>,
     pub name: String,
+    pub is_rust_func: bool,
     pub pointer: FunctionPointer,
 }
 
 impl NativeFunction {
-    pub fn new(namespace: Vec<String>, name: String, pointer: FunctionPointer) -> NativeFunction {
+    pub fn call(&self, context: &ExecutionContext, args: FunctionArgs) -> Value {
+        // Safety:
+        // assuming NativeFunction struct was created with NativeFunction::new_rs or new_c
+        // then is_rust_func will be correctly assigned and the pointer will also be correctly assigned
+        unsafe {
+            if self.is_rust_func {
+                (self.pointer.rs)(context, args);
+            }
+        }
+
+        return Value::from_i64(-1);
+    }
+}
+
+impl NativeFunction {
+    pub fn new_rs(namespace: Vec<String>, name: String, pointer: RustFunctionPointer) -> NativeFunction {
         NativeFunction {
             namespace,
             name,
-            pointer,
+            is_rust_func: true,
+            pointer: FunctionPointer { rs: pointer },
         }
     }
 

@@ -1,14 +1,14 @@
-use gray::interpreter::interpreter::ExecutionContext;
-use gray::interpreter::value::Value;
-use gray::interpreter::function_pointer::FunctionArgs;
-use gray::compiler::compiler::NativeFunction;
-use gray::interpreter::array::Array;
+use crate::interpreter::interpreter::ExecutionContext;
+use crate::interpreter::value::Value;
+use crate::interpreter::function_pointer::FunctionArgs;
+use crate::compiler::compiler::NativeFunction;
+use crate::interpreter::array::Array;
 
 pub fn load_functions(functions: &mut Vec<NativeFunction>) {
-    functions.push(NativeFunction::new(vec!["array".to_string()], String::from("new"), array_new));
-    functions.push(NativeFunction::new(vec!["array".to_string()], String::from("push"), array_push));
-    functions.push(NativeFunction::new(vec!["array".to_string()], String::from("get"), array_get));
-    functions.push(NativeFunction::new(vec!["array".to_string()], String::from("len"), array_len));
+    functions.push(NativeFunction::new_rs(vec!["array".to_string()], String::from("new"), array_new));
+    functions.push(NativeFunction::new_rs(vec!["array".to_string()], String::from("push"), array_push));
+    functions.push(NativeFunction::new_rs(vec!["array".to_string()], String::from("get"), array_get));
+    functions.push(NativeFunction::new_rs(vec!["array".to_string()], String::from("len"), array_len));
 }
 
 fn array_new(context: &ExecutionContext, mut args: FunctionArgs) -> Value {

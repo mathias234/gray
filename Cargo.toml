@@ -8,4 +8,3 @@ edition = "2018"
 
 [dependencies]
 gray = { path = "crates/gray" }
-built_in_functions = { path = "crates/built_in_functions" }

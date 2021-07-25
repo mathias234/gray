@@ -3,6 +3,8 @@ pub mod interpreter;
 pub mod parser;
 pub mod compiler;
 pub mod error_printer;
+pub mod interop;
+pub mod built_in_functions;
 
 use std::rc::Rc;
 use interpreter::interpreter::Interpreter;

@@ -11,7 +11,7 @@ use crate::bytecode::code_block::CodeSegment;
 use std::cell::Cell;
 use std::mem;
 use crate::interpreter::value::DataValue;
-use crate::compiler::compiler::{FunctionPointer, NativeFunction};
+use crate::compiler::compiler::{NativeFunction};
 
 pub type VariableHandle = usize;
 
@@ -255,7 +255,7 @@ pub struct Interpreter<'interp> {
 
     call_stack: Vec<StackFrame>,
 
-    native_functions: HashMap<String, FunctionPointer>,
+    native_functions: HashMap<String, NativeFunction>,
 
     code_text: Rc<String>,
 }
@@ -274,7 +274,7 @@ impl<'interp> Interpreter<'interp> {
         };
 
         for func in native_functions {
-            interp.set_native_function(func.namespace, func.name, func.pointer);
+            interp.set_native_function(func);
         }
 
         interp
@@ -407,7 +407,7 @@ impl<'interp> Interpreter<'interp> {
                     let native_function = self.native_functions.get(&*handle);
                     match native_function {
                         Some(func) => {
-                            let returned_value = func(&self.execution_context, FunctionArgs::new(block_args));
+                            let returned_value = func.call(&self.execution_context, FunctionArgs::new(block_args));
                             self.execution_context.set_accumulator(returned_value);
                             self.pc += 1;
                             continue;
@@ -485,12 +485,12 @@ impl<'interp> Interpreter<'interp> {
         self.get_last_accumulator_value()
     }
 
-    fn set_native_function(&mut self, namespace: Vec<String>, name: String, function: FunctionPointer) {
+    fn set_native_function(&mut self, function: NativeFunction) {
         let mut full_name = String::new();
-        for n in namespace {
+        for n in &function.namespace {
             full_name += &format!("{}::", n);
         }
-        full_name += &name;
+        full_name += &function.name;
         self.native_functions.insert(full_name, function);
     }
 

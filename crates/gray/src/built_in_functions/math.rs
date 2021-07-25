@@ -1,12 +1,12 @@
-use gray::interpreter::interpreter::ExecutionContext;
-use gray::interpreter::value::{Value, DataValue};
-use gray::interpreter::function_pointer::FunctionArgs;
-use gray::compiler::compiler::NativeFunction;
+use crate::interpreter::interpreter::ExecutionContext;
+use crate::interpreter::value::{Value, DataValue};
+use crate::interpreter::function_pointer::FunctionArgs;
+use crate::compiler::compiler::NativeFunction;
 
 pub fn load_functions(functions: &mut Vec<NativeFunction>) {
-    functions.push(NativeFunction::new(vec!["math".to_string()], "abs".to_string(), math_abs));
-    functions.push(NativeFunction::new(vec!["math".to_string()], "sin".to_string(), math_sin));
-    functions.push(NativeFunction::new(vec!["math".to_string()], "cos".to_string(), math_cos));
+    functions.push(NativeFunction::new_rs(vec!["math".to_string()], "abs".to_string(), math_abs));
+    functions.push(NativeFunction::new_rs(vec!["math".to_string()], "sin".to_string(), math_sin));
+    functions.push(NativeFunction::new_rs(vec!["math".to_string()], "cos".to_string(), math_cos));
 }
 
 pub fn math_abs(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
