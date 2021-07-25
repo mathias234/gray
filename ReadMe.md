@@ -37,9 +37,7 @@ if a > 4 && a < 6 {
 
 ### Loops
 #### For loop range based
-Ranges are a special syntax that under the hood will construct an array which can be iterated over with a `for` loop.
-
-In the example below the result of `0..5` is an array that looks like `[0, 1, 2, 3, 4]`  
+Ranges are a special syntax that under the hood will construct an RangeIterator which can be iterated over with a `for` loop.
 ```
 for i in 0..5 {
     print("Index is {}", i);
