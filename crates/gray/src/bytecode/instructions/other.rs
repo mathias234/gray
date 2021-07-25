@@ -5,9 +5,9 @@ use crate::{
 };
 use crate::bytecode::label::Label;
 use crate::interpreter::array::Array;
-use crate::interpreter::value::{IteratorHolder, ArrayIterator};
 use std::cell::RefCell;
 use std::rc::Rc;
+use crate::interpreter::iterator::{IteratorHolder, ArrayIterator};
 
 pub trait Instruction {
     fn execute(&self, context: &mut ExecutionContext);
