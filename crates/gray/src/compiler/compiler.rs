@@ -4,10 +4,10 @@ use crate::bytecode::generator::Generator;
 use std::collections::HashMap;
 use crate::bytecode::register::Register;
 use crate::interpreter::value::Value;
-use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument, LoadRegister, Break, Continue, PopBreakContinueScope, PushBreakContinueScope, ParamsList, Range};
-use crate::bytecode::instructions::jump::{JumpZero, Jump};
+use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument, LoadRegister, Break, Continue, PopBreakContinueScope, PushBreakContinueScope, ParamsList, Range, IteratorGetNext, CreateIterator};
+use crate::bytecode::instructions::jump::{JumpZero, Jump, JumpUndefined};
 use crate::bytecode::instructions::math::{Add, Subtract, Multiply, Divide};
-use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember, GetObjectMember, CreateEmptyArray, PushArray, GetArray, SetArray, GetArrayLength};
+use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember, GetObjectMember, CreateEmptyArray, PushArray, GetArray, SetArray };
 use crate::bytecode::instructions::comparison::{CompareGreaterThan, CompareLessThan, CompareNotEq, CompareEq, CompareLessThanOrEqual, CompareGreaterThanOrEqual, And, Or};
 use std::rc::Rc;
 use crate::compiler::compiler::CompilerError::UnexpectedASTNode;
@@ -288,23 +288,16 @@ impl Compiler {
         generator.emit(PushScope::new_boxed(), all_segments(node));
 
         self.compile_expression(generator, &node.children[1])?;
-        let array_register = generator.next_free_register();
-        generator.emit(Store::new_boxed(array_register), all_segments(node));
+
+        generator.emit(CreateIterator::new_boxed(), all_segments(&node.children[1]));
 
         let iterator_register = generator.next_free_register();
-        generator.emit(LoadImmediate::new_boxed(Value::from_i64(-1)), all_segments(node));
         generator.emit(Store::new_boxed(iterator_register), all_segments(node));
-
 
         let for_start = generator.make_label();
 
-        generator.emit(LoadImmediate::new_boxed(Value::from_i64(1)), node.code_segment);
-        generator.emit(Add::new_boxed(iterator_register), node.code_segment);
-        generator.emit(Store::new_boxed(iterator_register), node.code_segment);
-
-        generator.emit(LoadRegister::new_boxed(array_register), node.children[1].code_segment);
-        generator.emit(GetArrayLength::new_boxed(), node.children[1].code_segment);
-        generator.emit(CompareNotEq::new_boxed(iterator_register), node.children[1].code_segment);
+        generator.emit(LoadRegister::new_boxed(iterator_register), all_segments(node));
+        generator.emit(IteratorGetNext::new_boxed(), all_segments(&node.children[1]));
 
         let scope_start = generator.make_instruction_holder();
 
@@ -313,25 +306,22 @@ impl Compiler {
             _ => return Err(CompilerError::ExpectedIdentifier(node.children[0].clone()))
         };
 
-        generator.emit(LoadRegister::new_boxed(iterator_register), all_segments(node));
-        generator.emit(GetArray::new_boxed(array_register), all_segments(&node.children[1]));
+
         generator.emit(DeclareVariable::new_boxed(identifier_handle), all_segments(&node.children[0]));
 
         self.compile_scope(namespace, generator, &node.children[2], true)?;
-
 
         generator.emit(Jump::new_boxed(for_start), node.code_segment);
 
         let scope_end = generator.make_label();
 
-        generator.emit_at(JumpZero::new_boxed(scope_end), &scope_start, node.code_segment);
+        generator.emit_at(JumpUndefined::new_boxed(scope_end), &scope_start, node.code_segment);
 
         let break_label = generator.make_label();
 
         generator.emit(PopBreakContinueScope::new_boxed(), node.code_segment);
         generator.emit_at(PushBreakContinueScope::new_boxed(break_label, for_start), &push_break_continue_holder, node.code_segment);
 
-        generator.release_register(array_register);
         generator.release_register(iterator_register);
 
         generator.emit(PopScope::new_boxed(), all_segments(node));

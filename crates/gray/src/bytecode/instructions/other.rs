@@ -5,6 +5,9 @@ use crate::{
 };
 use crate::bytecode::label::Label;
 use crate::interpreter::array::Array;
+use crate::interpreter::value::{IteratorHolder, ArrayIterator};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub trait Instruction {
     fn execute(&self, context: &mut ExecutionContext);
@@ -187,6 +190,21 @@ impl Range {
     }
 }
 
+pub struct CreateIterator {}
+
+impl CreateIterator {
+    pub fn new_boxed() -> Box<CreateIterator> {
+        Box::new(CreateIterator {})
+    }
+}
+
+pub struct IteratorGetNext {}
+
+impl IteratorGetNext {
+    pub fn new_boxed() -> Box<IteratorGetNext> {
+        Box::new(IteratorGetNext {})
+    }
+}
 // Instruction implementations
 
 impl Instruction for LoadImmediate {
@@ -384,7 +402,7 @@ impl Instruction for Range {
             _ => {
                 context.throw_error("Expected integer");
                 return;
-            },
+            }
         };
 
         let rhs_integer = match rhs_value.get_data_value() {
@@ -394,20 +412,79 @@ impl Instruction for Range {
             _ => {
                 context.throw_error("Expected integer");
                 return;
-            },
+            }
         };
 
-
-        let mut array = Array::new();
-
-        for i in lhs_integer..rhs_integer {
-            array.push(Value::from_i64(i));
+        if lhs_integer > rhs_integer {
+            context.throw_error("Expected end to be larger then start");
+            return;
         }
 
-        context.set_accumulator(Value::from_array(array));
+        context.set_accumulator(Value::from_range(lhs_integer, rhs_integer));
     }
 
     fn to_string(&self) -> String {
         format!("Range")
+    }
+}
+
+impl Instruction for CreateIterator {
+    fn execute(&self, context: &mut ExecutionContext) {
+        let value = context.get_accumulator();
+
+        let iterator = match &value.get_data_value() {
+            DataValue::Range(range) => {
+                IteratorHolder {
+                    iterator: Rc::from(RefCell::from(range.clone()))
+                }
+            }
+            DataValue::Array(array) => {
+                let array_iter = ArrayIterator {
+                    array: array.clone(),
+                    index: 0,
+                };
+
+                IteratorHolder {
+                    iterator: Rc::from(RefCell::from(array_iter))
+                }
+            }
+
+            value => {
+                context.throw_error(&format!("Could not convert {:?} to iterator", value));
+                return;
+            }
+        };
+
+        context.set_accumulator(Value::from_iterator(iterator));
+    }
+
+    fn to_string(&self) -> String {
+        format!("CreateIterator")
+    }
+}
+
+
+impl Instruction for IteratorGetNext {
+    fn execute(&self, context: &mut ExecutionContext) {
+        let mut iterator = context.get_accumulator();
+        let iterator = &mut iterator.get_data_value_mut();
+        let iterator = match iterator {
+            DataValue::Iterator(iterator) => iterator,
+            _ => {
+                context.throw_error("Expected an iterator");
+                return;
+            }
+        };
+
+        if let Some(value) = iterator.iterator.borrow_mut().pop_next() {
+            context.set_accumulator(value);
+            return;
+        }
+
+        context.set_accumulator(Value::from_undefined());
+    }
+
+    fn to_string(&self) -> String {
+        format!("IteratorGetNext")
     }
 }

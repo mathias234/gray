@@ -13,6 +13,7 @@ use gray::compiler::compiler::NativeFunction;
 pub fn declare_functions() -> Vec<NativeFunction> {
     let mut functions = Vec::new();
     functions.push(NativeFunction::new(Vec::new(), String::from("print"), print_function));
+    functions.push(NativeFunction::new(Vec::new(), String::from("println"), println_function));
     functions.push(NativeFunction::new(Vec::new(), String::from("format"), format_to_value));
     functions.push(NativeFunction::new(Vec::new(), String::from("assert_eq"), assert_eq));
 
@@ -37,8 +38,15 @@ fn assert_eq(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
 }
 
 
+fn println_function(context: &ExecutionContext, args: FunctionArgs) -> Value {
+    print_function(context, args);
+    println!();
+
+    Value::from_i64(0)
+}
+
 fn print_function(context: &ExecutionContext, args: FunctionArgs) -> Value {
-    println!("{}", format_to_value(context, args).to_string());
+    print!("{}", format_to_value(context, args).to_string());
 
     Value::from_i64(0)
 }

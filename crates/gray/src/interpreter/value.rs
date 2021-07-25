@@ -6,8 +6,63 @@ use std::rc::Rc;
 use std::any::Any;
 use std::cell::RefCell;
 use crate::interpreter::interpreter::ExecutionContext;
+use std::fmt::Formatter;
 
 pub type Pointer<T> = Rc<RefCell<T>>;
+
+pub trait Iterator {
+    fn pop_next(&mut self) -> Option<Value>;
+}
+
+#[derive(Clone)]
+pub struct IteratorHolder {
+    pub iterator: Rc<RefCell<dyn Iterator>>,
+}
+
+impl std::fmt::Debug for IteratorHolder {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "(Iterator)")
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct RangeIterator {
+    pub from: i64,
+    pub to: i64,
+    pub index: i64,
+}
+
+#[derive(Clone, Debug)]
+pub struct ArrayIterator {
+    pub index: i64,
+    pub array: Array
+}
+
+impl Iterator for RangeIterator {
+    fn pop_next(&mut self) -> Option<Value> {
+        if self.index >= self.to {
+            return None;
+        }
+
+        let result = Some(Value::from_i64(self.from + self.index));
+        self.index += 1;
+
+        result
+    }
+}
+
+impl Iterator for ArrayIterator {
+    fn pop_next(&mut self) -> Option<Value> {
+        if self.index >= self.array.len() as i64 {
+            return None;
+        }
+
+        let result = Some(self.array.get(self.index as usize));
+        self.index += 1;
+
+        result
+    }
+}
 
 #[derive(Clone, Debug)]
 pub enum DataValue {
@@ -18,6 +73,8 @@ pub enum DataValue {
     Array(Array),
     Pointer(Pointer<dyn Any>),
     FunctionPointer(Rc<String>),
+    Range(RangeIterator),
+    Iterator(IteratorHolder),
     Undefined,
 }
 
@@ -72,6 +129,18 @@ impl Value {
     pub fn from_function(name: Rc<String>) -> Value {
         Value {
             value: DataValue::FunctionPointer(name)
+        }
+    }
+
+    pub fn from_range(from: i64, to: i64) -> Value {
+        Value {
+            value: DataValue::Range(RangeIterator { from, to, index: from }),
+        }
+    }
+
+    pub fn from_iterator(iterator: IteratorHolder) -> Value {
+        Value {
+            value: DataValue::Iterator(iterator),
         }
     }
 
@@ -269,7 +338,9 @@ impl Value {
             DataValue::String(string) => format!("{}", string),
             DataValue::Array(array) => format!("{}", array),
             DataValue::FunctionPointer(function_pointer) => format!("fn {}", function_pointer),
+            DataValue::Range(range) => format!("{}..{}", range.from, range.to),
             DataValue::Pointer(_) => format!("Internal Pointer"),
+            DataValue::Iterator(_) => format!("Iterator"),
             DataValue::Undefined => format!("Undefined")
         }
     }
@@ -285,7 +356,9 @@ impl fmt::Display for Value {
             DataValue::String(v) => write!(f, "({}: String)", v.clone()),
             DataValue::Array(v) => write!(f, "({}: Array)", v.clone()),
             DataValue::FunctionPointer(v) => write!(f, "({}: FunctionPointer)", v.clone()),
+            DataValue::Range(range) => write!(f, "{}..{}", range.from, range.to),
             DataValue::Pointer(_) => write!(f, "(Internal Pointer)"),
+            DataValue::Iterator(_) => write!(f, "Iterator"),
             DataValue::Undefined => write!(f, "(Undefined)"),
         }
     }
