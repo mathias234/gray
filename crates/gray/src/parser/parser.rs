@@ -511,7 +511,7 @@ impl Parser {
 
             let mut node = ASTNode::new(ASTType::Negate, hyphen.position);
             node.children.push(self.parse_sub_expression()?);
-            
+
             node
         } else {
             let token = self.get_next_token()?;
@@ -807,8 +807,6 @@ impl Parser {
             Ok(t) => Some(t),
             Err(_) => None,
         };
-
-        println!("Token 1 {:?}, Token 2 {:?}", token, token2);
 
         if token2.is_some() {
             if Parser::token_is_delimiter(token2.unwrap(), Delimiter::Equal) {

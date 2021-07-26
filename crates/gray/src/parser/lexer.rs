@@ -33,8 +33,6 @@ pub enum Delimiter {
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum Keyword {
-    Public,
-    Private,
     Function,
     VariableDeclaration,
     IfStatement,
@@ -399,8 +397,6 @@ impl Lexer {
 
     fn word_to_keyword(word: &str) -> Option<Keyword> {
         match word {
-            "public" => Some(Keyword::Public),
-            "private" => Some(Keyword::Private),
             "fn" => Some(Keyword::Function),
             "let" => Some(Keyword::VariableDeclaration),
             "if" => Some(Keyword::IfStatement),
