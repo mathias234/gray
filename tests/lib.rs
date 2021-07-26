@@ -1,4 +1,4 @@
-use r#mod::declare_functions;
+use gray::built_in_functions::declare_functions;
 
 fn run_file(file: &str) {
     let functions = declare_functions();

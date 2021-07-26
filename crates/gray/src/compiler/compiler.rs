@@ -52,7 +52,7 @@ impl NativeFunction {
         // then is_rust_func will be correctly assigned and the pointer will also be correctly assigned
         unsafe {
             if self.is_rust_func {
-                (self.pointer.rs)(context, args);
+                return (self.pointer.rs)(context, args);
             }
         }
 
