@@ -38,25 +38,31 @@ impl From<CompilerError> for GrayError {
 }
 
 pub fn load_file(file: &str, native_functions: Vec<NativeFunction>) -> Result<Interpreter, GrayError> {
-    let token_stream = Lexer::lex_file(file)?;
+    let mut token_stream = Lexer::lex_file(file)?;
 
-    /*
-    println!("\nLexer token stream");
-    loop {
-        let token = token_stream.next();
-        if token.is_none() {
-            break;
+    #[cfg(debug_assertions)]
+        {
+            println!("\nLexer token stream");
+            loop {
+                let token = token_stream.1.next();
+                if token.is_none() {
+                    break;
+                }
+                println!("{:?}", token.unwrap());
+            }
+
         }
-        println!("{:?}", token.unwrap());
-    }
 
-    token_stream.reset();
-     */
+    token_stream.1.reset();
 
     let root_ast_node = Parser::parse(token_stream.1, &token_stream.0)?;
 
-    //println!("\nParser AST Tree");
-    root_ast_node.dump(0);
+
+    #[cfg(debug_assertions)]
+        {
+            println!("\nParser AST Tree");
+            root_ast_node.dump(0);
+        }
 
     let blocks = Compiler::compile(root_ast_node, native_functions.clone())?;
 

@@ -185,12 +185,6 @@ impl Lexer {
             let token = lexer.pop_token()?;
 
             if token == TokenType::EndOfFile {
-                while let Some(t) = token_stream.next() {
-                    println!("{:?}", t);
-                }
-                token_stream.reset();
-
-
                 return Ok((Rc::from(file), token_stream));
             }
 
@@ -203,8 +197,6 @@ impl Lexer {
 
         let start_x = self.pos_x;
         let start_y = self.pos_y;
-
-        println!("Popping string!");
 
         let mut final_string = String::new();
         loop {

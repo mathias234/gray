@@ -286,32 +286,35 @@ impl<'interp> Interpreter<'interp> {
             None => String::from("ProgramMain"),
         };
 
-        println!("Compiled code");
-        for (name, block) in &self.blocks {
-            println!("\tBlock {}", name);
-            let mut idx = 0;
+        #[cfg(debug_assertions)]
+            {
+                println!("Compiled code");
+                for (name, block) in &self.blocks {
+                    println!("\tBlock {}", name);
+                    let mut idx = 0;
 
-            let mut indent = 2;
-            for ins in block.get_instructions() {
-                if ins.to_string() == String::from("PopScope") { indent -= 1; }
+                    let mut indent = 2;
+                    for ins in block.get_instructions() {
+                        if ins.to_string() == String::from("PopScope") { indent -= 1; }
 
-                for _ in 0..indent {
-                    print!("\t");
+                        for _ in 0..indent {
+                            print!("\t");
+                        }
+
+                        println!("// Segment ${:?}", block.code_mapping[idx]);
+
+                        for _ in 0..indent {
+                            print!("\t");
+                        }
+                        println!("[{:04}] {}", idx, ins.to_string());
+                        println!();
+                        if ins.to_string() == String::from("PushScope") { indent += 1; }
+                        idx += 1;
+                    }
+
+                    println!();
                 }
-
-                println!("// Segment ${:?}", block.code_mapping[idx]);
-
-                for _ in 0..indent {
-                    print!("\t");
-                }
-                println!("[{:04}] {}", idx, ins.to_string());
-                println!();
-                if ins.to_string() == String::from("PushScope") { indent += 1; }
-                idx += 1;
             }
-
-            println!();
-        }
 
         self.active_code_block = Some(&self.blocks[&self.active_block]);
 
