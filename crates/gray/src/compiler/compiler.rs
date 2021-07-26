@@ -4,7 +4,7 @@ use crate::bytecode::generator::Generator;
 use std::collections::HashMap;
 use crate::bytecode::register::Register;
 use crate::interpreter::value::Value;
-use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument, LoadRegister, Break, Continue, PopBreakContinueScope, PushBreakContinueScope, ParamsList, Range, IteratorGetNext, CreateIterator, IteratorEmpty};
+use crate::bytecode::instructions::other::{Return, Call, DeclareVariable, Store, LoadImmediate, GetVariable, PushScope, PopScope, SetVariable, LoadArgument, LoadRegister, Break, Continue, PopBreakContinueScope, PushBreakContinueScope, ParamsList, Range, IteratorGetNext, CreateIterator, IteratorEmpty, NegateValue};
 use crate::bytecode::instructions::jump::{JumpZero, Jump, JumpNotZero};
 use crate::bytecode::instructions::math::{Add, Subtract, Multiply, Divide};
 use crate::bytecode::instructions::object::{CreateEmptyObject, SetObjectMember, GetObjectMember, CreateEmptyArray, PushArray, GetArray, SetArray};
@@ -381,6 +381,13 @@ impl Compiler {
             ASTType::CreateObject => self.compile_create_object(generator, node),
             ASTType::CreateArray => self.compile_create_array(generator, node),
             ASTType::Expression => self.compile_expression(generator, node),
+            ASTType::Negate => {
+                self.compile_sub_expression(generator, &node.children[0])?;
+
+                generator.emit(NegateValue::new_boxed(), all_segments(node));
+
+                Ok({})
+            }
             ASTType::Subscript => {
                 let (index, array) = self.compile_subscript(generator, node)?;
                 generator.emit(LoadRegister::new_boxed(index), all_segments(node));

@@ -201,13 +201,46 @@ impl Lexer {
         }
     }
 
+    fn pop_string(&mut self) -> Result<Token, LexerError> {
+        let chars = &mut self.file[self.position..self.file.len()].chars();
+
+        let start_x = self.pos_x;
+        let start_y = self.pos_y;
+
+        println!("Popping string!");
+
+        let mut final_string = String::new();
+        loop {
+            let char = chars.next();
+
+            if char.is_none() {
+                return Ok(Token::new(TokenType::EndOfFile, CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y)));
+            }
+
+            let char = char.unwrap();
+
+
+            let delimiter = Lexer::char_to_delimiter(char);
+            if delimiter.is_some() {
+                let delimiter = delimiter.unwrap();
+                if delimiter == Delimiter::Quotation {
+                    self.pos_x += 1;
+                    self.position += char.len_utf8();
+                    break;
+                }
+            }
+
+            self.pos_x += 1;
+            self.position += char.len_utf8();
+            final_string += &String::from(char);
+        }
+
+        return Ok(Token::new(TokenType::String(final_string), CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y)));
+    }
+
     pub fn pop_token(&mut self) -> Result<Token, LexerError> {
         let mut word = String::new();
         let chars = &mut self.file[self.position..self.file.len()].chars();
-
-        let mut is_string = false;
-        let mut is_comment = false;
-        let mut saw_hyphen = false;
 
         let start_x = self.pos_x;
         let start_y = self.pos_y;
@@ -225,52 +258,14 @@ impl Lexer {
             let delimiter = Lexer::char_to_delimiter(char);
             if delimiter.is_some() {
                 let delimiter = delimiter.unwrap();
+
                 if delimiter == Delimiter::Quotation {
                     self.position += char.len_utf8();
                     self.pos_x += 1;
-
-                    if is_string {
-                        break;
-                    }
-
-                    is_string = true;
-                    continue;
-                } else if delimiter == Delimiter::Slash && !is_string {
-                    if let Some(delimiter) = chars.next_back() {
-                        if let Some(delimiter) = Lexer::char_to_delimiter(delimiter) {
-                            if delimiter == Delimiter::Slash {
-                                chars.next();
-                                is_comment = true;
-                                self.position += char.len_utf8();
-                                self.pos_x += 1;
-                                continue;
-                            }
-                        }
-                    }
+                    return self.pop_string();
                 }
 
-                if is_comment {
-                    self.position += char.len_utf8();
-                    match delimiter {
-                        Delimiter::LineFeed => {
-                            return self.pop_token();
-                        }
-                        _ => {}
-                    }
-                    continue;
-                }
-
-                // While parsing strings any character is fine
-                if is_string {
-                    word += &String::from(char);
-                    self.position += char.len_utf8();
-                    self.pos_x += 1;
-                    continue;
-                }
-
-                if saw_hyphen == false && delimiter == Delimiter::Hyphen {
-                    saw_hyphen = true;
-                } else if delimiter == Delimiter::Dot && Lexer::word_to_integer(&word).is_some() {
+                if delimiter == Delimiter::Dot && Lexer::word_to_integer(&word).is_some() {
                     // Seems like a float, as we have a full integer before then a dot
                     // Lets try and pop another token to get the fractional portion
 
@@ -318,14 +313,7 @@ impl Lexer {
             self.position += char.len_utf8();
             self.pos_x += 1;
 
-            if !is_comment {
-                word += &String::from(char);
-            }
-        }
-
-
-        if is_string {
-            return Ok(Token::new(TokenType::String(word), CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y)));
+            word += &String::from(char);
         }
 
         match Lexer::word_to_delimiter(&word) {

@@ -214,6 +214,14 @@ impl IteratorEmpty {
     }
 }
 
+pub struct NegateValue {}
+
+impl NegateValue {
+    pub fn new_boxed() -> Box<NegateValue> {
+        Box::new(NegateValue {})
+    }
+}
+
 // Instruction implementations
 
 impl Instruction for LoadImmediate {
@@ -521,3 +529,29 @@ impl Instruction for IteratorEmpty {
         format!("IteratorEmpty")
     }
 }
+
+impl Instruction for NegateValue {
+    fn execute(&self, context: &mut ExecutionContext) {
+        let value = context.get_accumulator();
+
+        let result = match value.get_data_value() {
+            DataValue::I64(v) => {
+                Value::from_i64(v * -1)
+            }
+            DataValue::F64(v) => {
+                Value::from_f64(v * -1.0)
+            }
+            v => {
+                context.throw_error(&format!("Unable to negate value {:?}", v));
+                return;
+            }
+        };
+
+        context.set_accumulator(result)
+    }
+
+    fn to_string(&self) -> String {
+        format!("IteratorEmpty")
+    }
+}
+

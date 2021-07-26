@@ -52,8 +52,8 @@ pub enum ASTType {
     ObjectMember(String),
     ObjectAccess,
     Subscript,
-    Trait(String),
     ParamsList,
+    Negate
 }
 
 #[derive(Debug)]
@@ -506,6 +506,13 @@ impl Parser {
             self.parse_object_declaration()?
         } else if Parser::token_is_delimiter(first_delimiter, Delimiter::OpenBracket) {
             self.parse_array_declaration()?
+        } else if Parser::token_is_delimiter(first_delimiter, Delimiter::Hyphen) {
+            let hyphen = self.get_next_token()?;
+
+            let mut node = ASTNode::new(ASTType::Negate, hyphen.position);
+            node.children.push(self.parse_sub_expression()?);
+            
+            node
         } else {
             let token = self.get_next_token()?;
             Parser::token_to_simple_ast_node(&token)?
