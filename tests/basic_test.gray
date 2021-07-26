@@ -20,3 +20,6 @@ while test_num < 100 {
 
 assert_eq(test_num, 100);
 
+let hex = 0x22FF;
+
+assert_eq(hex, 8959);

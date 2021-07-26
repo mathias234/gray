@@ -61,7 +61,6 @@ pub enum TokenType {
 pub struct Token {
     pub token_type: TokenType,
     pub position: CodeSegment,
-
 }
 
 impl Token {
@@ -363,8 +362,16 @@ impl Lexer {
     }
 
     fn word_to_integer(word: &str) -> Option<i64> {
-        // TODO: Parse as hex
-        if word.starts_with("0x") {}
+        if word.starts_with("0x") {
+            let word = word.trim_start_matches("0x");
+
+            let value = match i64::from_str_radix(&word, 16) {
+                Ok(v) => v,
+                Err(err) => panic!("Error {}", err),
+            };
+
+            return Some(value);
+        }
 
         let value: i64 = match word.parse() {
             Ok(v) => v,
