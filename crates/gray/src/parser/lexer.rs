@@ -265,6 +265,34 @@ impl Lexer {
                     return self.pop_string();
                 }
 
+                if delimiter == Delimiter::Slash {
+                    let mut peekable = chars.peekable();
+
+                    if let Some(next_char) = peekable.peek() {
+                        let delimiter = Lexer::char_to_delimiter(next_char.clone());
+                        if delimiter.is_some() && delimiter.unwrap() == Delimiter::Slash {
+                            loop {
+                                let char = chars.next();
+                                if char.is_none() { break; }
+                                let char = char.unwrap();
+
+                                if let Some(delimiter) = Lexer::char_to_delimiter(char) {
+                                    if delimiter == Delimiter::LineFeed {
+                                        self.position += char.len_utf8();
+                                        self.pos_x += 1;
+                                        break;
+                                    }
+                                }
+
+                                self.position += char.len_utf8();
+                                self.pos_x += 1;
+                            }
+
+                            continue;
+                        }
+                    }
+                }
+
                 if delimiter == Delimiter::Dot && Lexer::word_to_integer(&word).is_some() {
                     // Seems like a float, as we have a full integer before then a dot
                     // Lets try and pop another token to get the fractional portion
