@@ -6,6 +6,7 @@ use crate::interpreter::value::Value;
 use crate::interpreter::interpreter::Interpreter;
 use crate::load_file;
 use crate::built_in_functions::declare_functions;
+use crate::compiler::compiler::NativeFunction;
 
 unsafe fn c_str_to_string(str: *const c_char) -> String {
     let c_str = CStr::from_ptr(str);
@@ -47,4 +48,10 @@ pub unsafe extern "C" fn interpreter_run(pointer: InterpreterPointer)  {
     let mut interp = Box::from_raw(pointer.value as *mut Interpreter);
     interp.run(None);
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn declare_function(native_function: NativeFunction) {
+
+}
+
 

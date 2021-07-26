@@ -14,6 +14,9 @@ use crate::compiler::compiler::CompilerError::UnexpectedASTNode;
 
 use crate::interpreter::interpreter::ExecutionContext;
 use crate::interpreter::function_pointer::FunctionArgs;
+use crate::interop::execution_pointer::ExecutionContextPointer;
+use crate::interop::value_pointer::ValuePointer;
+use crate::interop::function_args_pointer::FunctionArgsPointer;
 
 #[derive(Debug)]
 pub enum CompilerError {
@@ -28,7 +31,7 @@ pub struct Compiler {
 }
 
 pub type RustFunctionPointer = fn(&ExecutionContext, FunctionArgs) -> Value;
-pub type CFunctionPointer = fn(&ExecutionContext, FunctionArgs) -> Value;
+pub type CFunctionPointer = fn(&ExecutionContextPointer, FunctionArgsPointer) -> ValuePointer;
 
 #[derive(Copy, Clone)]
 pub union FunctionPointer {

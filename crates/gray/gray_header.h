@@ -6,6 +6,8 @@
 #include <new>
 
 
+struct NativeFunction;
+
 struct InterpreterPointer {
   void *value;
 };
@@ -16,6 +18,8 @@ struct ValuePointer {
 
 
 extern "C" {
+
+void declare_function(NativeFunction native_function);
 
 InterpreterPointer interpreter_load_file(const char *name);
 
