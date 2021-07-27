@@ -44,6 +44,7 @@ pub enum Keyword {
     Namespace,
     Break,
     Continue,
+    Match,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -407,6 +408,7 @@ impl Lexer {
             "continue" => Some(Keyword::Continue),
             "for" => Some(Keyword::ForStatement),
             "in" => Some(Keyword::In),
+            "match" => Some(Keyword::Match),
             _ => None,
         }
     }

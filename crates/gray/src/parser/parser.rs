@@ -35,6 +35,8 @@ pub enum ASTType {
     ReturnExpression,
     ContinueExpression,
     BreakExpression,
+    MatchExpression,
+    MatchArm,
     IfStatement,
     WhileStatement,
     ForStatement,
@@ -182,6 +184,17 @@ impl Parser {
                 }
             }
 
+            match &token.token_type {
+                TokenType::Delimiter(d) => match d {
+                    Delimiter::CloseCurlyBracket => {
+                        self.get_next_token()?;
+                        return Ok(scope);
+                    }
+                    _ => {}
+                }
+                _ => {}
+            }
+
             let child = match &token.token_type {
                 TokenType::Keyword(keyword) => {
                     match keyword {
@@ -223,6 +236,12 @@ impl Parser {
                             namespace.children.push(self.parse_scope()?);
                             Ok(namespace)
                         }
+                        Keyword::Match => {
+                            let result = self.parse_expression()?;
+                            Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
+
+                            Ok(result)
+                        }
                         _ => Err(ParserError::UnexpectedKeywordInStream(keyword.clone(), token.clone())),
                     }
                 }
@@ -233,17 +252,12 @@ impl Parser {
 
                             self.parse_scope()
                         }
-                        Delimiter::CloseCurlyBracket => {
-                            self.get_next_token()?;
-                            return Ok(scope);
-                        }
+
                         _ => Err(ParserError::UnexpectedDelimiterInStream(Delimiter::CloseCurlyBracket, token.clone())),
                     }
                 }
                 _ => {
-                    let result;
-
-                    result = self.parse_expression()?;
+                    let result = self.parse_expression()?;
                     Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
 
                     Ok(result)
@@ -544,10 +558,16 @@ impl Parser {
     fn parse_sub_expression(&mut self) -> Result<ASTNode, ParserError> {
         let first_delimiter = self.peek_next_token(0)?;
         let delimiter = self.peek_next_token(1)?;
+        let delimiter2 = self.peek_next_token(2);
 
         let result = if Parser::token_is_keyword(first_delimiter, Keyword::Function) {
             self.parse_lambda_function()?
-        } else if Parser::token_is_delimiter(delimiter, Delimiter::OpenParen) || Parser::token_is_delimiter(&delimiter, Delimiter::Colon) {
+        } else if Parser::token_is_keyword(first_delimiter, Keyword::Match) {
+            self.parse_match_expression()?
+        } else if Parser::token_is_delimiter(delimiter, Delimiter::OpenParen) ||
+            (delimiter2.is_ok() &&
+                Parser::token_is_delimiter(&delimiter, Delimiter::Colon) &&
+                Parser::token_is_delimiter(delimiter2.unwrap(), Delimiter::Colon)) {
             self.parse_function_call()?
         } else if Parser::token_is_delimiter(first_delimiter, Delimiter::OpenCurlyBracket) {
             self.parse_object_declaration()?
@@ -580,6 +600,48 @@ impl Parser {
         }
 
         return Ok(result);
+    }
+
+    fn parse_match_expression(&mut self) -> Result<ASTNode, ParserError> {
+        let match_kv = self.get_next_token()?;
+        let mut match_node = ASTNode::new(ASTType::MatchExpression, match_kv.position);
+
+        let match_on = self.parse_expression()?;
+
+        match_node.children.push(match_on);
+
+        Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenCurlyBracket)?;
+
+        loop {
+            let arm = self.parse_expression()?;
+
+            Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Colon)?;
+            Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenCurlyBracket)?;
+
+            let scope = self.parse_scope()?;
+
+            let mut match_arm = ASTNode::new(ASTType::MatchArm, arm.code_segment);
+
+            match_arm.children.push(arm);
+            match_arm.children.push(scope);
+
+            match_node.children.push(match_arm);
+
+
+            let next = self.peek_next_token(0)?;
+            if Parser::token_is_delimiter(next, Delimiter::Comma) {
+                self.get_next_token()?;
+            }
+
+            let next = self.peek_next_token(0)?;
+            if Parser::token_is_delimiter(next, Delimiter::CloseCurlyBracket) {
+                break;
+            }
+        }
+
+        Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::CloseCurlyBracket)?;
+
+        Ok(match_node)
     }
 
     fn parse_array_declaration(&mut self) -> Result<ASTNode, ParserError> {
@@ -664,9 +726,7 @@ impl Parser {
             let call = ASTNode::new(ASTType::FunctionCall(identifier), identifier_token.position);
 
             node.children.push(call);
-
-        }
-        else {
+        } else {
             node.children.push(Parser::token_to_simple_ast_node(&identifier_token)?);
         }
 
