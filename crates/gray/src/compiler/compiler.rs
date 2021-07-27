@@ -407,6 +407,38 @@ impl Compiler {
         Ok({})
     }
 
+    fn compile_match_expression(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
+        self.compile_expression(generator, &node.children[0])?;
+        let expression_register = generator.next_free_register();
+        generator.emit(Store::new_boxed(expression_register), all_segments(&node.children[0]));
+
+        let result_register = generator.next_free_register();
+
+        for i in 1..node.children.len() {
+            let child = &node.children[i];
+            let expr = &child.children[0];
+            self.compile_expression(generator, expr)?;
+
+            generator.emit(CompareEq::new_boxed(expression_register), all_segments(child));
+
+            let jz_holder = generator.make_instruction_holder();
+
+            self.compile_scope("", generator, &child.children[1], true)?;
+            generator.emit(Store::new_boxed(result_register), all_segments(child));
+
+            let jump_point = generator.make_label();
+
+            generator.emit_at(JumpZero::new_boxed(jump_point), &jz_holder, all_segments(child));
+        }
+
+        generator.release_register(expression_register);
+
+        generator.emit(LoadRegister::new_boxed(result_register), all_segments(node));
+        generator.release_register(result_register);
+
+        Ok({})
+    }
+
     fn compile_sub_expression(&mut self, generator: &mut Generator, node: &ASTNode) -> Result<(), CompilerError> {
         match &node.ast_type {
             ASTType::IntegerValue(_) => self.compile_value_to_accumulator(generator, node),
@@ -453,6 +485,9 @@ impl Compiler {
 
                 self.compile_function("", &handle_str, node)?;
                 Ok({})
+            }
+            ASTType::MatchExpression => {
+                self.compile_match_expression(generator, node)
             }
             _ => Err(CompilerError::UnexpectedASTNode(node.clone())),
         }
