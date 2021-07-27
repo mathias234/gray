@@ -213,10 +213,10 @@ impl Compiler {
                 ASTType::ForStatement => {
                     self.compile_for_statement(namespace, generator, child)?;
                 }
-                ASTType::BreakExpresssion => {
+                ASTType::BreakExpression => {
                     generator.emit(Break::new_boxed(), node.code_segment);
                 }
-                ASTType::ContinueExpresssion => {
+                ASTType::ContinueExpression => {
                     generator.emit(Continue::new_boxed(), node.code_segment);
                 }
                 ASTType::ReturnExpression => {

@@ -33,8 +33,8 @@ pub enum ASTType {
     Scope,
     Expression,
     ReturnExpression,
-    ContinueExpresssion,
-    BreakExpresssion,
+    ContinueExpression,
+    BreakExpression,
     IfStatement,
     WhileStatement,
     ForStatement,
@@ -199,13 +199,13 @@ impl Parser {
                         }
                         Keyword::Continue => {
                             let token = self.get_next_token()?;
-                            let return_value = ASTNode::new(ASTType::ContinueExpresssion, token.position);
+                            let return_value = ASTNode::new(ASTType::ContinueExpression, token.position);
                             Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
                             Ok(return_value)
                         }
                         Keyword::Break => {
                             let token = self.get_next_token()?;
-                            let return_value = ASTNode::new(ASTType::BreakExpresssion, token.position);
+                            let return_value = ASTNode::new(ASTType::BreakExpression, token.position);
                             Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
                             Ok(return_value)
                         }
