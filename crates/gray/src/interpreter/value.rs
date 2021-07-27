@@ -209,14 +209,13 @@ impl Value {
         }
     }
 
-    pub fn eq(&self, context: &ExecutionContext, rhs_value: &Self) -> bool {
+    pub fn eq(&self, rhs_value: &Self) -> bool {
         match &self.value {
             DataValue::I64(lhs) => {
                 match &rhs_value.value {
                     DataValue::I64(rhs) => { *lhs == *rhs }
                     DataValue::F64(rhs) => { *lhs as f64 == *rhs }
-                    rhs => {
-                        context.throw_error(&format!("Unable to compare {:?} to {:?}", lhs, rhs));
+                    _ => {
                         false
                     }
                 }
@@ -225,8 +224,7 @@ impl Value {
                 match &rhs_value.value {
                     DataValue::I64(rhs) => { *lhs == *rhs as f64 }
                     DataValue::F64(rhs) => { *lhs == *rhs }
-                    rhs => {
-                        context.throw_error(&format!("Unable to compare {:?} to {:?}", lhs, rhs));
+                    _ => {
                         false
                     }
                 }
@@ -234,14 +232,12 @@ impl Value {
             DataValue::String(lhs) => {
                 match &rhs_value.value {
                     DataValue::String(rhs) => { lhs == rhs }
-                    rhs_type => {
-                        context.throw_error(&format!("Cannot compare a string to {:?}", rhs_type));
+                    _ => {
                         false
                     }
                 }
             }
-            rhs => {
-                context.throw_error(&format!("Equal operator is not implemented for {:?}", rhs));
+            _ => {
                 false
             }
         }

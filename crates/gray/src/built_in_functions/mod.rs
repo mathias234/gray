@@ -30,7 +30,7 @@ fn assert_eq(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
     let received_value = args.get_next(context).clone();
     let expected_value = args.get_next(context).clone();
 
-    if !received_value.eq(context, &expected_value) {
+    if !received_value.eq(&expected_value) {
         return context.throw_error(&format!("Assertion failed {:?} == {:?}", received_value.get_data_value(), expected_value.get_data_value()));
     }
     
