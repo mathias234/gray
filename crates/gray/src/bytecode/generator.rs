@@ -15,6 +15,7 @@ pub struct Generator {
     pub block: CodeBlock,
     variable_handles: HashMap<String, VariableHandle>,
     last_handle: VariableHandle,
+    lambda_index: usize,
 }
 
 impl Generator {
@@ -25,6 +26,7 @@ impl Generator {
             block: CodeBlock::new(),
             variable_handles: HashMap::new(),
             last_handle: 0,
+            lambda_index: 0,
         };
 
         for func in native_functions {
@@ -75,6 +77,12 @@ impl Generator {
         self.last_handle += 1;
 
         return handle;
+    }
+
+    pub fn next_lambda_handle(&mut self) -> String {
+        let handle = format!("__LambdaFunction[{}]", self.lambda_index);
+        self.lambda_index += 1;
+        handle
     }
 
     pub fn emit(&mut self, instruction: Box<dyn Instruction>, segment: CodeSegment) {

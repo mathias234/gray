@@ -75,4 +75,15 @@ fn test(params) {
 }
 
 test(0, 1, 2);
+
 ```
+
+#### Lambda functions
+```
+let lambda = fn (message) {
+    println("Lambda says: {}", message); 
+};
+
+lambda("hello");
+```
+

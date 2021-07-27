@@ -407,6 +407,13 @@ impl Compiler {
 
                 Ok({})
             }
+            ASTType::LambdaFunction => {
+                let handle_str= generator.next_lambda_handle();
+                generator.emit(LoadImmediate::new_boxed(Value::from_function(Rc::new(handle_str.to_string()))), all_segments(node));
+
+                self.compile_function("", &handle_str, node)?;
+                Ok({})
+            }
             _ => Err(CompilerError::UnexpectedASTNode(node.clone())),
         }
     }
