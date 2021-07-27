@@ -64,7 +64,7 @@ pub fn load_file(file: &str, native_functions: Vec<NativeFunction>) -> Result<In
             root_ast_node.dump(0);
         }
 
-    let blocks = Compiler::compile(root_ast_node, native_functions.clone())?;
+    let blocks = Compiler::compile(root_ast_node, native_functions.clone(), &token_stream.0.to_string())?;
 
     let interpreter = Interpreter::new(blocks, token_stream.0, native_functions);
 
@@ -77,7 +77,7 @@ pub fn load_string(code: &str, native_functions: Vec<NativeFunction>) -> Result<
 
     let root_ast_node = Parser::parse(token_stream, code)?;
 
-    let blocks = Compiler::compile(root_ast_node, native_functions.clone())?;
+    let blocks = Compiler::compile(root_ast_node, native_functions.clone(), code)?;
 
     let interpreter = Interpreter::new(blocks, Rc::from(code.to_string()), native_functions);
 

@@ -84,7 +84,37 @@ impl NativeFunction {
 }
 
 impl Compiler {
-    pub fn compile(root_node: ASTNode, native_functions: Vec<NativeFunction>) -> Result<HashMap<String, CodeBlock>, CompilerError> {
+    fn pretty_print_error(&self, error: &CompilerError, code_string: &str) {
+        let lines: Vec<&str> = code_string.split('\n').collect();
+
+        let code_segment;
+
+        let error_message = match error {
+            CompilerError::UnexpectedASTNode(v) => {
+                code_segment = v.code_segment;
+                format!("Unexpected {:?}", v)
+            }
+            CompilerError::ExpectedIdentifier(v) => {
+                code_segment = v.code_segment;
+                format!("Expected identifier got {:?}", v)
+            }
+            CompilerError::CannotAssignToReturnValueOfFunction(v) => {
+                code_segment = v.code_segment;
+                format!("Cannot assign to the return value of a function")
+            }
+        };
+
+        error_printer::print_error_line(
+            lines[code_segment.start_y - 1],
+            code_segment.start_y,
+            code_segment.start_x,
+            code_segment.end_x, );
+
+
+        println!(" {}", error_message)
+    }
+
+    pub fn compile(root_node: ASTNode, native_functions: Vec<NativeFunction>, code_string: &str) -> Result<HashMap<String, CodeBlock>, CompilerError> {
         let mut compiler = Compiler {
             blocks: HashMap::new(),
             native_functions,
@@ -92,7 +122,14 @@ impl Compiler {
 
 
         let mut generator = Generator::new(&compiler.native_functions);
-        compiler.compile_scope("", &mut generator, &root_node, true)?;
+        let result = compiler.compile_scope("", &mut generator, &root_node, true);
+
+        if result.is_err() {
+            let err = result.unwrap_err();
+            compiler.pretty_print_error(&err, code_string);
+            return Err(err);
+        }
+
         compiler.blocks.insert(String::from("ProgramMain"), generator.block);
 
         Ok(compiler.blocks)
