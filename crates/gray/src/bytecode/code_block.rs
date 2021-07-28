@@ -28,12 +28,13 @@ impl std::fmt::Debug for CodeSegment {
 
 pub struct CodeBlock {
     instructions: Vec<Box<dyn Instruction>>,
-    pub code_mapping: Vec<CodeSegment> // Maps instruction to a physical location in the original code
+    pub code_mapping: Vec<CodeSegment>, // Maps instruction to a physical location in the original code
+    pub capture_locals: bool,
 }
 
 impl CodeBlock {
-    pub fn new() -> CodeBlock {
-        CodeBlock { instructions: Vec::new(), code_mapping: Vec::new() }
+    pub fn new(capture_locals: bool) -> CodeBlock {
+        CodeBlock { instructions: Vec::new(), code_mapping: Vec::new(), capture_locals }
     }
 
     pub fn add_instruction(&mut self, instruction: Box<dyn Instruction>, segment: CodeSegment) {

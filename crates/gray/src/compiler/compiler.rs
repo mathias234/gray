@@ -121,7 +121,7 @@ impl Compiler {
         };
 
 
-        let mut generator = Generator::new(&compiler.native_functions);
+        let mut generator = Generator::new(&compiler.native_functions, false, None);
         let result = compiler.compile_scope("", &mut generator, &root_node, true);
 
         if result.is_err() {
@@ -135,8 +135,13 @@ impl Compiler {
         Ok(compiler.blocks)
     }
 
-    fn compile_function(&mut self, namespace: &str, name: &str, node: &ASTNode) -> Result<(), CompilerError> {
-        let mut generator = Generator::new(&self.native_functions);
+    fn compile_function(&mut self, parent_generator: &Generator, namespace: &str, name: &str, node: &ASTNode, capture_locals: bool) -> Result<(), CompilerError> {
+        let mut generator;
+        if !capture_locals {
+            generator = Generator::new(&self.native_functions, capture_locals, Some(parent_generator));
+        } else {
+            generator = Generator::new(&Vec::new(), capture_locals, Some(parent_generator));
+        }
 
         let mut argument_index = 0;
         for child in &node.children {
@@ -236,7 +241,7 @@ impl Compiler {
                     self.compile_scope("", generator, child, true)?;
                 }
                 ASTType::Function(name) => {
-                    self.compile_function(namespace, name, child)?
+                    self.compile_function(generator, namespace, name, child, false)?
                 }
                 _ => return Err(CompilerError::UnexpectedASTNode(child.clone())),
             }
@@ -430,7 +435,7 @@ impl Compiler {
 
             generator.emit(DeclareVariable::new_boxed(handle), all_segments(&child.children[1]));
 
-            self.compile_function("", &handle_str, &child.children[1])?;
+            self.compile_function(generator, "", &handle_str, &child.children[1], true)?;
             generator.emit(Call::new_boxed(handle, None), all_segments(&child.children[1]));
 
             generator.emit(Store::new_boxed(result_register), all_segments(child));
@@ -492,7 +497,7 @@ impl Compiler {
                 let handle_str = generator.next_lambda_handle();
                 generator.emit(LoadImmediate::new_boxed(Value::from_function(Rc::new(handle_str.to_string()))), all_segments(node));
 
-                self.compile_function("", &handle_str, node)?;
+                self.compile_function(generator, "", &handle_str, node, true)?;
                 Ok({})
             }
             ASTType::MatchExpression => {

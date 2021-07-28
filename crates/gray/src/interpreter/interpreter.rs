@@ -421,6 +421,23 @@ impl<'interp> Interpreter<'interp> {
 
                 let old_context = mem::replace(&mut self.execution_context, ExecutionContext::new(self.code_text.clone()));
 
+                let block_to_call = block_to_call.unwrap();
+
+                if block_to_call.capture_locals {
+                    let mut variables = Vec::new();
+                    for scope in &old_context.scope_stack {
+                        for _ in variables.len()..scope.variables.len() { variables.push(Value::from_undefined()) }
+
+                        for i in 0..scope.variables.len() {
+                            if variables[i].is_undefined() && scope.variables[i].is_undefined() { continue; }
+                            variables[i] = scope.variables[i].clone();
+                        }
+                    }
+
+                    self.execution_context.scope_stack[0].variables = variables;
+                }
+
+
                 let current_frame = StackFrame {
                     pc: self.pc,
                     execution_context: old_context,
@@ -431,7 +448,7 @@ impl<'interp> Interpreter<'interp> {
                 self.call_stack.push(current_frame);
 
                 self.active_block = handle.to_string();
-                self.active_code_block = block_to_call;
+                self.active_code_block = Some(block_to_call);
 
                 len = self.active_code_block.unwrap().get_instructions().len();
 

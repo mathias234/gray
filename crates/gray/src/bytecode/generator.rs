@@ -19,15 +19,19 @@ pub struct Generator {
 }
 
 impl Generator {
-    pub fn new(native_functions: &Vec<NativeFunction>) -> Generator {
+    pub fn new(native_functions: &Vec<NativeFunction>, capture_locals: bool, parent_generator: Option<&Generator>) -> Generator {
         let mut generator = Generator {
             register_index: 0,
             released_registers: Vec::new(),
-            block: CodeBlock::new(),
+            block: CodeBlock::new(capture_locals),
             variable_handles: HashMap::new(),
             last_handle: 0,
             lambda_index: 0,
         };
+
+        if capture_locals && parent_generator.is_some() {
+            generator.variable_handles = parent_generator.unwrap().variable_handles.clone();
+        }
 
         for func in native_functions {
             let handle = generator.next_variable_handle(&func.full_name());
