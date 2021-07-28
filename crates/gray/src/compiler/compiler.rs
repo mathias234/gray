@@ -423,7 +423,16 @@ impl Compiler {
 
             let jz_holder = generator.make_instruction_holder();
 
-            self.compile_scope("", generator, &child.children[1], true)?;
+            let handle_str = generator.next_lambda_handle();
+            let handle = generator.next_variable_handle(&handle_str);
+
+            generator.emit(LoadImmediate::new_boxed(Value::from_function(Rc::new(handle_str.to_string()))), all_segments(node));
+
+            generator.emit(DeclareVariable::new_boxed(handle), all_segments(&child.children[1]));
+
+            self.compile_function("", &handle_str, &child.children[1])?;
+            generator.emit(Call::new_boxed(handle, None), all_segments(&child.children[1]));
+
             generator.emit(Store::new_boxed(result_register), all_segments(child));
 
             let jump_point = generator.make_label();

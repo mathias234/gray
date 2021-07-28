@@ -619,11 +619,14 @@ impl Parser {
             Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenCurlyBracket)?;
 
             let scope = self.parse_scope()?;
+            let mut lambda = ASTNode::new(ASTType::LambdaFunction, scope.code_segment);
+            lambda.children.push(scope);
+
 
             let mut match_arm = ASTNode::new(ASTType::MatchArm, arm.code_segment);
 
             match_arm.children.push(arm);
-            match_arm.children.push(scope);
+            match_arm.children.push(lambda);
 
             match_node.children.push(match_arm);
 
