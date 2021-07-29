@@ -718,15 +718,32 @@ impl Parser {
         let next_token = self.peek_next_token(0)?;
 
         if Parser::token_is_delimiter(next_token, Delimiter::OpenParen) {
-            self.get_next_token()?;
-            self.get_next_token()?;
-
             let identifier = match identifier_token.token_type {
                 TokenType::Identifier(id) => id,
                 _ => return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(identifier_token.clone()))
             };
 
-            let call = ASTNode::new(ASTType::FunctionCall(identifier), identifier_token.position);
+            let mut call = ASTNode::new(ASTType::FunctionCall(identifier), identifier_token.position);
+
+            Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenParen)?;
+
+            // Parameters
+            loop {
+                if Parser::token_is_delimiter(self.peek_next_token(0)?, Delimiter::CloseParen) {
+                    break;
+                }
+
+                call.children.push(self.parse_expression()?);
+
+                let token = self.peek_next_token(0)?;
+                if Parser::token_is_delimiter(token, Delimiter::Comma) {
+                    self.get_next_token()?;
+                } else {
+                    break;
+                }
+            }
+
+            Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::CloseParen)?;
 
             node.children.push(call);
         } else {
