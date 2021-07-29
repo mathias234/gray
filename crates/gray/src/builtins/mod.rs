@@ -1,27 +1,43 @@
-mod math;
 mod array;
-mod io;
-mod gray_interp;
 mod debug;
+mod gray_interp;
+mod io;
+mod math;
 
-use crate::interpreter::interpreter::ExecutionContext;
-use crate::interpreter::value::{Value};
-use std::rc::Rc;
-use crate::interpreter::function_pointer::FunctionArgs;
 use crate::compiler::compiler::NativeFunction;
+use crate::interpreter::function_pointer::FunctionArgs;
+use crate::interpreter::interpreter::ExecutionContext;
+use crate::interpreter::value::Value;
+use std::rc::Rc;
 
 pub fn declare_functions() -> Vec<NativeFunction> {
     let mut functions = Vec::new();
-    functions.push(NativeFunction::new_rs(Vec::new(), String::from("print"), print_function));
-    functions.push(NativeFunction::new_rs(Vec::new(), String::from("println"), println_function));
-    functions.push(NativeFunction::new_rs(Vec::new(), String::from("format"), format_to_value));
-    functions.push(NativeFunction::new_rs(Vec::new(), String::from("assert_eq"), assert_eq));
+    functions.push(NativeFunction::new_rs(
+        Vec::new(),
+        String::from("print"),
+        print_function,
+    ));
+    functions.push(NativeFunction::new_rs(
+        Vec::new(),
+        String::from("println"),
+        println_function,
+    ));
+    functions.push(NativeFunction::new_rs(
+        Vec::new(),
+        String::from("format"),
+        format_to_value,
+    ));
+    functions.push(NativeFunction::new_rs(
+        Vec::new(),
+        String::from("assert_eq"),
+        assert_eq,
+    ));
 
-     math::load_functions(&mut functions);
-     array::load_functions(&mut functions);
-     io::load_functions(&mut functions);
-     gray_interp::load_functions(&mut functions);
-     debug::load_functions(&mut functions);
+    math::load_functions(&mut functions);
+    array::load_functions(&mut functions);
+    io::load_functions(&mut functions);
+    gray_interp::load_functions(&mut functions);
+    debug::load_functions(&mut functions);
 
     functions
 }
@@ -31,12 +47,14 @@ fn assert_eq(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
     let expected_value = args.get_next(context).clone();
 
     if !received_value.eq(&expected_value) {
-        return context.throw_error(&format!("Assertion failed {:?} == {:?}", received_value.get_data_value(), expected_value.get_data_value()));
+        return context.throw_error(&format!(
+            "Assertion failed {:?} == {:?}",
+            received_value.get_data_value(),
+            expected_value.get_data_value()
+        ));
     }
-    
     Value::from_i64(0)
 }
-
 
 fn println_function(context: &ExecutionContext, args: FunctionArgs) -> Value {
     print_function(context, args);
@@ -78,4 +96,3 @@ fn format_to_value(context: &ExecutionContext, mut args: FunctionArgs) -> Value 
 
     Value::from_string(Rc::from(formatted_string))
 }
-

@@ -1,12 +1,12 @@
-use std::{fmt};
-use std::cmp::Ordering;
-use crate::interpreter::object::Object;
 use crate::interpreter::array::Array;
-use std::rc::Rc;
+use crate::interpreter::interpreter::ExecutionContext;
+use crate::interpreter::iterator::{IteratorHolder, RangeIterator};
+use crate::interpreter::object::Object;
 use std::any::Any;
 use std::cell::RefCell;
-use crate::interpreter::interpreter::ExecutionContext;
-use crate::interpreter::iterator::{RangeIterator, IteratorHolder};
+use std::cmp::Ordering;
+use std::fmt;
+use std::rc::Rc;
 
 pub type Pointer<T> = Rc<RefCell<T>>;
 
@@ -32,31 +32,31 @@ pub struct Value {
 impl Value {
     pub fn from_i64(value: i64) -> Value {
         Value {
-            value: DataValue::I64(value)
+            value: DataValue::I64(value),
         }
     }
 
     pub fn from_f64(value: f64) -> Value {
         Value {
-            value: DataValue::F64(value)
+            value: DataValue::F64(value),
         }
     }
 
     pub fn from_object(value: Object) -> Value {
         Value {
-            value: DataValue::Object(value)
+            value: DataValue::Object(value),
         }
     }
 
     pub fn from_string(value: Rc<String>) -> Value {
         Value {
-            value: DataValue::String(value)
+            value: DataValue::String(value),
         }
     }
 
     pub fn from_array(value: Array) -> Value {
         Value {
-            value: DataValue::Array(value)
+            value: DataValue::Array(value),
         }
     }
 
@@ -68,19 +68,23 @@ impl Value {
 
     pub fn from_undefined() -> Value {
         Value {
-            value: DataValue::Undefined
+            value: DataValue::Undefined,
         }
     }
 
     pub fn from_function(name: Rc<String>) -> Value {
         Value {
-            value: DataValue::FunctionPointer(name)
+            value: DataValue::FunctionPointer(name),
         }
     }
 
     pub fn from_range(from: i64, to: i64) -> Value {
         Value {
-            value: DataValue::Range(RangeIterator { from, to, index: from }),
+            value: DataValue::Range(RangeIterator {
+                from,
+                to,
+                index: from,
+            }),
         }
     }
 
@@ -111,28 +115,20 @@ impl Value {
 
     pub fn add(self, context: &ExecutionContext, rhs_value: Value) -> Value {
         match &self.value {
-            DataValue::I64(lhs) => {
-                match &rhs_value.value {
-                    DataValue::I64(rhs) => { Value::from_i64(*lhs + *rhs) }
-                    DataValue::F64(rhs) => { Value::from_f64(*lhs as f64 + *rhs) }
-                    rhs => context.throw_error(&format!("Cannot convert {:?} to integer", rhs)),
-                }
-            }
-            DataValue::F64(lhs) => {
-                match &rhs_value.value {
-                    DataValue::I64(rhs) => { Value::from_f64(lhs + *rhs as f64) }
-                    DataValue::F64(rhs) => { Value::from_f64(lhs + rhs) }
-                    rhs => context.throw_error(&format!("Cannot convert {:?} to float", rhs)),
-                }
-            }
-            DataValue::String(lhs) => {
-                match &rhs_value.value {
-                    DataValue::String(rhs) => {
-                        Value::from_string(Rc::from(format!("{}{}", lhs, rhs)))
-                    }
-                    rhs => context.throw_error(&format!("Cannot convert {:?} to string", rhs)),
-                }
-            }
+            DataValue::I64(lhs) => match &rhs_value.value {
+                DataValue::I64(rhs) => Value::from_i64(*lhs + *rhs),
+                DataValue::F64(rhs) => Value::from_f64(*lhs as f64 + *rhs),
+                rhs => context.throw_error(&format!("Cannot convert {:?} to integer", rhs)),
+            },
+            DataValue::F64(lhs) => match &rhs_value.value {
+                DataValue::I64(rhs) => Value::from_f64(lhs + *rhs as f64),
+                DataValue::F64(rhs) => Value::from_f64(lhs + rhs),
+                rhs => context.throw_error(&format!("Cannot convert {:?} to float", rhs)),
+            },
+            DataValue::String(lhs) => match &rhs_value.value {
+                DataValue::String(rhs) => Value::from_string(Rc::from(format!("{}{}", lhs, rhs))),
+                rhs => context.throw_error(&format!("Cannot convert {:?} to string", rhs)),
+            },
             rhs => {
                 context.throw_error(&format!("Add operator is not implemented for {:?}", rhs));
                 Value::from_i64(-1)
@@ -142,22 +138,21 @@ impl Value {
 
     pub fn sub(self, context: &ExecutionContext, rhs_value: Value) -> Value {
         match self.value {
-            DataValue::I64(lhs) => {
-                match rhs_value.value {
-                    DataValue::I64(rhs) => { Value::from_i64(lhs - rhs) }
-                    DataValue::F64(rhs) => { Value::from_f64(lhs as f64 - rhs) }
-                    rhs => context.throw_error(&format!("Cannot convert {:?} to integer", rhs)),
-                }
-            }
-            DataValue::F64(lhs) => {
-                match rhs_value.value {
-                    DataValue::I64(rhs) => { Value::from_f64(lhs - rhs as f64) }
-                    DataValue::F64(rhs) => { Value::from_f64(lhs - rhs) }
-                    rhs => context.throw_error(&format!("Cannot convert {:?} to float", rhs)),
-                }
-            }
+            DataValue::I64(lhs) => match rhs_value.value {
+                DataValue::I64(rhs) => Value::from_i64(lhs - rhs),
+                DataValue::F64(rhs) => Value::from_f64(lhs as f64 - rhs),
+                rhs => context.throw_error(&format!("Cannot convert {:?} to integer", rhs)),
+            },
+            DataValue::F64(lhs) => match rhs_value.value {
+                DataValue::I64(rhs) => Value::from_f64(lhs - rhs as f64),
+                DataValue::F64(rhs) => Value::from_f64(lhs - rhs),
+                rhs => context.throw_error(&format!("Cannot convert {:?} to float", rhs)),
+            },
             rhs => {
-                context.throw_error(&format!("Subtract operator is not implemented for {:?}", rhs));
+                context.throw_error(&format!(
+                    "Subtract operator is not implemented for {:?}",
+                    rhs
+                ));
                 Value::from_i64(-1)
             }
         }
@@ -165,22 +160,21 @@ impl Value {
 
     pub fn mul(self, context: &ExecutionContext, rhs_value: Value) -> Value {
         match self.value {
-            DataValue::I64(lhs) => {
-                match rhs_value.value {
-                    DataValue::I64(rhs) => { Value::from_i64(lhs * rhs) }
-                    DataValue::F64(rhs) => { Value::from_f64(lhs as f64 * rhs) }
-                    rhs => context.throw_error(&format!("Cannot convert {:?} to integer", rhs)),
-                }
-            }
-            DataValue::F64(lhs) => {
-                match rhs_value.value {
-                    DataValue::I64(rhs) => { Value::from_f64(lhs * rhs as f64) }
-                    DataValue::F64(rhs) => { Value::from_f64(lhs * rhs) }
-                    rhs => context.throw_error(&format!("Cannot convert {:?} to float", rhs)),
-                }
-            }
+            DataValue::I64(lhs) => match rhs_value.value {
+                DataValue::I64(rhs) => Value::from_i64(lhs * rhs),
+                DataValue::F64(rhs) => Value::from_f64(lhs as f64 * rhs),
+                rhs => context.throw_error(&format!("Cannot convert {:?} to integer", rhs)),
+            },
+            DataValue::F64(lhs) => match rhs_value.value {
+                DataValue::I64(rhs) => Value::from_f64(lhs * rhs as f64),
+                DataValue::F64(rhs) => Value::from_f64(lhs * rhs),
+                rhs => context.throw_error(&format!("Cannot convert {:?} to float", rhs)),
+            },
             rhs => {
-                context.throw_error(&format!("Multiply operator is not implemented for {:?}", rhs));
+                context.throw_error(&format!(
+                    "Multiply operator is not implemented for {:?}",
+                    rhs
+                ));
                 Value::from_i64(-1)
             }
         }
@@ -188,20 +182,16 @@ impl Value {
 
     pub fn div(self, context: &ExecutionContext, rhs_value: Value) -> Value {
         match self.value {
-            DataValue::I64(lhs) => {
-                match rhs_value.value {
-                    DataValue::I64(rhs) => { Value::from_i64(lhs / rhs) }
-                    DataValue::F64(rhs) => { Value::from_f64(lhs as f64 / rhs) }
-                    rhs => context.throw_error(&format!("Cannot convert {:?} to integer", rhs)),
-                }
-            }
-            DataValue::F64(lhs) => {
-                match rhs_value.value {
-                    DataValue::I64(rhs) => { Value::from_f64(lhs / rhs as f64) }
-                    DataValue::F64(rhs) => { Value::from_f64(lhs / rhs) }
-                    rhs => context.throw_error(&format!("Cannot convert {:?} to float", rhs)),
-                }
-            }
+            DataValue::I64(lhs) => match rhs_value.value {
+                DataValue::I64(rhs) => Value::from_i64(lhs / rhs),
+                DataValue::F64(rhs) => Value::from_f64(lhs as f64 / rhs),
+                rhs => context.throw_error(&format!("Cannot convert {:?} to integer", rhs)),
+            },
+            DataValue::F64(lhs) => match rhs_value.value {
+                DataValue::I64(rhs) => Value::from_f64(lhs / rhs as f64),
+                DataValue::F64(rhs) => Value::from_f64(lhs / rhs),
+                rhs => context.throw_error(&format!("Cannot convert {:?} to float", rhs)),
+            },
             rhs => {
                 context.throw_error(&format!("Divide operator is not implemented for {:?}", rhs));
                 Value::from_i64(-1)
@@ -211,62 +201,47 @@ impl Value {
 
     pub fn eq(&self, rhs_value: &Self) -> bool {
         match &self.value {
-            DataValue::I64(lhs) => {
-                match &rhs_value.value {
-                    DataValue::I64(rhs) => { *lhs == *rhs }
-                    DataValue::F64(rhs) => { *lhs as f64 == *rhs }
-                    _ => {
-                        false
-                    }
-                }
-            }
-            DataValue::F64(lhs) => {
-                match &rhs_value.value {
-                    DataValue::I64(rhs) => { *lhs == *rhs as f64 }
-                    DataValue::F64(rhs) => { *lhs == *rhs }
-                    _ => {
-                        false
-                    }
-                }
-            }
-            DataValue::String(lhs) => {
-                match &rhs_value.value {
-                    DataValue::String(rhs) => { lhs == rhs }
-                    _ => {
-                        false
-                    }
-                }
-            }
-            _ => {
-                false
-            }
+            DataValue::I64(lhs) => match &rhs_value.value {
+                DataValue::I64(rhs) => *lhs == *rhs,
+                DataValue::F64(rhs) => *lhs as f64 == *rhs,
+                _ => false,
+            },
+            DataValue::F64(lhs) => match &rhs_value.value {
+                DataValue::I64(rhs) => *lhs == *rhs as f64,
+                DataValue::F64(rhs) => *lhs == *rhs,
+                _ => false,
+            },
+            DataValue::String(lhs) => match &rhs_value.value {
+                DataValue::String(rhs) => lhs == rhs,
+                _ => false,
+            },
+            _ => false,
         }
     }
 
     pub fn partial_cmp(&self, context: &ExecutionContext, rhs_value: &Self) -> Option<Ordering> {
         match self.value.clone() {
-            DataValue::I64(lhs) => {
-                match &rhs_value.value {
-                    DataValue::I64(rhs) => { lhs.partial_cmp(&rhs) }
-                    DataValue::F64(rhs) => { (lhs as f64).partial_cmp(&rhs) }
-                    rhs => {
-                        context.throw_error(&format!("Unable to compare {:?} to {:?}", lhs, rhs));
-                        None
-                    }
+            DataValue::I64(lhs) => match &rhs_value.value {
+                DataValue::I64(rhs) => lhs.partial_cmp(&rhs),
+                DataValue::F64(rhs) => (lhs as f64).partial_cmp(&rhs),
+                rhs => {
+                    context.throw_error(&format!("Unable to compare {:?} to {:?}", lhs, rhs));
+                    None
                 }
-            }
-            DataValue::F64(lhs) => {
-                match &rhs_value.value {
-                    DataValue::I64(rhs) => { lhs.partial_cmp(&(*rhs as f64)) }
-                    DataValue::F64(rhs) => { lhs.partial_cmp(&rhs) }
-                    rhs => {
-                        context.throw_error(&format!("Unable to compare {:?} to {:?}", lhs, rhs));
-                        None
-                    }
+            },
+            DataValue::F64(lhs) => match &rhs_value.value {
+                DataValue::I64(rhs) => lhs.partial_cmp(&(*rhs as f64)),
+                DataValue::F64(rhs) => lhs.partial_cmp(&rhs),
+                rhs => {
+                    context.throw_error(&format!("Unable to compare {:?} to {:?}", lhs, rhs));
+                    None
                 }
-            }
+            },
             rhs => {
-                context.throw_error(&format!("Compare operator is not implemented for {:?}", rhs));
+                context.throw_error(&format!(
+                    "Compare operator is not implemented for {:?}",
+                    rhs
+                ));
                 None
             }
         }
@@ -283,11 +258,10 @@ impl Value {
             DataValue::Range(range) => format!("{}..{}", range.from, range.to),
             DataValue::Pointer(_) => format!("Internal Pointer"),
             DataValue::Iterator(_) => format!("Iterator"),
-            DataValue::Undefined => format!("Undefined")
+            DataValue::Undefined => format!("Undefined"),
         }
     }
 }
-
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -305,6 +279,3 @@ impl fmt::Display for Value {
         }
     }
 }
-
-
-

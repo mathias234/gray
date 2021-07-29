@@ -1,6 +1,6 @@
+use crate::bytecode::instructions::other::Instruction;
 use crate::bytecode::label::Label;
 use crate::interpreter::interpreter::ExecutionContext;
-use crate::bytecode::instructions::other::Instruction;
 use crate::interpreter::value::Value;
 
 pub struct Jump {
@@ -41,7 +41,9 @@ impl Instruction for Jump {
         context.set_jump_target(&self.target)
     }
 
-    fn to_string(&self) -> String { format!("Jump {}", self.target) }
+    fn to_string(&self) -> String {
+        format!("Jump {}", self.target)
+    }
 }
 
 impl Instruction for JumpNotZero {
@@ -51,7 +53,9 @@ impl Instruction for JumpNotZero {
         }
     }
 
-    fn to_string(&self) -> String { format!("JumpNotZero {}", self.target) }
+    fn to_string(&self) -> String {
+        format!("JumpNotZero {}", self.target)
+    }
 }
 
 impl Instruction for JumpZero {
@@ -61,5 +65,7 @@ impl Instruction for JumpZero {
         }
     }
 
-    fn to_string(&self) -> String { format!("JumpZero {}", self.target) }
+    fn to_string(&self) -> String {
+        format!("JumpZero {}", self.target)
+    }
 }

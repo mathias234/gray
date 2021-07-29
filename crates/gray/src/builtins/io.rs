@@ -1,15 +1,27 @@
-use crate::interpreter::interpreter::ExecutionContext;
-use crate::interpreter::value::{Value, Pointer};
-use std::rc::Rc;
-use std::io::Read;
-use crate::interpreter::function_pointer::FunctionArgs;
-use std::any::Any;
 use crate::compiler::compiler::NativeFunction;
+use crate::interpreter::function_pointer::FunctionArgs;
+use crate::interpreter::interpreter::ExecutionContext;
+use crate::interpreter::value::{Pointer, Value};
+use std::any::Any;
+use std::io::Read;
+use std::rc::Rc;
 
 pub fn load_functions(functions: &mut Vec<NativeFunction>) {
-    functions.push(NativeFunction::new_rs(vec!["fs".to_string()], String::from("open"), fs_open));
-    functions.push(NativeFunction::new_rs(vec!["fs".to_string()], String::from("read_to_string"), fs_read_to_string));
-    functions.push(NativeFunction::new_rs(vec!["io".to_string()], String::from("read_line"), io_read_line));
+    functions.push(NativeFunction::new_rs(
+        vec!["fs".to_string()],
+        String::from("open"),
+        fs_open,
+    ));
+    functions.push(NativeFunction::new_rs(
+        vec!["fs".to_string()],
+        String::from("read_to_string"),
+        fs_read_to_string,
+    ));
+    functions.push(NativeFunction::new_rs(
+        vec!["io".to_string()],
+        String::from("read_line"),
+        io_read_line,
+    ));
 }
 
 pub fn fs_open(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
@@ -17,7 +29,7 @@ pub fn fs_open(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
 
     match std::fs::File::open(file_name.as_str()) {
         Ok(file) => return Value::from_any(file),
-        Err(e) => context.throw_error(&format!("Failed to open file `{}`", e))
+        Err(e) => context.throw_error(&format!("Failed to open file `{}`", e)),
     }
 }
 
@@ -32,10 +44,9 @@ pub fn fs_read_to_string(context: &ExecutionContext, mut args: FunctionArgs) -> 
 
     let mut buffer = String::new();
 
-    match file.read_to_string(&mut buffer)
-    {
+    match file.read_to_string(&mut buffer) {
         Ok(_) => return Value::from_string(Rc::from(buffer)),
-        Err(e) => context.throw_error(&format!("Error reading files contents `{}`", e))
+        Err(e) => context.throw_error(&format!("Error reading files contents `{}`", e)),
     }
 }
 
@@ -43,7 +54,7 @@ pub fn io_read_line(context: &ExecutionContext, _: FunctionArgs) -> Value {
     let mut input = String::new();
     match std::io::stdin().read_line(&mut input) {
         Ok(_) => Value::from_string(Rc::new(input.trim().to_string())),
-        Err(e) => context.throw_error(&format!("Error reading for stdin `{}`", e))
+        Err(e) => context.throw_error(&format!("Error reading for stdin `{}`", e)),
     }
 }
 

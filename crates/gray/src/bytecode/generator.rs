@@ -1,12 +1,12 @@
 use crate::bytecode::code_block::{CodeBlock, CodeSegment};
-use crate::bytecode::label::Label;
-use crate::bytecode::instructions::other::{Instruction, DeclareVariable, LoadImmediate};
-use crate::bytecode::register::Register;
 use crate::bytecode::instructions::object::NotAnInstruction;
-use crate::interpreter::interpreter::VariableHandle;
-use std::collections::HashMap;
+use crate::bytecode::instructions::other::{DeclareVariable, Instruction, LoadImmediate};
+use crate::bytecode::label::Label;
+use crate::bytecode::register::Register;
 use crate::compiler::compiler::NativeFunction;
+use crate::interpreter::interpreter::VariableHandle;
 use crate::interpreter::value::Value;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 pub struct Generator {
@@ -19,7 +19,11 @@ pub struct Generator {
 }
 
 impl Generator {
-    pub fn new(native_functions: &Vec<NativeFunction>, capture_locals: bool, parent_generator: Option<&Generator>) -> Generator {
+    pub fn new(
+        native_functions: &Vec<NativeFunction>,
+        capture_locals: bool,
+        parent_generator: Option<&Generator>,
+    ) -> Generator {
         let mut generator = Generator {
             register_index: 0,
             released_registers: Vec::new(),
@@ -35,8 +39,14 @@ impl Generator {
 
         for func in native_functions {
             let handle = generator.next_variable_handle(&func.full_name());
-            generator.emit(LoadImmediate::new_boxed(Value::from_function(Rc::new(func.full_name()))), CodeSegment::new(1, 1, 1, 1));
-            generator.emit(DeclareVariable::new_boxed(handle), CodeSegment::new(1, 1, 1, 1));
+            generator.emit(
+                LoadImmediate::new_boxed(Value::from_function(Rc::new(func.full_name()))),
+                CodeSegment::new(1, 1, 1, 1),
+            );
+            generator.emit(
+                DeclareVariable::new_boxed(handle),
+                CodeSegment::new(1, 1, 1, 1),
+            );
         }
 
         generator
@@ -75,7 +85,8 @@ impl Generator {
             return self.variable_handles[variable];
         }
 
-        self.variable_handles.insert(variable.to_string(), self.last_handle);
+        self.variable_handles
+            .insert(variable.to_string(), self.last_handle);
         let handle = self.last_handle;
 
         self.last_handle += 1;
@@ -93,7 +104,12 @@ impl Generator {
         self.block.add_instruction(instruction, segment);
     }
 
-    pub fn emit_at(&mut self, instruction: Box<dyn Instruction>, label: &Label, segment: CodeSegment) {
+    pub fn emit_at(
+        &mut self,
+        instruction: Box<dyn Instruction>,
+        label: &Label,
+        segment: CodeSegment,
+    ) {
         self.block.set_instruction_at(instruction, label, segment);
     }
 }

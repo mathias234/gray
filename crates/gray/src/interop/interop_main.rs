@@ -1,11 +1,11 @@
-use std::ffi::{CStr, c_void};
-use std::rc::Rc;
-use std::os::raw::c_char;
+use crate::builtins::declare_functions;
 use crate::interop::value_pointer::ValuePointer;
-use crate::interpreter::value::Value;
 use crate::interpreter::interpreter::Interpreter;
+use crate::interpreter::value::Value;
 use crate::load_file;
-use crate::built_in_functions::declare_functions;
+use std::ffi::{c_void, CStr};
+use std::os::raw::c_char;
+use std::rc::Rc;
 
 unsafe fn c_str_to_string(str: *const c_char) -> String {
     let c_str = CStr::from_ptr(str);
@@ -39,18 +39,16 @@ pub unsafe extern "C" fn interpreter_load_file(name: *const c_char) -> Interpret
     let interp = load_file(&file, functions).expect("Failed to load file");
 
     let boxed = Box::from(interp);
-    InterpreterPointer { value: Box::into_raw(boxed) as *mut c_void }
+    InterpreterPointer {
+        value: Box::into_raw(boxed) as *mut c_void,
+    }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn interpreter_run(pointer: InterpreterPointer)  {
+pub unsafe extern "C" fn interpreter_run(pointer: InterpreterPointer) {
     let mut interp = Box::from_raw(pointer.value as *mut Interpreter);
     interp.run(None);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn declare_function() {
-
-}
-
-
+pub unsafe extern "C" fn declare_function() {}

@@ -1,13 +1,17 @@
-use std::fmt::Write as FmtWrite;
-use crate::{
-    bytecode::{register::Register},
-    interpreter::{interpreter::{ExecutionContext, VariableHandle}, value::Value, value::DataValue},
-};
 use crate::bytecode::label::Label;
 use crate::interpreter::array::Array;
+use crate::interpreter::iterator::{ArrayIterator, IteratorHolder};
+use crate::{
+    bytecode::register::Register,
+    interpreter::{
+        interpreter::{ExecutionContext, VariableHandle},
+        value::DataValue,
+        value::Value,
+    },
+};
 use std::cell::RefCell;
+use std::fmt::Write as FmtWrite;
 use std::rc::Rc;
-use crate::interpreter::iterator::{IteratorHolder, ArrayIterator};
 
 pub trait Instruction {
     fn execute(&self, context: &mut ExecutionContext);
@@ -43,9 +47,7 @@ pub struct LoadArgument {
 #[allow(dead_code)]
 impl LoadArgument {
     pub fn new_boxed(argument: usize) -> Box<LoadArgument> {
-        Box::new(LoadArgument {
-            argument
-        })
+        Box::new(LoadArgument { argument })
     }
 }
 
@@ -56,12 +58,9 @@ pub struct ParamsList {
 #[allow(dead_code)]
 impl ParamsList {
     pub fn new_boxed(start: usize) -> Box<ParamsList> {
-        Box::new(ParamsList {
-            start
-        })
+        Box::new(ParamsList { start })
     }
 }
-
 
 pub struct Store {
     register: Register,
@@ -82,10 +81,16 @@ pub struct Call {
 impl Call {
     pub fn new_boxed(block_id: VariableHandle, args: Option<Vec<Register>>) -> Box<Call> {
         if args.is_some() {
-            return Box::new(Call { block_id, arguments: args.unwrap() });
+            return Box::new(Call {
+                block_id,
+                arguments: args.unwrap(),
+            });
         }
 
-        Box::new(Call { block_id, arguments: Vec::new() })
+        Box::new(Call {
+            block_id,
+            arguments: Vec::new(),
+        })
     }
 }
 
@@ -117,7 +122,6 @@ impl SetVariable {
     }
 }
 
-
 pub struct GetVariable {
     variable: VariableHandle,
 }
@@ -144,7 +148,6 @@ impl PopScope {
     }
 }
 
-
 pub struct PushBreakContinueScope {
     continue_label: Label,
     break_label: Label,
@@ -152,7 +155,10 @@ pub struct PushBreakContinueScope {
 
 impl PushBreakContinueScope {
     pub fn new_boxed(break_label: Label, continue_label: Label) -> Box<PushBreakContinueScope> {
-        Box::new(PushBreakContinueScope { break_label, continue_label })
+        Box::new(PushBreakContinueScope {
+            break_label,
+            continue_label,
+        })
     }
 }
 
@@ -311,7 +317,9 @@ impl Instruction for Return {
         context.set_return();
     }
 
-    fn to_string(&self) -> String { format!("Return") }
+    fn to_string(&self) -> String {
+        format!("Return")
+    }
 }
 
 impl Instruction for DeclareVariable {
@@ -333,7 +341,6 @@ impl Instruction for SetVariable {
         format!("SetVariable {}", self.variable)
     }
 }
-
 
 impl Instruction for GetVariable {
     fn execute(&self, context: &mut ExecutionContext) {
@@ -365,7 +372,6 @@ impl Instruction for PopScope {
         format!("PopScope")
     }
 }
-
 
 impl Instruction for PushBreakContinueScope {
     fn execute(&self, context: &mut ExecutionContext) {
@@ -413,9 +419,7 @@ impl Instruction for Range {
         let rhs_value = context.get_register(&self.rhs_register);
 
         let lhs_integer = match lhs_value.get_data_value() {
-            DataValue::I64(v) => {
-                *v
-            }
+            DataValue::I64(v) => *v,
             _ => {
                 context.throw_error("Expected integer");
                 return;
@@ -423,9 +427,7 @@ impl Instruction for Range {
         };
 
         let rhs_integer = match rhs_value.get_data_value() {
-            DataValue::I64(v) => {
-                *v
-            }
+            DataValue::I64(v) => *v,
             _ => {
                 context.throw_error("Expected integer");
                 return;
@@ -450,11 +452,9 @@ impl Instruction for CreateIterator {
         let value = context.get_accumulator();
 
         let iterator = match &value.get_data_value() {
-            DataValue::Range(range) => {
-                IteratorHolder {
-                    iterator: Rc::from(RefCell::from(range.clone()))
-                }
-            }
+            DataValue::Range(range) => IteratorHolder {
+                iterator: Rc::from(RefCell::from(range.clone())),
+            },
             DataValue::Array(array) => {
                 let array_iter = ArrayIterator {
                     array: array.clone(),
@@ -462,7 +462,7 @@ impl Instruction for CreateIterator {
                 };
 
                 IteratorHolder {
-                    iterator: Rc::from(RefCell::from(array_iter))
+                    iterator: Rc::from(RefCell::from(array_iter)),
                 }
             }
 
@@ -535,12 +535,8 @@ impl Instruction for NegateValue {
         let value = context.get_accumulator();
 
         let result = match value.get_data_value() {
-            DataValue::I64(v) => {
-                Value::from_i64(v * -1)
-            }
-            DataValue::F64(v) => {
-                Value::from_f64(v * -1.0)
-            }
+            DataValue::I64(v) => Value::from_i64(v * -1),
+            DataValue::F64(v) => Value::from_f64(v * -1.0),
             v => {
                 context.throw_error(&format!("Unable to negate value {:?}", v));
                 return;
@@ -554,4 +550,3 @@ impl Instruction for NegateValue {
         format!("IteratorEmpty")
     }
 }
-

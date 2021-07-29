@@ -1,5 +1,5 @@
-use crate::bytecode::label::Label;
 use crate::bytecode::instructions::other::Instruction;
+use crate::bytecode::label::Label;
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct CodeSegment {
@@ -15,14 +15,17 @@ impl CodeSegment {
             start_x,
             start_y,
             end_x,
-            end_y
+            end_y,
         }
     }
 }
 
 impl std::fmt::Debug for CodeSegment {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{}:{} - {}:{}", self.start_y, self.start_x, self.end_y, self.end_x))
+        f.write_fmt(format_args!(
+            "{}:{} - {}:{}",
+            self.start_y, self.start_x, self.end_y, self.end_x
+        ))
     }
 }
 
@@ -34,7 +37,11 @@ pub struct CodeBlock {
 
 impl CodeBlock {
     pub fn new(capture_locals: bool) -> CodeBlock {
-        CodeBlock { instructions: Vec::new(), code_mapping: Vec::new(), capture_locals }
+        CodeBlock {
+            instructions: Vec::new(),
+            code_mapping: Vec::new(),
+            capture_locals,
+        }
     }
 
     pub fn add_instruction(&mut self, instruction: Box<dyn Instruction>, segment: CodeSegment) {
@@ -42,7 +49,12 @@ impl CodeBlock {
         self.instructions.push(instruction);
     }
 
-    pub fn set_instruction_at(&mut self, instruction: Box<dyn Instruction>, label: &Label, segment: CodeSegment) {
+    pub fn set_instruction_at(
+        &mut self,
+        instruction: Box<dyn Instruction>,
+        label: &Label,
+        segment: CodeSegment,
+    ) {
         self.code_mapping[label.position] = segment;
         self.instructions[label.position] = instruction;
     }

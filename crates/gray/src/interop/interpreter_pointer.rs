@@ -11,7 +11,7 @@ impl From<Interpreter<'_>> for InterpreterPointer {
         let boxed = Box::from(value);
 
         InterpreterPointer {
-            value: Box::into_raw(boxed) as *mut c_void
+            value: Box::into_raw(boxed) as *mut c_void,
         }
     }
 }

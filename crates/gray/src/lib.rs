@@ -1,16 +1,16 @@
+pub mod builtins;
 pub mod bytecode;
-pub mod interpreter;
-pub mod parser;
 pub mod compiler;
 pub mod error_printer;
 pub mod interop;
-pub mod built_in_functions;
+pub mod interpreter;
+pub mod parser;
 
-use std::rc::Rc;
-use interpreter::interpreter::Interpreter;
-use crate::parser::parser::{Parser, ParserError};
-use crate::parser::lexer::{Lexer, LexerError};
 use crate::compiler::compiler::{Compiler, CompilerError, NativeFunction};
+use crate::parser::lexer::{Lexer, LexerError};
+use crate::parser::parser::{Parser, ParserError};
+use interpreter::interpreter::Interpreter;
+use std::rc::Rc;
 
 #[derive(Debug)]
 pub enum GrayError {
@@ -37,42 +37,49 @@ impl From<CompilerError> for GrayError {
     }
 }
 
-pub fn load_file(file: &str, native_functions: Vec<NativeFunction>) -> Result<Interpreter, GrayError> {
+pub fn load_file(
+    file: &str,
+    native_functions: Vec<NativeFunction>,
+) -> Result<Interpreter, GrayError> {
     let mut token_stream = Lexer::lex_file(file)?;
 
     #[cfg(debug_assertions)]
-        {
-            println!("\nLexer token stream");
-            loop {
-                let token = token_stream.1.next();
-                if token.is_none() {
-                    break;
-                }
-                println!("{:?}", token.unwrap());
+    {
+        println!("\nLexer token stream");
+        loop {
+            let token = token_stream.1.next();
+            if token.is_none() {
+                break;
             }
-
+            println!("{:?}", token.unwrap());
         }
+    }
 
     token_stream.1.reset();
 
     let root_ast_node = Parser::parse(token_stream.1, &token_stream.0)?;
 
-
     #[cfg(debug_assertions)]
-        {
-            println!("\nParser AST Tree");
-            root_ast_node.dump(0);
-        }
+    {
+        println!("\nParser AST Tree");
+        root_ast_node.dump(0);
+    }
 
-    let blocks = Compiler::compile(root_ast_node, native_functions.clone(), &token_stream.0.to_string())?;
+    let blocks = Compiler::compile(
+        root_ast_node,
+        native_functions.clone(),
+        &token_stream.0.to_string(),
+    )?;
 
     let interpreter = Interpreter::new(blocks, token_stream.0, native_functions);
-
 
     return Ok(interpreter);
 }
 
-pub fn load_string(code: &str, native_functions: Vec<NativeFunction>) -> Result<Interpreter, GrayError> {
+pub fn load_string(
+    code: &str,
+    native_functions: Vec<NativeFunction>,
+) -> Result<Interpreter, GrayError> {
     let token_stream = Lexer::lex_string(code)?;
 
     let root_ast_node = Parser::parse(token_stream, code)?;

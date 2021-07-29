@@ -1,8 +1,8 @@
-use std::collections::HashMap;
-use crate::interpreter::value::{Value};
-use std::rc::Rc;
-use std::fmt;
+use crate::interpreter::value::Value;
 use std::cell::RefCell;
+use std::collections::HashMap;
+use std::fmt;
+use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct Object {
@@ -54,10 +54,8 @@ impl fmt::Debug for Object {
             }
 
             idx += 1;
-
         }
         f.write_str(" ]")?;
-
 
         Ok({})
     }

@@ -11,7 +11,7 @@ impl From<ExecutionContext> for ExecutionContextPointer {
         let boxed = Box::from(value);
 
         ExecutionContextPointer {
-            value: Box::into_raw(boxed) as *mut c_void
+            value: Box::into_raw(boxed) as *mut c_void,
         }
     }
 }

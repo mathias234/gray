@@ -1,5 +1,4 @@
+pub mod comparison;
 pub mod jump;
 pub mod math;
-pub mod comparison;
-pub mod other;
-pub mod object;
+pub mod object;pub mod other;

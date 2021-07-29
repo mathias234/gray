@@ -1,12 +1,10 @@
-use crate::interpreter::value::{Value, DataValue, Pointer};
 use crate::interpreter::array::Array;
-use std::any::Any;
-use crate::interpreter::object::Object;
 use crate::interpreter::interpreter::ExecutionContext;
-use std::rc::Rc;
+use crate::interpreter::object::Object;
+use crate::interpreter::value::{DataValue, Pointer, Value};
+use std::any::Any;
 use std::cell::RefCell;
-
-
+use std::rc::Rc;
 
 pub struct FunctionArgs {
     args: Vec<Value>,
@@ -14,9 +12,7 @@ pub struct FunctionArgs {
 
 impl FunctionArgs {
     pub fn new(args: Vec<Value>) -> FunctionArgs {
-        FunctionArgs {
-            args,
-        }
+        FunctionArgs { args }
     }
 
     pub fn get_next(&mut self, context: &ExecutionContext) -> Value {

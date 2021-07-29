@@ -1,5 +1,5 @@
-use crate::bytecode::register::Register;
 use crate::bytecode::instructions::other::Instruction;
+use crate::bytecode::register::Register;
 use crate::interpreter::interpreter::ExecutionContext;
 
 pub struct Add {
@@ -81,7 +81,6 @@ impl Instruction for Multiply {
         format!("Multiply {}", self.register)
     }
 }
-
 
 impl Instruction for Divide {
     fn execute(&self, context: &mut ExecutionContext) {

@@ -1,9 +1,9 @@
-use crate::interpreter::interpreter::ExecutionContext;
 use crate::bytecode::instructions::other::Instruction;
-use crate::interpreter::value::{Value, DataValue};
-use crate::interpreter::object::Object;
-use crate::interpreter::array::Array;
 use crate::bytecode::register::Register;
+use crate::interpreter::array::Array;
+use crate::interpreter::interpreter::ExecutionContext;
+use crate::interpreter::object::Object;
+use crate::interpreter::value::{DataValue, Value};
 
 pub struct CreateEmptyObject {}
 
@@ -53,7 +53,6 @@ impl CreateEmptyArray {
     }
 }
 
-
 pub struct PushArray {
     array: Register,
 }
@@ -76,13 +75,12 @@ impl GetArray {
     }
 }
 
-pub struct GetArrayLength {
-}
+pub struct GetArrayLength {}
 
 #[allow(dead_code)]
 impl GetArrayLength {
     pub fn new_boxed() -> Box<GetArrayLength> {
-        Box::new(GetArrayLength { })
+        Box::new(GetArrayLength {})
     }
 }
 
@@ -98,7 +96,6 @@ impl SetArray {
     }
 }
 
-
 pub struct NotAnInstruction {}
 
 #[allow(dead_code)]
@@ -108,13 +105,14 @@ impl NotAnInstruction {
     }
 }
 
-
 impl Instruction for CreateEmptyObject {
     fn execute(&self, context: &mut ExecutionContext) {
         context.set_accumulator(Value::from_object(Object::new()));
     }
 
-    fn to_string(&self) -> String { format!("CreateEmptyObject") }
+    fn to_string(&self) -> String {
+        format!("CreateEmptyObject")
+    }
 }
 
 impl Instruction for SetObjectMember {
@@ -122,11 +120,11 @@ impl Instruction for SetObjectMember {
         let mut obj = match context.get_register(&self.object_register).get_data_value() {
             DataValue::Object(object) => object.clone(),
             _ => {
-                context.throw_error("Trying to set a member value of something that is not an object");
+                context
+                    .throw_error("Trying to set a member value of something that is not an object");
                 return;
             }
         };
-
 
         let accessor_value = match context.get_register(&self.accessor_value).get_data_value() {
             DataValue::String(name) => name.clone(),
@@ -141,7 +139,12 @@ impl Instruction for SetObjectMember {
         context.set_register(&self.object_register, Value::from_object(obj));
     }
 
-    fn to_string(&self) -> String { format!("SetObjectMember {} {}", self.object_register, self.accessor_value) }
+    fn to_string(&self) -> String {
+        format!(
+            "SetObjectMember {} {}",
+            self.object_register, self.accessor_value
+        )
+    }
 }
 
 impl Instruction for GetObjectMember {
@@ -149,11 +152,13 @@ impl Instruction for GetObjectMember {
         let obj = match context.get_register(&self.object_register).get_data_value() {
             DataValue::Object(object) => object.clone(),
             value => {
-                context.throw_error(&format!("Trying to get a member value of something that is not an object {:?}", value));
+                context.throw_error(&format!(
+                    "Trying to get a member value of something that is not an object {:?}",
+                    value
+                ));
                 return;
             }
         };
-
 
         let accessor_value = match context.get_register(&self.accessor_value).get_data_value() {
             DataValue::String(name) => name.clone(),
@@ -163,11 +168,9 @@ impl Instruction for GetObjectMember {
             }
         };
 
-
         let value = if let Some(value) = obj.get(accessor_value) {
             value
-        }
-        else {
+        } else {
             context.throw_error("Could not find member on object");
             return;
         };
@@ -175,7 +178,12 @@ impl Instruction for GetObjectMember {
         context.set_accumulator(value);
     }
 
-    fn to_string(&self) -> String { format!("GetObjectMember {} {}", self.object_register, self.accessor_value) }
+    fn to_string(&self) -> String {
+        format!(
+            "GetObjectMember {} {}",
+            self.object_register, self.accessor_value
+        )
+    }
 }
 
 impl Instruction for CreateEmptyArray {
@@ -183,7 +191,9 @@ impl Instruction for CreateEmptyArray {
         context.set_accumulator(Value::from_array(Array::new()));
     }
 
-    fn to_string(&self) -> String { format!("CreateEmptyArray") }
+    fn to_string(&self) -> String {
+        format!("CreateEmptyArray")
+    }
 }
 
 impl Instruction for PushArray {
@@ -201,7 +211,9 @@ impl Instruction for PushArray {
         }
     }
 
-    fn to_string(&self) -> String { format!("PushArray {}", self.array) }
+    fn to_string(&self) -> String {
+        format!("PushArray {}", self.array)
+    }
 }
 
 impl Instruction for GetArrayLength {
@@ -209,9 +221,7 @@ impl Instruction for GetArrayLength {
         let array = context.get_accumulator();
 
         let len = match &array.get_data_value() {
-            DataValue::Array(array) => {
-                array.len() as i64
-            }
+            DataValue::Array(array) => array.len() as i64,
             _ => {
                 context.throw_error("Expected array");
                 -1
@@ -221,8 +231,9 @@ impl Instruction for GetArrayLength {
         context.set_accumulator(Value::from_i64(len));
     }
 
-    fn to_string(&self) -> String { "GetArrayLength".to_string() }
-
+    fn to_string(&self) -> String {
+        "GetArrayLength".to_string()
+    }
 }
 
 impl Instruction for GetArray {
@@ -235,7 +246,10 @@ impl Instruction for GetArray {
         let index = match index.get_data_value() {
             DataValue::I64(v) => *v as usize,
             d => {
-                context.throw_error(&format!("Array can only be indexed with an integer {:?}", d));
+                context.throw_error(&format!(
+                    "Array can only be indexed with an integer {:?}",
+                    d
+                ));
                 return;
             }
         };
@@ -245,13 +259,18 @@ impl Instruction for GetArray {
                 context.set_accumulator(a.get(index));
             }
             v => {
-                context.throw_error(&format!("Error getting value from object that is not an array {:?}", v));
+                context.throw_error(&format!(
+                    "Error getting value from object that is not an array {:?}",
+                    v
+                ));
                 return;
             }
         }
     }
 
-    fn to_string(&self) -> String { format!("GetArray {}", self.array) }
+    fn to_string(&self) -> String {
+        format!("GetArray {}", self.array)
+    }
 }
 
 impl Instruction for SetArray {
@@ -264,7 +283,10 @@ impl Instruction for SetArray {
         let index = match index.get_data_value() {
             DataValue::I64(v) => *v as usize,
             d => {
-                context.throw_error(&format!("Array can only be indexed with an integer {:?}", d));
+                context.throw_error(&format!(
+                    "Array can only be indexed with an integer {:?}",
+                    d
+                ));
                 return;
             }
         };
@@ -280,11 +302,15 @@ impl Instruction for SetArray {
         }
     }
 
-    fn to_string(&self) -> String { format!("SetArray {}", self.array) }
+    fn to_string(&self) -> String {
+        format!("SetArray {}", self.array)
+    }
 }
 
 impl Instruction for NotAnInstruction {
     fn execute(&self, _: &mut ExecutionContext) {}
 
-    fn to_string(&self) -> String { format!("NotAnInstruction") }
+    fn to_string(&self) -> String {
+        format!("NotAnInstruction")
+    }
 }

@@ -11,7 +11,7 @@ impl From<FunctionArgs> for FunctionArgsPointer {
         let boxed = Box::from(value);
 
         FunctionArgsPointer {
-            value: Box::into_raw(boxed) as *mut c_void
+            value: Box::into_raw(boxed) as *mut c_void,
         }
     }
 }

@@ -1,14 +1,22 @@
-use crate::interpreter::interpreter::ExecutionContext;
-use crate::interpreter::function_pointer::FunctionArgs;
-use crate::interpreter::value::Value;
-use std::time::Instant;
-use crate::interpreter::object::Object;
-use std::rc::Rc;
 use crate::compiler::compiler::NativeFunction;
+use crate::interpreter::function_pointer::FunctionArgs;
+use crate::interpreter::interpreter::ExecutionContext;
+use crate::interpreter::object::Object;
+use crate::interpreter::value::Value;
+use std::rc::Rc;
+use std::time::Instant;
 
 pub fn load_functions(functions: &mut Vec<NativeFunction>) {
-    functions.push(NativeFunction::new_rs(vec!["debug".to_string()], String::from("start_watch"), start_watch));
-    functions.push(NativeFunction::new_rs(vec!["debug".to_string()], String::from("stop_watch"), stop_watch));
+    functions.push(NativeFunction::new_rs(
+        vec!["debug".to_string()],
+        String::from("start_watch"),
+        start_watch,
+    ));
+    functions.push(NativeFunction::new_rs(
+        vec!["debug".to_string()],
+        String::from("stop_watch"),
+        stop_watch,
+    ));
 }
 
 fn start_watch(_: &ExecutionContext, _: FunctionArgs) -> Value {
@@ -23,19 +31,18 @@ fn stop_watch(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
         let mut time_result = Object::new();
         time_result.declare(
             Rc::from("nanos".to_string()),
-            &Value::from_i64(file.elapsed().as_nanos() as i64)
+            &Value::from_i64(file.elapsed().as_nanos() as i64),
         );
 
         time_result.declare(
             Rc::from("millis".to_string()),
-            &Value::from_i64(file.elapsed().as_millis() as i64)
+            &Value::from_i64(file.elapsed().as_millis() as i64),
         );
 
         time_result.declare(
             Rc::from("secs".to_string()),
-            &Value::from_i64(file.elapsed().as_secs() as i64)
+            &Value::from_i64(file.elapsed().as_secs() as i64),
         );
-
 
         Value::from_object(time_result)
     } else {
@@ -43,5 +50,3 @@ fn stop_watch(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
         Value::from_i64(-1)
     }
 }
-
-

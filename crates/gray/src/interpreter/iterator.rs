@@ -1,8 +1,8 @@
-use crate::interpreter::value::Value;
 use crate::interpreter::array::Array;
-use std::fmt::Formatter;
+use crate::interpreter::value::Value;
 use core::fmt;
 use std::cell::RefCell;
+use std::fmt::Formatter;
 use std::rc::Rc;
 
 pub trait Iterator {
@@ -31,7 +31,7 @@ pub struct RangeIterator {
 #[derive(Clone, Debug)]
 pub struct ArrayIterator {
     pub index: i64,
-    pub array: Array
+    pub array: Array,
 }
 
 impl Iterator for RangeIterator {

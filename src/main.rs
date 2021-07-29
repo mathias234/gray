@@ -1,9 +1,9 @@
+use gray::builtins::declare_functions;
 use gray::GrayError;
-use std::time::Instant;
 use std::env;
 use std::fs::{metadata, read_dir};
 use std::path::Path;
-use gray::built_in_functions::declare_functions;
+use std::time::Instant;
 
 fn get_dir(dir: &Path) -> Vec<String> {
     let mut result = Vec::new();
@@ -46,7 +46,6 @@ fn main() -> Result<(), GrayError> {
 
             let mut interpreter = gray::load_file(&file, functions)?;
             println! {"Compilation took {}ms", now.elapsed().as_millis()}
-
 
             let now = Instant::now();
             println!("Starting execution");
