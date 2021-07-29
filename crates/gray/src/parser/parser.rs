@@ -1,7 +1,7 @@
-use crate::parser::lexer::{TokenStream, Token, Keyword, TokenType};
-use crate::parser::lexer::Delimiter;
 use crate::bytecode::code_block::CodeSegment;
 use crate::error_printer;
+use crate::parser::lexer::Delimiter;
+use crate::parser::lexer::{Keyword, Token, TokenStream, TokenType};
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum ExpressionOp {
@@ -123,7 +123,11 @@ impl Parser {
         let error_message = match error {
             ParserError::UnexpectedTokenInStreamWithExpected(t, v) => {
                 code_segment = v.position;
-                format!("Unexpected {}, expected {}", Parser::token_type_to_string(&v.token_type), Parser::token_type_to_string(t))
+                format!(
+                    "Unexpected {}, expected {}",
+                    Parser::token_type_to_string(&v.token_type),
+                    Parser::token_type_to_string(t)
+                )
             }
             ParserError::UnexpectedTokenInStream(v) => {
                 code_segment = v.position;
@@ -131,15 +135,26 @@ impl Parser {
             }
             ParserError::UnexpectedTokenInStreamExpectedIdentifier(v) => {
                 code_segment = v.position;
-                format!("Unexpected {}, expected an identifier", Parser::token_type_to_string(&v.token_type))
+                format!(
+                    "Unexpected {}, expected an identifier",
+                    Parser::token_type_to_string(&v.token_type)
+                )
             }
             ParserError::UnexpectedDelimiterInStream(d, v) => {
                 code_segment = v.position;
-                format!("Unexpected {}, expected {:?}", Parser::token_type_to_string(&v.token_type), d)
+                format!(
+                    "Unexpected {}, expected {:?}",
+                    Parser::token_type_to_string(&v.token_type),
+                    d
+                )
             }
             ParserError::UnexpectedKeywordInStream(k, v) => {
                 code_segment = v.position;
-                format!("Unexpected {}, expected {:?}", Parser::token_type_to_string(&v.token_type), k)
+                format!(
+                    "Unexpected {}, expected {:?}",
+                    Parser::token_type_to_string(&v.token_type),
+                    k
+                )
             }
             ParserError::UnexpectedEndOfProgram => {
                 format!("Unexpected end of program!")
@@ -150,8 +165,8 @@ impl Parser {
             lines[code_segment.start_y - 1],
             code_segment.start_y,
             code_segment.start_x,
-            code_segment.end_x, );
-
+            code_segment.end_x,
+        );
 
         println!(" {}", error_message)
     }
@@ -181,7 +196,7 @@ impl Parser {
                 Err(e) => match e {
                     ParserError::UnexpectedEndOfProgram => return Ok(scope),
                     _ => return Err(e),
-                }
+                },
             }
 
             match &token.token_type {
@@ -191,74 +206,100 @@ impl Parser {
                         return Ok(scope);
                     }
                     _ => {}
-                }
+                },
                 _ => {}
             }
 
             let child = match &token.token_type {
-                TokenType::Keyword(keyword) => {
-                    match keyword {
-                        Keyword::Function => self.parse_function(),
-                        Keyword::VariableDeclaration => self.parse_variable_declaration(),
-                        Keyword::IfStatement => self.parse_if_statement(),
-                        Keyword::WhileStatement => self.parse_while_statement(),
-                        Keyword::ForStatement => self.parse_for_statement(),
-                        Keyword::Return => {
-                            let token = self.get_next_token()?;
-                            let mut return_node = ASTNode::new(ASTType::ReturnExpression, token.position);
-                            return_node.children.push(self.parse_expression()?);
-                            Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
-                            Ok(return_node)
-                        }
-                        Keyword::Continue => {
-                            let token = self.get_next_token()?;
-                            let return_value = ASTNode::new(ASTType::ContinueExpression, token.position);
-                            Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
-                            Ok(return_value)
-                        }
-                        Keyword::Break => {
-                            let token = self.get_next_token()?;
-                            let return_value = ASTNode::new(ASTType::BreakExpression, token.position);
-                            Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
-                            Ok(return_value)
-                        }
-                        Keyword::Namespace => {
-                            let token = self.get_next_token()?.clone();
-                            let name_token = self.get_next_token()?;
-                            let name = match &name_token.token_type {
-                                TokenType::Identifier(name) => name.clone(),
-                                _ => return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(name_token.clone())),
-                            };
-
-                            Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenCurlyBracket)?;
-
-                            let mut namespace = ASTNode::new(ASTType::Namespace(name), token.position);
-                            namespace.children.push(self.parse_scope()?);
-                            Ok(namespace)
-                        }
-                        Keyword::Match => {
-                            let result = self.parse_expression()?;
-                            Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
-
-                            Ok(result)
-                        }
-                        _ => Err(ParserError::UnexpectedKeywordInStream(keyword.clone(), token.clone())),
+                TokenType::Keyword(keyword) => match keyword {
+                    Keyword::Function => self.parse_function(),
+                    Keyword::VariableDeclaration => self.parse_variable_declaration(),
+                    Keyword::IfStatement => self.parse_if_statement(),
+                    Keyword::WhileStatement => self.parse_while_statement(),
+                    Keyword::ForStatement => self.parse_for_statement(),
+                    Keyword::Return => {
+                        let token = self.get_next_token()?;
+                        let mut return_node =
+                            ASTNode::new(ASTType::ReturnExpression, token.position);
+                        return_node.children.push(self.parse_expression()?);
+                        Parser::validate_token_is_delimiter(
+                            self.get_next_token()?,
+                            Delimiter::Semicolon,
+                        )?;
+                        Ok(return_node)
                     }
-                }
-                TokenType::Delimiter(d) => {
-                    match d {
-                        Delimiter::OpenCurlyBracket => {
-                            self.get_next_token()?;
-
-                            self.parse_scope()
-                        }
-
-                        _ => Err(ParserError::UnexpectedDelimiterInStream(Delimiter::CloseCurlyBracket, token.clone())),
+                    Keyword::Continue => {
+                        let token = self.get_next_token()?;
+                        let return_value =
+                            ASTNode::new(ASTType::ContinueExpression, token.position);
+                        Parser::validate_token_is_delimiter(
+                            self.get_next_token()?,
+                            Delimiter::Semicolon,
+                        )?;
+                        Ok(return_value)
                     }
-                }
+                    Keyword::Break => {
+                        let token = self.get_next_token()?;
+                        let return_value = ASTNode::new(ASTType::BreakExpression, token.position);
+                        Parser::validate_token_is_delimiter(
+                            self.get_next_token()?,
+                            Delimiter::Semicolon,
+                        )?;
+                        Ok(return_value)
+                    }
+                    Keyword::Namespace => {
+                        let token = self.get_next_token()?.clone();
+                        let name_token = self.get_next_token()?;
+                        let name = match &name_token.token_type {
+                            TokenType::Identifier(name) => name.clone(),
+                            _ => {
+                                return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(
+                                    name_token.clone(),
+                                ))
+                            }
+                        };
+
+                        Parser::validate_token_is_delimiter(
+                            self.get_next_token()?,
+                            Delimiter::OpenCurlyBracket,
+                        )?;
+
+                        let mut namespace = ASTNode::new(ASTType::Namespace(name), token.position);
+                        namespace.children.push(self.parse_scope()?);
+                        Ok(namespace)
+                    }
+                    Keyword::Match => {
+                        let result = self.parse_expression()?;
+                        Parser::validate_token_is_delimiter(
+                            self.get_next_token()?,
+                            Delimiter::Semicolon,
+                        )?;
+
+                        Ok(result)
+                    }
+                    _ => Err(ParserError::UnexpectedKeywordInStream(
+                        keyword.clone(),
+                        token.clone(),
+                    )),
+                },
+                TokenType::Delimiter(d) => match d {
+                    Delimiter::OpenCurlyBracket => {
+                        self.get_next_token()?;
+
+                        self.parse_scope()
+                    }
+
+                    _ => Err(ParserError::UnexpectedDelimiterInStream(
+                        Delimiter::CloseCurlyBracket,
+                        token.clone(),
+                    )),
+                },
                 _ => {
                     let result = self.parse_expression()?;
-                    Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Semicolon)?;
+                    Parser::validate_token_is_delimiter(
+                        self.get_next_token()?,
+                        Delimiter::Semicolon,
+                    )?;
 
                     Ok(result)
                 }
@@ -282,11 +323,18 @@ impl Parser {
                 TokenType::Identifier(identifier) => {
                     let identifier = identifier.clone();
                     if identifier == "params" {
-                        node.children.push(ASTNode::new(ASTType::ParamsList, token.position));
-                        Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::CloseParen)?;
+                        node.children
+                            .push(ASTNode::new(ASTType::ParamsList, token.position));
+                        Parser::validate_token_is_delimiter(
+                            self.get_next_token()?,
+                            Delimiter::CloseParen,
+                        )?;
                         break;
                     }
-                    node.children.push(ASTNode::new(ASTType::Identifier(identifier), token.position));
+                    node.children.push(ASTNode::new(
+                        ASTType::Identifier(identifier),
+                        token.position,
+                    ));
                 }
                 TokenType::Delimiter(d) => match d {
                     Delimiter::CloseParen => break,
@@ -320,7 +368,11 @@ impl Parser {
 
         match &name_token.token_type {
             TokenType::Identifier(name) => func_name = String::from(name),
-            _ => return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(name_token.clone())),
+            _ => {
+                return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(
+                    name_token.clone(),
+                ))
+            }
         }
 
         let mut node = ASTNode::new(ASTType::Function(func_name), name_token.position);
@@ -334,11 +386,18 @@ impl Parser {
                 TokenType::Identifier(identifier) => {
                     let identifier = identifier.clone();
                     if identifier == "params" {
-                        node.children.push(ASTNode::new(ASTType::ParamsList, token.position));
-                        Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::CloseParen)?;
+                        node.children
+                            .push(ASTNode::new(ASTType::ParamsList, token.position));
+                        Parser::validate_token_is_delimiter(
+                            self.get_next_token()?,
+                            Delimiter::CloseParen,
+                        )?;
                         break;
                     }
-                    node.children.push(ASTNode::new(ASTType::Identifier(identifier), token.position));
+                    node.children.push(ASTNode::new(
+                        ASTType::Identifier(identifier),
+                        token.position,
+                    ));
                 }
                 TokenType::Delimiter(d) => match d {
                     Delimiter::CloseParen => break,
@@ -372,11 +431,17 @@ impl Parser {
 
         match &name_token.token_type {
             TokenType::Identifier(name) => variable_name = String::from(name),
-            _ => return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(name_token.clone())),
+            _ => {
+                return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(
+                    name_token.clone(),
+                ))
+            }
         }
 
-        let mut node = ASTNode::new(ASTType::VariableDeclaration(variable_name), name_token.position);
-
+        let mut node = ASTNode::new(
+            ASTType::VariableDeclaration(variable_name),
+            name_token.position,
+        );
 
         let delimiter = self.get_next_token()?;
         Parser::validate_token_is_delimiter(delimiter, Delimiter::Equal)?;
@@ -386,7 +451,6 @@ impl Parser {
 
         let semicolon = self.get_next_token()?;
         Parser::validate_token_is_delimiter(semicolon, Delimiter::Semicolon)?;
-
 
         Ok(node)
     }
@@ -409,37 +473,31 @@ impl Parser {
         }
 
         match &self.peek_next_token(0)?.token_type {
-            TokenType::Keyword(keyword) => {
-                match keyword {
-                    Keyword::ElseStatement => {
-                        self.get_next_token()?;
+            TokenType::Keyword(keyword) => match keyword {
+                Keyword::ElseStatement => {
+                    self.get_next_token()?;
 
-                        match &self.peek_next_token(0)?.token_type {
-                            TokenType::Keyword(keyword) => {
-                                match keyword {
-                                    Keyword::IfStatement => {
-                                        let else_if_statement = self.parse_if_statement()?;
-                                        node.children.push(else_if_statement);
-                                    }
-                                    _ => {}
-                                }
-                            }
-                            TokenType::Delimiter(delimiter) => {
-                                match delimiter {
-                                    Delimiter::OpenCurlyBracket => {
-                                        self.get_next_token()?;
-                                        let else_statement = self.parse_scope()?;
-                                        node.children.push(else_statement);
-                                    }
-                                    _ => {}
-                                }
+                    match &self.peek_next_token(0)?.token_type {
+                        TokenType::Keyword(keyword) => match keyword {
+                            Keyword::IfStatement => {
+                                let else_if_statement = self.parse_if_statement()?;
+                                node.children.push(else_if_statement);
                             }
                             _ => {}
-                        }
+                        },
+                        TokenType::Delimiter(delimiter) => match delimiter {
+                            Delimiter::OpenCurlyBracket => {
+                                self.get_next_token()?;
+                                let else_statement = self.parse_scope()?;
+                                node.children.push(else_statement);
+                            }
+                            _ => {}
+                        },
+                        _ => {}
                     }
-                    _ => {}
                 }
-            }
+                _ => {}
+            },
             _ => {}
         }
 
@@ -473,19 +531,21 @@ impl Parser {
 
         let in_keyword = self.get_next_token()?;
         match &in_keyword.token_type {
-            TokenType::Keyword(kv) => {
-                match kv {
-                    Keyword::In => {}
-                    kv => return Err(ParserError::UnexpectedKeywordInStream(kv.clone(), in_keyword.clone())),
+            TokenType::Keyword(kv) => match kv {
+                Keyword::In => {}
+                kv => {
+                    return Err(ParserError::UnexpectedKeywordInStream(
+                        kv.clone(),
+                        in_keyword.clone(),
+                    ))
                 }
-            }
-            _ => return Err(ParserError::UnexpectedTokenInStream(in_keyword.clone()))
+            },
+            _ => return Err(ParserError::UnexpectedTokenInStream(in_keyword.clone())),
         };
 
         let expression = self.parse_expression()?;
 
         node.children.push(expression);
-
 
         let open_curly = self.get_next_token()?;
         Parser::validate_token_is_delimiter(open_curly, Delimiter::OpenCurlyBracket)?;
@@ -564,10 +624,11 @@ impl Parser {
             self.parse_lambda_function()?
         } else if Parser::token_is_keyword(first_delimiter, Keyword::Match) {
             self.parse_match_expression()?
-        } else if Parser::token_is_delimiter(delimiter, Delimiter::OpenParen) ||
-            (delimiter2.is_ok() &&
-                Parser::token_is_delimiter(&delimiter, Delimiter::Colon) &&
-                Parser::token_is_delimiter(delimiter2.unwrap(), Delimiter::Colon)) {
+        } else if Parser::token_is_delimiter(delimiter, Delimiter::OpenParen)
+            || (delimiter2.is_ok()
+                && Parser::token_is_delimiter(&delimiter, Delimiter::Colon)
+                && Parser::token_is_delimiter(delimiter2.unwrap(), Delimiter::Colon))
+        {
             self.parse_function_call()?
         } else if Parser::token_is_delimiter(first_delimiter, Delimiter::OpenCurlyBracket) {
             self.parse_object_declaration()?
@@ -588,8 +649,10 @@ impl Parser {
         let delimiter = self.peek_next_token(0)?;
         let delimiter1 = self.peek_next_token(1);
 
-        if Parser::token_is_delimiter(delimiter, Delimiter::Dot) &&
-            (delimiter1.is_err() || !Parser::token_is_delimiter(delimiter1.unwrap(), Delimiter::Dot)) {
+        if Parser::token_is_delimiter(delimiter, Delimiter::Dot)
+            && (delimiter1.is_err()
+                || !Parser::token_is_delimiter(delimiter1.unwrap(), Delimiter::Dot))
+        {
             let object_access = self.parse_object_access(result)?;
 
             return Ok(object_access);
@@ -616,12 +679,14 @@ impl Parser {
             let arm = self.parse_expression()?;
 
             Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Colon)?;
-            Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenCurlyBracket)?;
+            Parser::validate_token_is_delimiter(
+                self.get_next_token()?,
+                Delimiter::OpenCurlyBracket,
+            )?;
 
             let scope = self.parse_scope()?;
             let mut lambda = ASTNode::new(ASTType::LambdaFunction, scope.code_segment);
             lambda.children.push(scope);
-
 
             let mut match_arm = ASTNode::new(ASTType::MatchArm, arm.code_segment);
 
@@ -629,7 +694,6 @@ impl Parser {
             match_arm.children.push(lambda);
 
             match_node.children.push(match_arm);
-
 
             let next = self.peek_next_token(0)?;
             if Parser::token_is_delimiter(next, Delimiter::Comma) {
@@ -666,7 +730,6 @@ impl Parser {
             array_node.children.push(expression);
         }
 
-
         Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::CloseBracket)?;
 
         Ok(array_node)
@@ -680,9 +743,10 @@ impl Parser {
             let token = self.get_next_token()?.clone();
             let identifier = match &token.token_type {
                 TokenType::Identifier(identifier) => Ok(identifier.clone()),
-                _ => Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(token.clone()))
+                _ => Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(
+                    token.clone(),
+                )),
             }?;
-
 
             Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Colon)?;
             let expression = self.parse_expression()?;
@@ -720,10 +784,15 @@ impl Parser {
         if Parser::token_is_delimiter(next_token, Delimiter::OpenParen) {
             let identifier = match identifier_token.token_type {
                 TokenType::Identifier(id) => id,
-                _ => return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(identifier_token.clone()))
+                _ => {
+                    return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(
+                        identifier_token.clone(),
+                    ))
+                }
             };
 
-            let mut call = ASTNode::new(ASTType::FunctionCall(identifier), identifier_token.position);
+            let mut call =
+                ASTNode::new(ASTType::FunctionCall(identifier), identifier_token.position);
 
             Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenParen)?;
 
@@ -747,7 +816,8 @@ impl Parser {
 
             node.children.push(call);
         } else {
-            node.children.push(Parser::token_to_simple_ast_node(&identifier_token)?);
+            node.children
+                .push(Parser::token_to_simple_ast_node(&identifier_token)?);
         }
 
         node.children.push(object);
@@ -765,7 +835,6 @@ impl Parser {
 
         Ok(node)
     }
-
 
     fn parse_subscript_expression(&mut self, object: ASTNode) -> Result<ASTNode, ParserError> {
         let token = self.get_next_token()?;
@@ -789,7 +858,6 @@ impl Parser {
             return Ok(next);
         }
 
-
         Ok(node)
 
         /*
@@ -810,7 +878,11 @@ impl Parser {
             let namespace_part = self.get_next_token()?;
             let namespace_part = match &namespace_part.token_type {
                 TokenType::Identifier(identifier) => identifier.clone(),
-                _ => return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(namespace_part.clone())),
+                _ => {
+                    return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(
+                        namespace_part.clone(),
+                    ))
+                }
             };
 
             Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::Colon)?;
@@ -822,7 +894,11 @@ impl Parser {
         let identifier_token = self.get_next_token()?;
         let mut identifier = match &identifier_token.token_type {
             TokenType::Identifier(identifier) => identifier.clone(),
-            _ => return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(identifier_token.clone())),
+            _ => {
+                return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(
+                    identifier_token.clone(),
+                ))
+            }
         };
 
         identifier = namespace + &identifier;
@@ -856,33 +932,31 @@ impl Parser {
 
     fn operator_precedence(node: &ASTNode) -> i32 {
         match &node.ast_type {
-            ASTType::ExpressionOp(op) => {
-                match op {
-                    ExpressionOp::Assign => 0,
-                    ExpressionOp::AddAssign => 0,
-                    ExpressionOp::SubtractAssign => 0,
-                    ExpressionOp::MultiplyAssign => 0,
-                    ExpressionOp::DivideAssign => 0,
+            ASTType::ExpressionOp(op) => match op {
+                ExpressionOp::Assign => 0,
+                ExpressionOp::AddAssign => 0,
+                ExpressionOp::SubtractAssign => 0,
+                ExpressionOp::MultiplyAssign => 0,
+                ExpressionOp::DivideAssign => 0,
 
-                    ExpressionOp::And => 0,
-                    ExpressionOp::Or => 0,
+                ExpressionOp::And => 0,
+                ExpressionOp::Or => 0,
 
-                    ExpressionOp::Equal => 1,
-                    ExpressionOp::NotEqual => 1,
-                    ExpressionOp::LessThan => 1,
-                    ExpressionOp::GreaterThan => 1,
-                    ExpressionOp::LessThanOrEqual => 1,
-                    ExpressionOp::GreaterThanOrEqual => 1,
+                ExpressionOp::Equal => 1,
+                ExpressionOp::NotEqual => 1,
+                ExpressionOp::LessThan => 1,
+                ExpressionOp::GreaterThan => 1,
+                ExpressionOp::LessThanOrEqual => 1,
+                ExpressionOp::GreaterThanOrEqual => 1,
 
-                    ExpressionOp::Add => 1,
-                    ExpressionOp::Subtract => 1,
+                ExpressionOp::Add => 1,
+                ExpressionOp::Subtract => 1,
 
-                    ExpressionOp::Multiply => 2,
-                    ExpressionOp::Divide => 2,
+                ExpressionOp::Multiply => 2,
+                ExpressionOp::Divide => 2,
 
-                    ExpressionOp::Range => 3,
-                }
-            }
+                ExpressionOp::Range => 3,
+            },
             _ => -1,
         }
     }
@@ -891,7 +965,7 @@ impl Parser {
         let token = self.token_stream.next();
         match token {
             Some(token) => Ok(token),
-            None => Err(ParserError::UnexpectedEndOfProgram)
+            None => Err(ParserError::UnexpectedEndOfProgram),
         }
     }
 
@@ -899,69 +973,73 @@ impl Parser {
         let token = self.token_stream.peek_next(offset);
         match token {
             Some(token) => Ok(token),
-            None => Err(ParserError::UnexpectedEndOfProgram)
+            None => Err(ParserError::UnexpectedEndOfProgram),
         }
     }
 
     fn token_is_keyword(token: &Token, keyword: Keyword) -> bool {
         return match &token.token_type {
             TokenType::Keyword(kv) => {
-                return if *kv == keyword {
-                    true
-                } else {
-                    false
-                };
+                return if *kv == keyword { true } else { false };
             }
-            _ => false
+            _ => false,
         };
     }
 
     fn token_is_delimiter(token: &Token, delimiter: Delimiter) -> bool {
         return match &token.token_type {
             TokenType::Delimiter(d) => {
-                return if *d == delimiter {
-                    true
-                } else {
-                    false
-                };
+                return if *d == delimiter { true } else { false };
             }
-            _ => false
+            _ => false,
         };
     }
 
     fn token_to_simple_ast_node(token: &Token) -> Result<ASTNode, ParserError> {
         match &token.token_type {
-            TokenType::Identifier(identifier) => {
-                Ok(ASTNode::new(ASTType::Identifier(identifier.clone()), token.position))
-            }
-            TokenType::String(value) => {
-                Ok(ASTNode::new(ASTType::StringValue(value.clone()), token.position))
-            }
+            TokenType::Identifier(identifier) => Ok(ASTNode::new(
+                ASTType::Identifier(identifier.clone()),
+                token.position,
+            )),
+            TokenType::String(value) => Ok(ASTNode::new(
+                ASTType::StringValue(value.clone()),
+                token.position,
+            )),
             TokenType::Integer(value) => {
                 Ok(ASTNode::new(ASTType::IntegerValue(*value), token.position))
             }
             TokenType::Float(value) => {
                 Ok(ASTNode::new(ASTType::FloatValue(*value), token.position))
             }
-            _ => Err(ParserError::UnexpectedTokenInStream(token.clone()))
+            _ => Err(ParserError::UnexpectedTokenInStream(token.clone())),
         }
     }
 
     fn combine_code_segments(segment1: CodeSegment, segment2: CodeSegment) -> CodeSegment {
         let mut smallest_x = segment1.start_x;
-        if segment2.start_x < smallest_x { smallest_x = segment2.start_x }
+        if segment2.start_x < smallest_x {
+            smallest_x = segment2.start_x
+        }
         let mut smallest_y = segment1.start_y;
-        if segment2.start_y < smallest_y { smallest_y = segment2.start_y }
+        if segment2.start_y < smallest_y {
+            smallest_y = segment2.start_y
+        }
 
         let mut largest_x = segment1.end_x;
-        if segment2.end_x < largest_x { largest_x = segment2.end_x }
+        if segment2.end_x < largest_x {
+            largest_x = segment2.end_x
+        }
         let mut largest_y = segment1.end_y;
-        if segment2.end_y < largest_y { largest_y = segment2.end_y }
+        if segment2.end_y < largest_y {
+            largest_y = segment2.end_y
+        }
 
         CodeSegment::new(smallest_x, smallest_y, largest_x, largest_y)
     }
 
-    fn get_next_expression_operator(&mut self) -> Result<Option<(ExpressionOp, CodeSegment)>, ParserError> {
+    fn get_next_expression_operator(
+        &mut self,
+    ) -> Result<Option<(ExpressionOp, CodeSegment)>, ParserError> {
         let token = self.peek_next_token(0)?;
         let token2 = match self.peek_next_token(1) {
             Ok(t) => Some(t),
@@ -973,49 +1051,88 @@ impl Parser {
                 if Parser::token_is_delimiter(&token, Delimiter::Equal) {
                     let token1 = self.get_next_token()?.clone();
                     let token2 = self.get_next_token()?;
-                    return Ok(Some((ExpressionOp::Equal, Parser::combine_code_segments(token1.position, token2.position))));
+                    return Ok(Some((
+                        ExpressionOp::Equal,
+                        Parser::combine_code_segments(token1.position, token2.position),
+                    )));
                 } else if Parser::token_is_delimiter(&token, Delimiter::Exclamation) {
                     let token1 = self.get_next_token()?.clone();
                     let token2 = self.get_next_token()?;
-                    return Ok(Some((ExpressionOp::NotEqual, Parser::combine_code_segments(token1.position, token2.position))));
+                    return Ok(Some((
+                        ExpressionOp::NotEqual,
+                        Parser::combine_code_segments(token1.position, token2.position),
+                    )));
                 } else if Parser::token_is_delimiter(&token, Delimiter::LessThan) {
                     let token1 = self.get_next_token()?.clone();
                     let token2 = self.get_next_token()?;
-                    return Ok(Some((ExpressionOp::LessThanOrEqual, Parser::combine_code_segments(token1.position, token2.position))));
+                    return Ok(Some((
+                        ExpressionOp::LessThanOrEqual,
+                        Parser::combine_code_segments(token1.position, token2.position),
+                    )));
                 } else if Parser::token_is_delimiter(&token, Delimiter::GreaterThan) {
                     let token1 = self.get_next_token()?.clone();
                     let token2 = self.get_next_token()?;
-                    return Ok(Some((ExpressionOp::GreaterThanOrEqual, Parser::combine_code_segments(token1.position, token2.position))));
+                    return Ok(Some((
+                        ExpressionOp::GreaterThanOrEqual,
+                        Parser::combine_code_segments(token1.position, token2.position),
+                    )));
                 } else if Parser::token_is_delimiter(&token, Delimiter::Plus) {
                     let token1 = self.get_next_token()?.clone();
                     let token2 = self.get_next_token()?;
-                    return Ok(Some((ExpressionOp::AddAssign, Parser::combine_code_segments(token1.position, token2.position))));
+                    return Ok(Some((
+                        ExpressionOp::AddAssign,
+                        Parser::combine_code_segments(token1.position, token2.position),
+                    )));
                 } else if Parser::token_is_delimiter(&token, Delimiter::Hyphen) {
                     let token1 = self.get_next_token()?.clone();
                     let token2 = self.get_next_token()?;
-                    return Ok(Some((ExpressionOp::SubtractAssign, Parser::combine_code_segments(token1.position, token2.position))));
+                    return Ok(Some((
+                        ExpressionOp::SubtractAssign,
+                        Parser::combine_code_segments(token1.position, token2.position),
+                    )));
                 } else if Parser::token_is_delimiter(&token, Delimiter::Star) {
                     let token1 = self.get_next_token()?.clone();
                     let token2 = self.get_next_token()?;
-                    return Ok(Some((ExpressionOp::MultiplyAssign, Parser::combine_code_segments(token1.position, token2.position))));
+                    return Ok(Some((
+                        ExpressionOp::MultiplyAssign,
+                        Parser::combine_code_segments(token1.position, token2.position),
+                    )));
                 } else if Parser::token_is_delimiter(&token, Delimiter::Slash) {
                     let token1 = self.get_next_token()?.clone();
                     let token2 = self.get_next_token()?;
-                    return Ok(Some((ExpressionOp::DivideAssign, Parser::combine_code_segments(token1.position, token2.position))));
+                    return Ok(Some((
+                        ExpressionOp::DivideAssign,
+                        Parser::combine_code_segments(token1.position, token2.position),
+                    )));
                 }
-            } else if Parser::token_is_delimiter(&token, Delimiter::And) && Parser::token_is_delimiter(&token2.unwrap(), Delimiter::And) {
+            } else if Parser::token_is_delimiter(&token, Delimiter::And)
+                && Parser::token_is_delimiter(&token2.unwrap(), Delimiter::And)
+            {
                 let token1 = self.get_next_token()?.clone();
                 let token2 = self.get_next_token()?;
-                return Ok(Some((ExpressionOp::And, Parser::combine_code_segments(token1.position, token2.position))));
-            } else if Parser::token_is_delimiter(&token, Delimiter::Pipe) && Parser::token_is_delimiter(&token2.unwrap(), Delimiter::Pipe) {
+                return Ok(Some((
+                    ExpressionOp::And,
+                    Parser::combine_code_segments(token1.position, token2.position),
+                )));
+            } else if Parser::token_is_delimiter(&token, Delimiter::Pipe)
+                && Parser::token_is_delimiter(&token2.unwrap(), Delimiter::Pipe)
+            {
                 let token1 = self.get_next_token()?.clone();
                 let token2 = self.get_next_token()?;
-                return Ok(Some((ExpressionOp::Or, Parser::combine_code_segments(token1.position, token2.position))));
-            } else if Parser::token_is_delimiter(&token, Delimiter::Dot) && Parser::token_is_delimiter(&token2.unwrap(), Delimiter::Dot) {
+                return Ok(Some((
+                    ExpressionOp::Or,
+                    Parser::combine_code_segments(token1.position, token2.position),
+                )));
+            } else if Parser::token_is_delimiter(&token, Delimiter::Dot)
+                && Parser::token_is_delimiter(&token2.unwrap(), Delimiter::Dot)
+            {
                 let token1 = self.get_next_token()?.clone();
                 let token2 = self.get_next_token()?;
                 println!("Range expression");
-                return Ok(Some((ExpressionOp::Range, Parser::combine_code_segments(token1.position, token2.position))));
+                return Ok(Some((
+                    ExpressionOp::Range,
+                    Parser::combine_code_segments(token1.position, token2.position),
+                )));
             }
         }
 
@@ -1042,7 +1159,6 @@ impl Parser {
             return Ok(Some((ExpressionOp::Assign, token1.position)));
         }
 
-
         return Ok(None);
     }
 
@@ -1050,13 +1166,15 @@ impl Parser {
         match Parser::token_is_delimiter(token, delimiter.clone()) {
             true => Ok({}),
             false => match &token.token_type {
-                TokenType::Delimiter(_) => {
-                    Err(ParserError::UnexpectedDelimiterInStream(delimiter, token.clone()))
-                }
-                _ => {
-                    Err(ParserError::UnexpectedTokenInStreamWithExpected(TokenType::Delimiter(delimiter), token.clone()))
-                }
-            }
+                TokenType::Delimiter(_) => Err(ParserError::UnexpectedDelimiterInStream(
+                    delimiter,
+                    token.clone(),
+                )),
+                _ => Err(ParserError::UnexpectedTokenInStreamWithExpected(
+                    TokenType::Delimiter(delimiter),
+                    token.clone(),
+                )),
+            },
         }
     }
 }

@@ -1,6 +1,6 @@
-use std::fs::File;
-use std::io::{Read, ErrorKind};
 use crate::bytecode::code_block::CodeSegment;
+use std::fs::File;
+use std::io::{ErrorKind, Read};
 use std::rc::Rc;
 
 #[derive(PartialEq, Debug, Clone)]
@@ -116,7 +116,6 @@ impl TokenStream {
     }
 }
 
-
 #[derive(Debug)]
 pub enum LexerError {
     FileNotFound,
@@ -154,24 +153,26 @@ impl Lexer {
         }
     }
 
-
     pub fn lex_file(file: &str) -> Result<(Rc<String>, TokenStream), LexerError> {
         let file_result = File::open(file);
         let mut file = String::new();
 
         match file_result {
-            Err(e) => return match e.kind() {
-                ErrorKind::NotFound => Err(LexerError::FileNotFound),
-                _ => Err(LexerError::UnknownError),
-            },
+            Err(e) => {
+                return match e.kind() {
+                    ErrorKind::NotFound => Err(LexerError::FileNotFound),
+                    _ => Err(LexerError::UnknownError),
+                }
+            }
             Ok(mut f) => match f.read_to_string(&mut file) {
                 Ok(_) => {}
-                Err(e) => return match e.kind() {
-                    _ => Err(LexerError::UnknownError),
-                },
+                Err(e) => {
+                    return match e.kind() {
+                        _ => Err(LexerError::UnknownError),
+                    }
+                }
             },
         };
-
 
         let mut lexer = Lexer {
             file: file.clone(),
@@ -204,11 +205,13 @@ impl Lexer {
             let char = chars.next();
 
             if char.is_none() {
-                return Ok(Token::new(TokenType::EndOfFile, CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y)));
+                return Ok(Token::new(
+                    TokenType::EndOfFile,
+                    CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y),
+                ));
             }
 
             let char = char.unwrap();
-
 
             let delimiter = Lexer::char_to_delimiter(char);
             if delimiter.is_some() {
@@ -225,7 +228,10 @@ impl Lexer {
             final_string += &String::from(char);
         }
 
-        return Ok(Token::new(TokenType::String(final_string), CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y)));
+        return Ok(Token::new(
+            TokenType::String(final_string),
+            CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y),
+        ));
     }
 
     pub fn pop_token(&mut self) -> Result<Token, LexerError> {
@@ -238,9 +244,11 @@ impl Lexer {
         loop {
             let char = chars.next();
 
-
             if char.is_none() {
-                return Ok(Token::new(TokenType::EndOfFile, CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y)));
+                return Ok(Token::new(
+                    TokenType::EndOfFile,
+                    CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y),
+                ));
             }
 
             let char = char.unwrap();
@@ -263,7 +271,9 @@ impl Lexer {
                         if delimiter.is_some() && delimiter.unwrap() == Delimiter::Slash {
                             loop {
                                 let char = chars.next();
-                                if char.is_none() { break; }
+                                if char.is_none() {
+                                    break;
+                                }
                                 let char = char.unwrap();
 
                                 if let Some(delimiter) = Lexer::char_to_delimiter(char) {
@@ -301,9 +311,12 @@ impl Lexer {
                     return match fractional.token_type {
                         TokenType::Integer(i) => {
                             let result = Lexer::integer_and_fractional_to_float(integer, i)?;
-                            Ok(Token::new(TokenType::Float(result), CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y)))
+                            Ok(Token::new(
+                                TokenType::Float(result),
+                                CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y),
+                            ))
                         }
-                        _ => Err(LexerError::UnexpectedTokenWhileParsingFloat(fractional))
+                        _ => Err(LexerError::UnexpectedTokenWhileParsingFloat(fractional)),
                     };
                 } else if word.len() > 0 {
                     break;
@@ -324,7 +337,10 @@ impl Lexer {
                         _ => {}
                     }
 
-                    return Ok(Token::new(TokenType::Delimiter(delimiter), CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y)));
+                    return Ok(Token::new(
+                        TokenType::Delimiter(delimiter),
+                        CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y),
+                    ));
                 }
             }
 
@@ -335,23 +351,39 @@ impl Lexer {
         }
 
         match Lexer::word_to_delimiter(&word) {
-            Some(value) => return Ok(Token::new(TokenType::Delimiter(value), CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y))),
+            Some(value) => {
+                return Ok(Token::new(
+                    TokenType::Delimiter(value),
+                    CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y),
+                ))
+            }
             None => {}
         }
 
         match Lexer::word_to_integer(&word) {
-            Some(value) => return Ok(Token::new(TokenType::Integer(value), CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y))),
+            Some(value) => {
+                return Ok(Token::new(
+                    TokenType::Integer(value),
+                    CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y),
+                ))
+            }
             None => {}
         };
 
-
         match Lexer::word_to_keyword(&word) {
-            Some(keyword) => return Ok(Token::new(TokenType::Keyword(keyword), CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y))),
+            Some(keyword) => {
+                return Ok(Token::new(
+                    TokenType::Keyword(keyword),
+                    CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y),
+                ))
+            }
             None => {}
         }
 
-
-        return Ok(Token::new(TokenType::Identifier(word), CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y)));
+        return Ok(Token::new(
+            TokenType::Identifier(word),
+            CodeSegment::new(start_x, start_y, self.pos_x, self.pos_y),
+        ));
     }
 
     fn word_to_integer(word: &str) -> Option<i64> {

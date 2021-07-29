@@ -1,17 +1,17 @@
-use crate::{bytecode::{
-    register::Register,
-    label::Label,
-    code_block::CodeBlock,
-}, interpreter::{value::Value}, error_printer};
+use crate::{
+    bytecode::{code_block::CodeBlock, label::Label, register::Register},
+    error_printer,
+    interpreter::value::Value,
+};
 
-use std::collections::HashMap;
-use std::rc::Rc;
-use crate::interpreter::function_pointer::FunctionArgs;
 use crate::bytecode::code_block::CodeSegment;
-use std::cell::Cell;
-use std::mem;
+use crate::compiler::compiler::NativeFunction;
+use crate::interpreter::function_pointer::FunctionArgs;
 use crate::interpreter::value::DataValue;
-use crate::compiler::compiler::{NativeFunction};
+use std::cell::Cell;
+use std::collections::HashMap;
+use std::mem;
+use std::rc::Rc;
 
 pub type VariableHandle = usize;
 
@@ -64,7 +64,6 @@ pub struct ExecutionContext {
     code_text: Rc<String>,
     code_segment: CodeSegment,
 }
-
 
 impl ExecutionContext {
     pub fn new(code_text: Rc<String>) -> ExecutionContext {
@@ -123,7 +122,9 @@ impl ExecutionContext {
     pub fn set_call(&mut self, block_id: VariableHandle) {
         self.call_block_id = Some(block_id)
     }
-    pub fn set_call_arguments(&mut self, args: Option<Vec<Register>>) { self.call_arguments = args; }
+    pub fn set_call_arguments(&mut self, args: Option<Vec<Register>>) {
+        self.call_arguments = args;
+    }
     pub fn set_return(&mut self) {
         self.call_return = true;
     }
@@ -191,7 +192,8 @@ impl ExecutionContext {
     }
 
     pub fn push_break_continue_scope(&mut self, break_label: Label, continue_label: Label) {
-        self.break_continue_scope_stack.insert(0, BreakContinueScope::new(break_label, continue_label));
+        self.break_continue_scope_stack
+            .insert(0, BreakContinueScope::new(break_label, continue_label));
     }
 
     pub fn pop_break_continue_scope(&mut self) -> BreakContinueScope {
@@ -202,8 +204,12 @@ impl ExecutionContext {
         &self.break_continue_scope_stack[0]
     }
 
-    pub fn set_break(&mut self) { self.should_break = true; }
-    pub fn set_continue(&mut self) { self.should_continue = true; }
+    pub fn set_break(&mut self) {
+        self.should_break = true;
+    }
+    pub fn set_continue(&mut self) {
+        self.should_continue = true;
+    }
 
     pub fn throw_error(&self, message: &str) -> Value {
         self.errored.set(true);
@@ -225,12 +231,7 @@ impl ExecutionContext {
                 let start_x = 0;
                 let end_x = lines[line].len();
 
-                error_printer::print_error_line(
-                    lines[line],
-                    line + 1,
-                    start_x,
-                    end_x,
-                );
+                error_printer::print_error_line(lines[line], line + 1, start_x, end_x);
             }
         }
 
@@ -261,7 +262,11 @@ pub struct Interpreter<'interp> {
 }
 
 impl<'interp> Interpreter<'interp> {
-    pub fn new(blocks: HashMap<String, CodeBlock>, code_text: Rc<String>, native_functions: Vec<NativeFunction>) -> Interpreter<'interp> {
+    pub fn new(
+        blocks: HashMap<String, CodeBlock>,
+        code_text: Rc<String>,
+        native_functions: Vec<NativeFunction>,
+    ) -> Interpreter<'interp> {
         let mut interp = Interpreter {
             active_block: String::from(""),
             active_code_block: None,
@@ -287,39 +292,42 @@ impl<'interp> Interpreter<'interp> {
         };
 
         #[cfg(debug_assertions)]
-            {
-                println!("Compiled code");
-                for (name, block) in &self.blocks {
-                    println!("\tBlock {}", name);
-                    let mut idx = 0;
+        {
+            println!("Compiled code");
+            for (name, block) in &self.blocks {
+                println!("\tBlock {}", name);
+                let mut idx = 0;
 
-                    let mut indent = 2;
-                    for ins in block.get_instructions() {
-                        if ins.to_string() == String::from("PopScope") { indent -= 1; }
-
-                        for _ in 0..indent {
-                            print!("\t");
-                        }
-
-                        println!("// Segment ${:?}", block.code_mapping[idx]);
-
-                        for _ in 0..indent {
-                            print!("\t");
-                        }
-                        println!("[{:04}] {}", idx, ins.to_string());
-                        println!();
-                        if ins.to_string() == String::from("PushScope") { indent += 1; }
-                        idx += 1;
+                let mut indent = 2;
+                for ins in block.get_instructions() {
+                    if ins.to_string() == String::from("PopScope") {
+                        indent -= 1;
                     }
 
+                    for _ in 0..indent {
+                        print!("\t");
+                    }
+
+                    println!("// Segment ${:?}", block.code_mapping[idx]);
+
+                    for _ in 0..indent {
+                        print!("\t");
+                    }
+                    println!("[{:04}] {}", idx, ins.to_string());
                     println!();
+                    if ins.to_string() == String::from("PushScope") {
+                        indent += 1;
+                    }
+                    idx += 1;
                 }
+
+                println!();
             }
+        }
 
         self.active_code_block = Some(&self.blocks[&self.active_block]);
 
         let mut len = self.active_code_block.unwrap().get_instructions().len();
-
 
         while self.pc < len {
             let active_block = self.active_code_block.unwrap();
@@ -327,7 +335,8 @@ impl<'interp> Interpreter<'interp> {
             let instructions = active_block.get_instructions();
             let ins = &instructions[self.pc];
             //println!("Executing [{}][{}]{}", self.active_block, self.pc, ins.to_string());
-            self.execution_context.code_segment = self.active_code_block.unwrap().code_mapping[self.pc];
+            self.execution_context.code_segment =
+                self.active_code_block.unwrap().code_mapping[self.pc];
             ins.execute(&mut self.execution_context);
 
             if self.execution_context.errored.get() {
@@ -345,7 +354,8 @@ impl<'interp> Interpreter<'interp> {
                             lines[frame.caller_segment.start_y - 1],
                             frame.caller_segment.start_y,
                             frame.caller_segment.start_x,
-                            frame.caller_segment.end_x, );
+                            frame.caller_segment.end_x,
+                        );
                         println!();
 
                         i -= 1;
@@ -386,20 +396,19 @@ impl<'interp> Interpreter<'interp> {
                     }
                 }
 
-
                 let variable = self.execution_context.get_variable_no_error(call_block_id);
 
                 if variable.is_none() {
-                    self.execution_context.throw_error("Failed to find variable");
+                    self.execution_context
+                        .throw_error("Failed to find variable");
                     continue;
                 }
 
                 let handle = match variable.unwrap().get_data_value() {
-                    DataValue::FunctionPointer(handle) => {
-                        handle.clone()
-                    }
+                    DataValue::FunctionPointer(handle) => handle.clone(),
                     _ => {
-                        self.execution_context.throw_error("Expected value to be a function handle");
+                        self.execution_context
+                            .throw_error("Expected value to be a function handle");
                         continue;
                     }
                 };
@@ -410,33 +419,42 @@ impl<'interp> Interpreter<'interp> {
                     let native_function = self.native_functions.get(&*handle);
                     match native_function {
                         Some(func) => {
-                            let returned_value = func.call(&self.execution_context, FunctionArgs::new(block_args));
+                            let returned_value =
+                                func.call(&self.execution_context, FunctionArgs::new(block_args));
                             self.execution_context.set_accumulator(returned_value);
                             self.pc += 1;
                             continue;
                         }
-                        None => self.execution_context.throw_error(&format!("Unable to find function {:?}", call_block_id))
+                        None => self
+                            .execution_context
+                            .throw_error(&format!("Unable to find function {:?}", call_block_id)),
                     };
                 }
 
-                let old_context = mem::replace(&mut self.execution_context, ExecutionContext::new(self.code_text.clone()));
+                let old_context = mem::replace(
+                    &mut self.execution_context,
+                    ExecutionContext::new(self.code_text.clone()),
+                );
 
                 let block_to_call = block_to_call.unwrap();
 
                 if block_to_call.capture_locals {
                     let mut variables = Vec::new();
                     for scope in &old_context.scope_stack {
-                        for _ in variables.len()..scope.variables.len() { variables.push(Value::from_undefined()) }
+                        for _ in variables.len()..scope.variables.len() {
+                            variables.push(Value::from_undefined())
+                        }
 
                         for i in 0..scope.variables.len() {
-                            if variables[i].is_undefined() && scope.variables[i].is_undefined() { continue; }
+                            if variables[i].is_undefined() && scope.variables[i].is_undefined() {
+                                continue;
+                            }
                             variables[i] = scope.variables[i].clone();
                         }
                     }
 
                     self.execution_context.scope_stack[0].variables = variables;
                 }
-
 
                 let current_frame = StackFrame {
                     pc: self.pc,
@@ -475,9 +493,11 @@ impl<'interp> Interpreter<'interp> {
                 self.active_block = last_frame.active_block;
                 self.active_code_block = self.blocks.get(&self.active_block);
                 if self.active_code_block.is_none() {
-                    panic!("Error in return could not find previous function `{}`", self.active_block);
+                    panic!(
+                        "Error in return could not find previous function `{}`",
+                        self.active_block
+                    );
                 }
-
 
                 len = self.active_code_block.unwrap().get_instructions().len();
                 self.execution_context = last_frame.execution_context;
