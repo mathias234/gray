@@ -45,6 +45,7 @@ pub enum ASTType {
     Function(String),
     LambdaFunction,
     FunctionCall(String),
+    MemberFunctionCall(String),
     VariableDeclaration(String),
     FloatValue(f64),
     IntegerValue(i64),
@@ -792,7 +793,7 @@ impl Parser {
             };
 
             let mut call =
-                ASTNode::new(ASTType::FunctionCall(identifier), identifier_token.position);
+                ASTNode::new(ASTType::MemberFunctionCall(identifier), identifier_token.position);
 
             Parser::validate_token_is_delimiter(self.get_next_token()?, Delimiter::OpenParen)?;
 

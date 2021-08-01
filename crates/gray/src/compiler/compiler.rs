@@ -332,6 +332,38 @@ impl Compiler {
         Ok({})
     }
 
+    fn compile_member_function_call(
+        &mut self,
+        call: &String,
+        generator: &mut Generator,
+        object: Register,
+        node: &ASTNode,
+    ) -> Result<(), CompilerError> {
+        let handle = generator.next_variable_handle(call);
+
+        let mut argument_registers = Vec::new();
+
+        argument_registers.push(object);
+
+        for child in &node.children {
+            self.compile_expression(generator, child)?;
+            let register = generator.next_free_register();
+            generator.emit(Store::new_boxed(register), child.code_segment);
+            argument_registers.push(register);
+        }
+
+        generator.emit(
+            Call::new_boxed(handle, Some(argument_registers.clone())),
+            node.code_segment,
+        );
+
+        for register in argument_registers {
+            generator.release_register(register);
+        }
+
+        Ok({})
+    }
+
     fn compile_variable_declaration(
         &mut self,
         variable: &String,
@@ -939,7 +971,7 @@ impl Compiler {
                 );
                 generator.emit(Store::new_boxed(accessor_register), all_segments(accessor));
             }
-            ASTType::FunctionCall(id) => {
+            ASTType::MemberFunctionCall(id) => {
                 generator.emit(
                     LoadImmediate::new_boxed(Value::from_string(Rc::new(id.clone()))),
                     all_segments(accessor),
@@ -950,14 +982,14 @@ impl Compiler {
                     all_segments(accessor),
                 );
 
-                let handle = generator.next_variable_handle("__TempFunctionCall");
+                let handle = generator.next_variable_handle("__TempMemberFunctionCall");
 
                 generator.emit(DeclareVariable::new_boxed(handle), all_segments(accessor));
 
                 generator.release_register(accessor_register);
                 let final_value = generator.next_free_register();
 
-                self.compile_function_call(&"__TempFunctionCall".to_string(), generator, accessor)?;
+                self.compile_member_function_call(&"__TempMemberFunctionCall".to_string(), generator, object_register, accessor)?;
 
                 generator.emit(Store::new_boxed(final_value), all_segments(accessor));
 
