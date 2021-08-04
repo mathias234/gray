@@ -295,7 +295,7 @@ impl<'interp> Interpreter<'interp> {
         {
             println!("Compiled code");
             for (name, block) in &self.blocks {
-                println!("\tBlock {}", name);
+                println!("\tBlock {}, Capture locals: {}", name, block.capture_locals);
                 let mut idx = 0;
 
                 let mut indent = 2;
@@ -406,9 +406,9 @@ impl<'interp> Interpreter<'interp> {
 
                 let handle = match variable.unwrap().get_data_value() {
                     DataValue::FunctionPointer(handle) => handle.clone(),
-                    _ => {
+                    v => {
                         self.execution_context
-                            .throw_error("Expected value to be a function handle");
+                            .throw_error(&format!("Expected value to be a function handle it is {:?}", v));
                         continue;
                     }
                 };
@@ -449,6 +449,7 @@ impl<'interp> Interpreter<'interp> {
                             if variables[i].is_undefined() && scope.variables[i].is_undefined() {
                                 continue;
                             }
+
                             variables[i] = scope.variables[i].clone();
                         }
                     }

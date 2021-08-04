@@ -34,7 +34,9 @@ impl Generator {
         };
 
         if capture_locals && parent_generator.is_some() {
-            generator.variable_handles = parent_generator.unwrap().variable_handles.clone();
+            let parent = parent_generator.unwrap();
+            generator.variable_handles = parent.variable_handles.clone();
+            generator.last_handle = parent.last_handle;
         }
 
         for func in native_functions {
