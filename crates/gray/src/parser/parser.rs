@@ -62,7 +62,7 @@ pub enum ASTType {
 
 #[derive(Debug)]
 pub enum ParserError {
-    UnexpectedEndOfProgram,
+    UnexpectedEndOfProgram(CodeSegment),
     UnexpectedKeywordInStream(Keyword, Token),
     UnexpectedDelimiterInStream(Delimiter, Token),
     UnexpectedTokenInStream(Token),
@@ -101,6 +101,7 @@ impl ASTNode {
 
 pub struct Parser {
     token_stream: TokenStream,
+    last_code_segment: CodeSegment,
 }
 
 impl Parser {
@@ -119,7 +120,7 @@ impl Parser {
     fn pretty_print_error(&self, error: &ParserError, code_string: &str) {
         let lines: Vec<&str> = code_string.split('\n').collect();
 
-        let mut code_segment = CodeSegment::new(1, 1, 1, 1);
+        let code_segment;
 
         let error_message = match error {
             ParserError::UnexpectedTokenInStreamWithExpected(t, v) => {
@@ -157,7 +158,8 @@ impl Parser {
                     k
                 )
             }
-            ParserError::UnexpectedEndOfProgram => {
+            ParserError::UnexpectedEndOfProgram(segment) => {
+                code_segment = segment.clone();
                 format!("Unexpected end of program!")
             }
         };
@@ -173,7 +175,7 @@ impl Parser {
     }
 
     pub fn parse(token_stream: TokenStream, code_string: &str) -> Result<ASTNode, ParserError> {
-        let mut parser = Parser { token_stream };
+        let mut parser = Parser { token_stream, last_code_segment: CodeSegment::new(1, 1, 1, 1) };
 
         let root = parser.parse_scope();
 
@@ -194,9 +196,9 @@ impl Parser {
 
             match token_result {
                 Ok(t) => token = t,
-                Err(e) => match e {
-                    ParserError::UnexpectedEndOfProgram => return Ok(scope),
-                    _ => return Err(e),
+                Err(e) => return match e {
+                    ParserError::UnexpectedEndOfProgram(_) => Ok(scope),
+                    _ => Err(e),
                 },
             }
 
@@ -256,7 +258,7 @@ impl Parser {
                             _ => {
                                 return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(
                                     name_token.clone(),
-                                ))
+                                ));
                             }
                         };
 
@@ -372,7 +374,7 @@ impl Parser {
             _ => {
                 return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(
                     name_token.clone(),
-                ))
+                ));
             }
         }
 
@@ -435,7 +437,7 @@ impl Parser {
             _ => {
                 return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(
                     name_token.clone(),
-                ))
+                ));
             }
         }
 
@@ -538,7 +540,7 @@ impl Parser {
                     return Err(ParserError::UnexpectedKeywordInStream(
                         kv.clone(),
                         in_keyword.clone(),
-                    ))
+                    ));
                 }
             },
             _ => return Err(ParserError::UnexpectedTokenInStream(in_keyword.clone())),
@@ -618,17 +620,17 @@ impl Parser {
 
     fn parse_sub_expression(&mut self) -> Result<ASTNode, ParserError> {
         let first_delimiter = self.peek_next_token(0)?;
-        let delimiter = self.peek_next_token(1)?;
+        let delimiter = self.peek_next_token(1);
         let delimiter2 = self.peek_next_token(2);
 
         let result = if Parser::token_is_keyword(first_delimiter, Keyword::Function) {
             self.parse_lambda_function()?
         } else if Parser::token_is_keyword(first_delimiter, Keyword::Match) {
             self.parse_match_expression()?
-        } else if Parser::token_is_delimiter(delimiter, Delimiter::OpenParen)
+        } else if delimiter.is_ok() && Parser::token_is_delimiter(delimiter.as_ref().unwrap(), Delimiter::OpenParen)
             || (delimiter2.is_ok()
-                && Parser::token_is_delimiter(&delimiter, Delimiter::Colon)
-                && Parser::token_is_delimiter(delimiter2.unwrap(), Delimiter::Colon))
+            && Parser::token_is_delimiter(delimiter.unwrap(), Delimiter::Colon)
+            && Parser::token_is_delimiter(delimiter2.unwrap(), Delimiter::Colon))
         {
             self.parse_function_call()?
         } else if Parser::token_is_delimiter(first_delimiter, Delimiter::OpenCurlyBracket) {
@@ -652,7 +654,7 @@ impl Parser {
 
         if Parser::token_is_delimiter(delimiter, Delimiter::Dot)
             && (delimiter1.is_err()
-                || !Parser::token_is_delimiter(delimiter1.unwrap(), Delimiter::Dot))
+            || !Parser::token_is_delimiter(delimiter1.unwrap(), Delimiter::Dot))
         {
             let object_access = self.parse_object_access(result)?;
 
@@ -788,7 +790,7 @@ impl Parser {
                 _ => {
                     return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(
                         identifier_token.clone(),
-                    ))
+                    ));
                 }
             };
 
@@ -882,7 +884,7 @@ impl Parser {
                 _ => {
                     return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(
                         namespace_part.clone(),
-                    ))
+                    ));
                 }
             };
 
@@ -898,7 +900,7 @@ impl Parser {
             _ => {
                 return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(
                     identifier_token.clone(),
-                ))
+                ));
             }
         };
 
@@ -965,8 +967,11 @@ impl Parser {
     fn get_next_token(&mut self) -> Result<&Token, ParserError> {
         let token = self.token_stream.next();
         match token {
-            Some(token) => Ok(token),
-            None => Err(ParserError::UnexpectedEndOfProgram),
+            Some(token) => {
+                self.last_code_segment = token.position;
+                Ok(token)
+            }
+            None => Err(ParserError::UnexpectedEndOfProgram(self.last_code_segment)),
         }
     }
 
@@ -974,7 +979,7 @@ impl Parser {
         let token = self.token_stream.peek_next(offset);
         match token {
             Some(token) => Ok(token),
-            None => Err(ParserError::UnexpectedEndOfProgram),
+            None => Err(ParserError::UnexpectedEndOfProgram(self.last_code_segment)),
         }
     }
 
