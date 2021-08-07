@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct Object {
-    variables: Rc<RefCell<HashMap<Rc<String>, Value>>>,
+    pub variables: Rc<RefCell<HashMap<Rc<String>, Value>>>,
 }
 
 impl Object {
