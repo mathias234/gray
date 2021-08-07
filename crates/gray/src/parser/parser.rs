@@ -159,7 +159,7 @@ impl Parser {
                 )
             }
             ParserError::UnexpectedEndOfProgram(segment) => {
-                code_segment = segment.clone();
+                code_segment = CodeSegment::new(segment.end_x, segment.end_y, segment.end_x + 1, segment.end_y);
                 format!("Unexpected end of program!")
             }
         };
