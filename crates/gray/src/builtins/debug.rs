@@ -64,7 +64,7 @@ fn debug_size_of(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
 }
 
 fn size_of_object(object: &Object) -> usize {
-    let mut total = 0;
+    let mut total = size_of::<Value>();
 
     for v in object.variables.borrow().iter() {
         total += size_of_value(v.1)
@@ -74,7 +74,7 @@ fn size_of_object(object: &Object) -> usize {
 }
 
 fn size_of_array(array: &Array) -> usize {
-    let mut total = 0;
+    let mut total = size_of::<Value>();
 
     for i in 0..array.len() {
         let v = array.get(i);
