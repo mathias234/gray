@@ -288,6 +288,16 @@ impl Instruction for Store {
 
 impl Instruction for Call {
     fn execute(&self, context: &mut ExecutionContext) {
+        if self.arguments.len() > 0 {
+            let first_arg = context.get_register(&self.arguments[0]);
+            if let Some(struct_def) = first_arg.as_struct_def() {
+                context.set_register(
+                    &self.arguments[0],
+                    Value::from_object(struct_def.create_object()),
+                );
+            }
+        }
+
         context.set_call_arguments(Some(self.arguments.clone()));
         context.set_call(self.block_id);
     }

@@ -8,6 +8,8 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::rc::Rc;
 
+use super::struct_def::StructDef;
+
 pub type Pointer<T> = Rc<RefCell<T>>;
 
 #[derive(Clone, Debug)]
@@ -21,6 +23,7 @@ pub enum DataValue {
     FunctionPointer(Rc<String>),
     Range(RangeIterator),
     Iterator(IteratorHolder),
+    StructDef(StructDef),
     Undefined,
 }
 
@@ -94,10 +97,23 @@ impl Value {
         }
     }
 
+    pub fn from_struct_def(struct_def: StructDef) -> Value {
+        Value {
+            value: DataValue::StructDef(struct_def),
+        }
+    }
+
     pub fn is_undefined(&self) -> bool {
         match self.get_data_value() {
             DataValue::Undefined => true,
             _ => false,
+        }
+    }
+
+    pub fn as_struct_def(&self) -> Option<StructDef> {
+        match self.get_data_value() {
+            DataValue::StructDef(def) => Some(def.clone()),
+            _ => None,
         }
     }
 
@@ -259,6 +275,7 @@ impl Value {
             DataValue::Pointer(_) => format!("Internal Pointer"),
             DataValue::Iterator(_) => format!("Iterator"),
             DataValue::Undefined => format!("Undefined"),
+            DataValue::StructDef(_) => format!("StructDef"),
         }
     }
 }
@@ -276,6 +293,7 @@ impl fmt::Display for Value {
             DataValue::Pointer(_) => write!(f, "(Internal Pointer)"),
             DataValue::Iterator(_) => write!(f, "Iterator"),
             DataValue::Undefined => write!(f, "(Undefined)"),
+            DataValue::StructDef(_) => write!(f, "StructDef"),
         }
     }
 }

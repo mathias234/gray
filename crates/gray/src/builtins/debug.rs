@@ -1,12 +1,12 @@
 use crate::compiler::compiler::NativeFunction;
+use crate::interpreter::array::Array;
 use crate::interpreter::function_pointer::FunctionArgs;
 use crate::interpreter::interpreter::ExecutionContext;
 use crate::interpreter::object::Object;
-use crate::interpreter::value::{Value, DataValue};
+use crate::interpreter::value::{DataValue, Value};
+use std::mem::size_of;
 use std::rc::Rc;
 use std::time::Instant;
-use std::mem::size_of;
-use crate::interpreter::array::Array;
 
 pub fn load_functions(functions: &mut Vec<NativeFunction>) {
     functions.push(NativeFunction::new_rs(
@@ -97,6 +97,7 @@ fn size_of_value(value: &Value) -> usize {
         DataValue::Range(_) => size_of::<Value>(),
         DataValue::Iterator(_) => size_of::<Value>(),
         DataValue::Undefined => size_of::<Value>(),
+        DataValue::StructDef(_) => size_of::<Value>(),
     };
 
     size

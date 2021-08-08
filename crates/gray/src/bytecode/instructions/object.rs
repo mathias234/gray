@@ -151,6 +151,7 @@ impl Instruction for GetObjectMember {
     fn execute(&self, context: &mut ExecutionContext) {
         let obj = match context.get_register(&self.object_register).get_data_value() {
             DataValue::Object(object) => object.clone(),
+            DataValue::StructDef(def) => def.create_object(),
             value => {
                 context.throw_error(&format!(
                     "Trying to get a member value of something that is not an object {:?}",

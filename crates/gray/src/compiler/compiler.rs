@@ -23,6 +23,7 @@ use crate::interop::function_args_pointer::FunctionArgsPointer;
 use crate::interop::value_pointer::ValuePointer;
 use crate::interpreter::function_pointer::FunctionArgs;
 use crate::interpreter::interpreter::ExecutionContext;
+use crate::interpreter::struct_def::StructDef;
 use crate::interpreter::value::Value;
 use crate::parser::parser::{ASTNode, ASTType, ExpressionOp};
 use std::collections::HashMap;
@@ -154,6 +155,50 @@ impl Compiler {
         Ok(compiler.blocks)
     }
 
+    fn compile_struct_definition(
+        &mut self,
+        generator: &mut Generator,
+        node: &ASTNode,
+    ) -> Result<(), CompilerError> {
+        let name_node = &node.children[0];
+        let struct_name = match &name_node.ast_type {
+            ASTType::Identifier(id) => id.clone(),
+            _ => return Err(CompilerError::UnexpectedASTNode(name_node.clone())),
+        };
+
+        let mut struct_def = StructDef::new();
+
+        for child in 1..node.children.len() {
+            let child = &node.children[child];
+            match &child.ast_type {
+                ASTType::Function(f) => {
+                    let full_name = self.compile_function(
+                        generator,
+                        &format!("__Struct[{}]", struct_name),
+                        &f,
+                        child,
+                        false,
+                    )?;
+                    struct_def.add_function(f.into(), full_name);
+                }
+                ASTType::VariableDeclaration(v) => {
+                    struct_def.add_variable(v.into());
+                }
+                _ => return Err(CompilerError::UnexpectedASTNode(child.clone())),
+            }
+        }
+
+        generator.emit(
+            LoadImmediate::new_boxed(Value::from_struct_def(struct_def)),
+            all_segments(node),
+        );
+
+        let handle = generator.next_variable_handle(&struct_name);
+        generator.emit(DeclareVariable::new_boxed(handle), all_segments(node));
+
+        Ok({})
+    }
+
     fn compile_function(
         &mut self,
         parent_generator: &Generator,
@@ -161,7 +206,7 @@ impl Compiler {
         name: &str,
         node: &ASTNode,
         capture_locals: bool,
-    ) -> Result<(), CompilerError> {
+    ) -> Result<String, CompilerError> {
         let mut generator;
         if !capture_locals {
             generator = Generator::new(
@@ -207,8 +252,8 @@ impl Compiler {
             full_name = String::from(name);
         }
 
-        self.blocks.insert(full_name, generator.block);
-        Ok({})
+        self.blocks.insert(full_name.clone(), generator.block);
+        Ok(full_name)
     }
 
     fn compile_scope(
@@ -241,6 +286,7 @@ impl Compiler {
                     let variable = generator.next_variable_handle(&full_name);
                     generator.emit(DeclareVariable::new_boxed(variable), all_segments(child));
                 }
+
                 _ => {}
             }
         }
@@ -285,8 +331,9 @@ impl Compiler {
                     self.compile_scope("", generator, child, true)?;
                 }
                 ASTType::Function(name) => {
-                    self.compile_function(generator, namespace, name, child, false)?
+                    self.compile_function(generator, namespace, name, child, false)?;
                 }
+                ASTType::StructDefinition => self.compile_struct_definition(generator, child)?,
                 _ => return Err(CompilerError::UnexpectedASTNode(child.clone())),
             }
         }
@@ -989,7 +1036,12 @@ impl Compiler {
                 generator.release_register(accessor_register);
                 let final_value = generator.next_free_register();
 
-                self.compile_member_function_call(&"__TempMemberFunctionCall".to_string(), generator, object_register, accessor)?;
+                self.compile_member_function_call(
+                    &"__TempMemberFunctionCall".to_string(),
+                    generator,
+                    object_register,
+                    accessor,
+                )?;
 
                 generator.emit(Store::new_boxed(final_value), all_segments(accessor));
 
