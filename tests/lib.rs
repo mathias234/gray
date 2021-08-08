@@ -66,3 +66,8 @@ fn variable_arguments_test() {
 fn loops_test() {
     run_file("./tests/loops_test.gray");
 }
+
+#[test]
+fn struct_test() {
+    run_file("./tests/struct_test.gray");
+}
