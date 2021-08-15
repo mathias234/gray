@@ -178,8 +178,21 @@ impl Compiler {
                         &f,
                         child,
                         false,
+                        false,
                     )?;
                     struct_def.add_function(f.into(), full_name);
+                }
+                ASTType::Constructor => {
+                    let full_name = self.compile_function(
+                        generator,
+                        &format!("__Struct[{}]", struct_name),
+                        "__Constructor__",
+                        child,
+                        false,
+                        true,
+                    )?;
+
+                    struct_def.add_function("__Constructor__".into(), full_name);
                 }
                 ASTType::VariableDeclaration(v) => {
                     struct_def.add_variable(v.into());
@@ -206,6 +219,7 @@ impl Compiler {
         name: &str,
         node: &ASTNode,
         capture_locals: bool,
+        constructor: bool,
     ) -> Result<String, CompilerError> {
         let mut generator;
         if !capture_locals {
@@ -219,6 +233,18 @@ impl Compiler {
         }
 
         let mut argument_index = 0;
+
+        if constructor {
+            generator.emit(LoadArgument::new_boxed(argument_index), all_segments(node));
+            let parameter_handle = generator.next_variable_handle("self");
+            generator.emit(
+                DeclareVariable::new_boxed(parameter_handle),
+                all_segments(node),
+            );
+
+            argument_index += 1;
+        }
+
         for child in &node.children {
             match &child.ast_type {
                 ASTType::Scope => self.compile_scope(namespace, &mut generator, child, true)?,
@@ -241,6 +267,10 @@ impl Compiler {
                 }
                 _ => return Err(CompilerError::UnexpectedASTNode(child.clone())),
             }
+        }
+
+        if constructor {
+            generator.emit(LoadArgument::new_boxed(0), all_segments(node));
         }
 
         generator.emit(Return::new_boxed(), node.code_segment);
@@ -331,7 +361,7 @@ impl Compiler {
                     self.compile_scope("", generator, child, true)?;
                 }
                 ASTType::Function(name) => {
-                    self.compile_function(generator, namespace, name, child, false)?;
+                    self.compile_function(generator, namespace, name, child, false, false)?;
                 }
                 ASTType::StructDefinition => self.compile_struct_definition(generator, child)?,
                 _ => return Err(CompilerError::UnexpectedASTNode(child.clone())),
@@ -647,7 +677,7 @@ impl Compiler {
                 all_segments(&child.children[1]),
             );
 
-            self.compile_function(generator, "", &handle_str, &child.children[1], true)?;
+            self.compile_function(generator, "", &handle_str, &child.children[1], true, false)?;
             generator.emit(
                 Call::new_boxed(handle, None),
                 all_segments(&child.children[1]),
@@ -727,7 +757,7 @@ impl Compiler {
                     all_segments(node),
                 );
 
-                self.compile_function(generator, "", &handle_str, node, true)?;
+                self.compile_function(generator, "", &handle_str, node, true, false)?;
                 Ok({})
             }
             ASTType::MatchExpression => self.compile_match_expression(generator, node),

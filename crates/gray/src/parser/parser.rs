@@ -59,6 +59,7 @@ pub enum ASTType {
     Subscript,
     ParamsList,
     Negate,
+    Constructor,
 }
 
 #[derive(Debug)]
@@ -432,10 +433,8 @@ impl Parser {
 
                         node
                     }
-                    Keyword::Function => {
-                        let function = self.parse_function()?;
-                        function
-                    }
+                    Keyword::Constructor => self.parse_function()?,
+                    Keyword::Function => self.parse_function()?,
                     k => {
                         return Err(ParserError::UnexpectedKeywordInStream(
                             k.clone(),
@@ -455,21 +454,39 @@ impl Parser {
     }
 
     fn parse_function(&mut self) -> Result<ASTNode, ParserError> {
-        self.get_next_token()?;
+        let token = self.get_next_token()?.clone();
+        let is_constructor = match &token.token_type {
+            TokenType::Keyword(kv) => match kv {
+                Keyword::Function => false,
+                Keyword::Constructor => true,
+                _ => {
+                    return Err(ParserError::UnexpectedKeywordInStream(
+                        kv.clone(),
+                        token.clone(),
+                    ))
+                }
+            },
+            _ => return Err(ParserError::UnexpectedTokenInStream(token.clone())),
+        };
 
-        let func_name;
-        let name_token = self.get_next_token()?;
+        let ast_type = if !is_constructor {
+            let func_name;
+            let name_token = self.get_next_token()?;
 
-        match &name_token.token_type {
-            TokenType::Identifier(name) => func_name = String::from(name),
-            _ => {
-                return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(
-                    name_token.clone(),
-                ));
+            match &name_token.token_type {
+                TokenType::Identifier(name) => func_name = String::from(name),
+                _ => {
+                    return Err(ParserError::UnexpectedTokenInStreamExpectedIdentifier(
+                        name_token.clone(),
+                    ));
+                }
             }
-        }
+            ASTType::Function(func_name)
+        } else {
+            ASTType::Constructor
+        };
 
-        let mut node = ASTNode::new(ASTType::Function(func_name), name_token.position);
+        let mut node = ASTNode::new(ast_type, token.position);
 
         let token = self.get_next_token()?;
         Parser::validate_token_is_delimiter(token, Delimiter::OpenParen)?;

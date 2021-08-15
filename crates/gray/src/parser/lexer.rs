@@ -46,6 +46,7 @@ pub enum Keyword {
     Continue,
     Match,
     Struct,
+    Constructor,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -443,6 +444,7 @@ impl Lexer {
             "in" => Some(Keyword::In),
             "match" => Some(Keyword::Match),
             "struct" => Some(Keyword::Struct),
+            "constructor" => Some(Keyword::Constructor),
             _ => None,
         }
     }

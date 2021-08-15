@@ -3,7 +3,7 @@ struct StructsWithMethodAndProperties {
     let B;
     let C;
 
-    fn new(self, a) {
+    constructor(a) {
         self.A = a;
         self.B = self.A * 2;
         self.C = self.B * 2;
@@ -18,6 +18,6 @@ struct StructsWithMethodAndProperties {
 
 
 let a = 55;
-let instance = StructsWithMethodAndProperties.new(a);
+let instance = StructsWithMethodAndProperties(a);
 
 assert_eq(instance.get_a(), a);

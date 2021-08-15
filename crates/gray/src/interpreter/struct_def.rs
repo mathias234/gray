@@ -19,6 +19,7 @@ impl StructDef {
     pub fn add_variable(&mut self, name: String) {
         self.variables.push(name)
     }
+
     pub fn add_function(&mut self, name: String, full_name: String) {
         self.functions.push((name, full_name))
     }
