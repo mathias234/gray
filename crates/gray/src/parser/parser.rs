@@ -408,9 +408,7 @@ impl Parser {
 
             let node = match &next.token_type {
                 TokenType::Keyword(k) => match k {
-                    Keyword::VariableDeclaration => {
-                        self.parse_variable_declaration()?
-                    }
+                    Keyword::VariableDeclaration => self.parse_variable_declaration()?,
                     Keyword::Constructor => self.parse_function()?,
                     Keyword::Function => self.parse_function()?,
                     k => {
@@ -533,7 +531,9 @@ impl Parser {
         );
 
         let delimiter = self.get_next_token()?;
-        Parser::validate_token_is_delimiter(delimiter, Delimiter::Equal)?;
+        if !Parser::token_is_delimiter(delimiter, Delimiter::Equal) {
+            return Ok(node);
+        }
 
         let assignment_expression = self.parse_expression()?;
         node.children.push(assignment_expression);
@@ -1223,7 +1223,6 @@ impl Parser {
             {
                 let token1 = self.get_next_token()?.clone();
                 let token2 = self.get_next_token()?;
-                println!("Range expression");
                 return Ok(Some((
                     ExpressionOp::Range,
                     Parser::combine_code_segments(token1.position, token2.position),
