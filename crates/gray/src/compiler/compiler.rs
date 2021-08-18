@@ -168,6 +168,15 @@ impl Compiler {
 
         let mut struct_def = StructDef::new();
 
+        let mut internal_constructor = Generator::new(&self.native_functions, false, Some(generator));
+
+        internal_constructor.emit(LoadArgument::new_boxed(0), all_segments(node));
+        let self_register = internal_constructor.next_free_register();
+        internal_constructor.emit(Store::new_boxed(self_register), all_segments(node));
+
+        let mut has_user_constructor = false;
+        let mut user_constructor_full_name = None;
+
         for child in 1..node.children.len() {
             let child = &node.children[child];
             match &child.ast_type {
@@ -192,14 +201,46 @@ impl Compiler {
                         true,
                     )?;
 
-                    struct_def.add_function("__Constructor__".into(), full_name);
+                    has_user_constructor = true;
+                    user_constructor_full_name = Some(full_name);
                 }
                 ASTType::VariableDeclaration(v) => {
+                    internal_constructor.emit(LoadImmediate::new_boxed(Value::from_string(Rc::new(v.into()))), all_segments(child));
+                    let accessor_register = internal_constructor.next_free_register();
+                    internal_constructor.emit(Store::new_boxed(accessor_register), all_segments(child));
+
+                    self.compile_expression(&mut internal_constructor, &child.children[0])?;
+
+                    internal_constructor.emit(SetObjectMember::new_boxed(self_register,accessor_register ), all_segments(child));
+                    internal_constructor.release_register(accessor_register);
+
                     struct_def.add_variable(v.into());
                 }
                 _ => return Err(CompilerError::UnexpectedASTNode(child.clone())),
             }
         }
+
+        // The internal constructor will call the user defined constructor once it is done
+        if has_user_constructor &&  user_constructor_full_name.is_some() {
+            internal_constructor.emit(
+                LoadImmediate::new_boxed(
+                    Value::from_function(
+                        Rc::from(user_constructor_full_name.unwrap())
+                    )
+                ),
+                all_segments(node)
+            );
+
+            let user_constructor_handle = internal_constructor.next_variable_handle("__Constructor__");
+            internal_constructor.emit(DeclareVariable::new_boxed(user_constructor_handle), all_segments(node));
+            internal_constructor.emit(Call::new_boxed(user_constructor_handle, Some(vec![self_register])), all_segments(node));
+        }
+
+        internal_constructor.release_register(self_register);
+        let internal_constructor_full_name = format!("__Struct[{}]::__InternalConstructor__", struct_name);
+        self.blocks.insert(internal_constructor_full_name.clone(), internal_constructor.block);
+        struct_def.add_function("__InternalConstructor__".into(), internal_constructor_full_name);
+
 
         generator.emit(
             LoadImmediate::new_boxed(Value::from_struct_def(struct_def)),

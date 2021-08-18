@@ -409,29 +409,7 @@ impl Parser {
             let node = match &next.token_type {
                 TokenType::Keyword(k) => match k {
                     Keyword::VariableDeclaration => {
-                        let let_keyword = self.get_next_token()?.clone();
-                        let variable_name = self.get_next_token()?;
-
-                        let variable_name = match &variable_name.token_type {
-                            TokenType::Identifier(i) => i.clone(),
-                            _ => {
-                                return Err(ParserError::UnexpectedTokenInStream(
-                                    variable_name.clone(),
-                                ))
-                            }
-                        };
-
-                        let node = ASTNode::new(
-                            ASTType::VariableDeclaration(variable_name),
-                            let_keyword.position,
-                        );
-
-                        Parser::validate_token_is_delimiter(
-                            self.get_next_token()?,
-                            Delimiter::Semicolon,
-                        )?;
-
-                        node
+                        self.parse_variable_declaration()?
                     }
                     Keyword::Constructor => self.parse_function()?,
                     Keyword::Function => self.parse_function()?,

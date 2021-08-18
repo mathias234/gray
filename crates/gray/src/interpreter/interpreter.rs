@@ -408,7 +408,7 @@ impl<'interp> Interpreter<'interp> {
                     DataValue::FunctionPointer(handle) => handle.clone(),
                     DataValue::StructDef(def) => {
                         let obj = def.create_object();
-                        let handle = obj.get(Rc::from("__Constructor__".to_string()));
+                        let handle = obj.get(Rc::from("__InternalConstructor__".to_string()));
                         if handle.is_none() {
                             self.execution_context
                                 .throw_error(&format!("Could not find constructor on {:?}", def));
