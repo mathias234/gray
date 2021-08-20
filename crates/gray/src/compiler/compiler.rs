@@ -256,6 +256,9 @@ impl Compiler {
         }
 
         internal_constructor.release_register(self_register);
+
+        internal_constructor.emit(Return::new_boxed(), all_segments(node));
+
         let internal_constructor_full_name =
             format!("__Struct[{}]::__InternalConstructor__", struct_name);
         self.blocks.insert(
