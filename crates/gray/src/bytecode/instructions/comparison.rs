@@ -123,9 +123,8 @@ impl Instruction for CompareGreaterThan {
         let lhs = context.get_accumulator();
         let rhs = context.get_register(&self.register);
 
-        context.set_accumulator(Value::from_i64(
-            (lhs.partial_cmp(context, &rhs).unwrap() == Ordering::Greater) as i64,
-        ));
+        let result = (lhs.partial_cmp(context, &rhs).unwrap() == Ordering::Greater) as i64;
+        context.set_accumulator(Value::from_i64(result));
     }
 
     fn to_string(&self) -> String {
@@ -138,9 +137,8 @@ impl Instruction for CompareLessThan {
         let lhs = context.get_accumulator();
         let rhs = context.get_register(&self.register);
 
-        context.set_accumulator(Value::from_i64(
-            (lhs.partial_cmp(context, &rhs).unwrap() == Ordering::Less) as i64,
-        ));
+        let result = (lhs.partial_cmp(context, &rhs).unwrap() == Ordering::Less) as i64;
+        context.set_accumulator(Value::from_i64(result));
     }
 
     fn to_string(&self) -> String {
@@ -153,9 +151,8 @@ impl Instruction for CompareLessThanOrEqual {
         let lhs = context.get_accumulator();
         let rhs = context.get_register(&self.register);
 
-        context.set_accumulator(Value::from_i64(
-            (lhs.partial_cmp(context, &rhs).unwrap() != Ordering::Greater) as i64,
-        ));
+        let result = (lhs.partial_cmp(context, &rhs).unwrap() != Ordering::Greater) as i64;
+        context.set_accumulator(Value::from_i64(result));
     }
 
     fn to_string(&self) -> String {
@@ -168,9 +165,8 @@ impl Instruction for CompareGreaterThanOrEqual {
         let lhs = context.get_accumulator();
         let rhs = context.get_register(&self.register);
 
-        context.set_accumulator(Value::from_i64(
-            (lhs.partial_cmp(context, &rhs).unwrap() != Ordering::Less) as i64,
-        ));
+        let result = (lhs.partial_cmp(context, &rhs).unwrap() != Ordering::Less) as i64;
+        context.set_accumulator(Value::from_i64(result));
     }
 
     fn to_string(&self) -> String {

@@ -64,6 +64,8 @@ pub struct ExecutionContext {
     errored: Cell<bool>,
     code_text: Rc<String>,
     code_segment: CodeSegment,
+
+    debugging: bool
 }
 
 impl ExecutionContext {
@@ -84,7 +86,13 @@ impl ExecutionContext {
             code_segment: CodeSegment::new(1, 1, 1, 1),
             code_text,
             errored: Cell::from(false),
+
+            debugging: false
         }
+    }
+
+    pub fn start_debugging(&mut self) {
+       self.debugging = true; 
     }
 
     pub fn set_accumulator(&mut self, value: Value) {
@@ -419,7 +427,7 @@ impl<'interp> Interpreter<'interp> {
                     match native_function {
                         Some(func) => {
                             let returned_value =
-                                func.call(&self.execution_context, FunctionArgs::new(block_args));
+                                func.call(&mut self.execution_context, FunctionArgs::new(block_args));
                             self.execution_context.set_accumulator(returned_value);
                             self.pc += 1;
                             continue;

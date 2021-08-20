@@ -42,7 +42,7 @@ pub fn declare_functions() -> Vec<NativeFunction> {
     functions
 }
 
-fn assert_eq(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
+fn assert_eq(context: &mut ExecutionContext, mut args: FunctionArgs) -> Value {
     let received_value = args.get_next(context).clone();
     let expected_value = args.get_next(context).clone();
 
@@ -56,20 +56,20 @@ fn assert_eq(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
     Value::from_i64(0)
 }
 
-fn println_function(context: &ExecutionContext, args: FunctionArgs) -> Value {
+fn println_function(context: &mut ExecutionContext, args: FunctionArgs) -> Value {
     print_function(context, args);
     println!();
 
     Value::from_i64(0)
 }
 
-fn print_function(context: &ExecutionContext, args: FunctionArgs) -> Value {
+fn print_function(context: &mut ExecutionContext, args: FunctionArgs) -> Value {
     print!("{}", format_to_value(context, args).to_string());
 
     Value::from_i64(0)
 }
 
-fn format_to_value(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
+fn format_to_value(context: &mut ExecutionContext, mut args: FunctionArgs) -> Value {
     let format_str = args.get_next_string(context);
 
     let mut formatted_string = String::new();

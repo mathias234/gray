@@ -24,7 +24,7 @@ pub fn load_functions(functions: &mut Vec<NativeFunction>) {
     ));
 }
 
-pub fn fs_open(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
+pub fn fs_open(context: &mut ExecutionContext, mut args: FunctionArgs) -> Value {
     let file_name = args.get_next_string(context);
 
     match std::fs::File::open(file_name.as_str()) {
@@ -33,7 +33,7 @@ pub fn fs_open(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
     }
 }
 
-pub fn fs_read_to_string(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
+pub fn fs_read_to_string(context: &mut ExecutionContext, mut args: FunctionArgs) -> Value {
     let file = value_to_file(context, args.get_next_pointer(context));
 
     if file.is_none() {
@@ -50,7 +50,7 @@ pub fn fs_read_to_string(context: &ExecutionContext, mut args: FunctionArgs) -> 
     }
 }
 
-pub fn io_read_line(context: &ExecutionContext, _: FunctionArgs) -> Value {
+pub fn io_read_line(context: &mut ExecutionContext, _: FunctionArgs) -> Value {
     let mut input = String::new();
     match std::io::stdin().read_line(&mut input) {
         Ok(_) => Value::from_string(Rc::new(input.trim().to_string())),
@@ -58,7 +58,7 @@ pub fn io_read_line(context: &ExecutionContext, _: FunctionArgs) -> Value {
     }
 }
 
-fn value_to_file(context: &ExecutionContext, p: Pointer<dyn Any>) -> Option<std::fs::File> {
+fn value_to_file(context: &mut ExecutionContext, p: Pointer<dyn Any>) -> Option<std::fs::File> {
     let p = p.borrow();
     if let Some(file) = p.downcast_ref::<std::fs::File>() {
         Some(file.try_clone().unwrap())

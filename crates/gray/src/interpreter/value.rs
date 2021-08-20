@@ -129,7 +129,7 @@ impl Value {
         &mut self.value
     }
 
-    pub fn add(self, context: &ExecutionContext, rhs_value: Value) -> Value {
+    pub fn add(self, context: &mut ExecutionContext, rhs_value: Value) -> Value {
         match &self.value {
             DataValue::I64(lhs) => match &rhs_value.value {
                 DataValue::I64(rhs) => Value::from_i64(*lhs + *rhs),
@@ -152,7 +152,7 @@ impl Value {
         }
     }
 
-    pub fn sub(self, context: &ExecutionContext, rhs_value: Value) -> Value {
+    pub fn sub(self, context: &mut ExecutionContext, rhs_value: Value) -> Value {
         match self.value {
             DataValue::I64(lhs) => match rhs_value.value {
                 DataValue::I64(rhs) => Value::from_i64(lhs - rhs),
@@ -174,7 +174,7 @@ impl Value {
         }
     }
 
-    pub fn mul(self, context: &ExecutionContext, rhs_value: Value) -> Value {
+    pub fn mul(self, context: &mut ExecutionContext, rhs_value: Value) -> Value {
         match self.value {
             DataValue::I64(lhs) => match rhs_value.value {
                 DataValue::I64(rhs) => Value::from_i64(lhs * rhs),
@@ -196,7 +196,7 @@ impl Value {
         }
     }
 
-    pub fn div(self, context: &ExecutionContext, rhs_value: Value) -> Value {
+    pub fn div(self, context: &mut ExecutionContext, rhs_value: Value) -> Value {
         match self.value {
             DataValue::I64(lhs) => match rhs_value.value {
                 DataValue::I64(rhs) => Value::from_i64(lhs / rhs),
@@ -235,7 +235,7 @@ impl Value {
         }
     }
 
-    pub fn partial_cmp(&self, context: &ExecutionContext, rhs_value: &Self) -> Option<Ordering> {
+    pub fn partial_cmp(&self, context: &mut ExecutionContext, rhs_value: &Self) -> Option<Ordering> {
         match self.value.clone() {
             DataValue::I64(lhs) => match &rhs_value.value {
                 DataValue::I64(rhs) => lhs.partial_cmp(&rhs),

@@ -24,14 +24,24 @@ pub fn load_functions(functions: &mut Vec<NativeFunction>) {
         String::from("size_of"),
         debug_size_of,
     ));
+    functions.push(NativeFunction::new_rs(
+        vec!["debug".to_string()], 
+        String::from("break"),
+        debug_break
+    ));
 }
 
-fn start_watch(_: &ExecutionContext, _: FunctionArgs) -> Value {
+fn debug_break(context: &mut ExecutionContext, _: FunctionArgs) -> Value {
+    context.start_debugging();
+    Value::from_undefined()
+}
+
+fn start_watch(_: &mut ExecutionContext, _: FunctionArgs) -> Value {
     let instant = Instant::now();
     Value::from_any(instant)
 }
 
-fn stop_watch(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
+fn stop_watch(context: &mut ExecutionContext, mut args: FunctionArgs) -> Value {
     let pointer = args.get_next_pointer(context);
     let p = pointer.borrow();
     if let Some(file) = p.downcast_ref::<Instant>() {
@@ -58,7 +68,7 @@ fn stop_watch(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
     }
 }
 
-fn debug_size_of(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
+fn debug_size_of(context: &mut ExecutionContext, mut args: FunctionArgs) -> Value {
     let value = args.get_next(context);
     Value::from_i64(size_of_value(&value) as i64)
 }

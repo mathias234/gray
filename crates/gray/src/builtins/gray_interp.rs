@@ -14,7 +14,7 @@ pub fn load_functions(functions: &mut Vec<NativeFunction>) {
     ));
 }
 
-pub fn run_string(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
+pub fn run_string(context: &mut ExecutionContext, mut args: FunctionArgs) -> Value {
     let str = args.get_next_string(context);
 
     let functions = declare_functions();

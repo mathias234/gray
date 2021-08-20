@@ -27,7 +27,7 @@ pub fn load_functions(functions: &mut Vec<NativeFunction>) {
     ));
 }
 
-fn array_new(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
+fn array_new(context: &mut ExecutionContext, mut args: FunctionArgs) -> Value {
     let mut size = 0;
     let mut fill = Value::from_i64(0);
 
@@ -47,7 +47,7 @@ fn array_new(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
     Value::from_array(array)
 }
 
-fn array_push(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
+fn array_push(context: &mut ExecutionContext, mut args: FunctionArgs) -> Value {
     let mut array = args.get_next_array(context);
 
     let mut pushed = 0;
@@ -59,12 +59,12 @@ fn array_push(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
     Value::from_i64(pushed as i64)
 }
 
-fn array_get(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
+fn array_get(context: &mut ExecutionContext, mut args: FunctionArgs) -> Value {
     let array = args.get_next_array(context);
     let index = args.get_next_i64(context) as usize;
     array.get(index)
 }
 
-fn array_len(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
+fn array_len(context: &mut ExecutionContext, mut args: FunctionArgs) -> Value {
     Value::from_i64(args.get_next_array(context).len() as i64)
 }

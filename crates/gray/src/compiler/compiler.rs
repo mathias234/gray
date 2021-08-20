@@ -41,7 +41,7 @@ pub struct Compiler {
     native_functions: Vec<NativeFunction>,
 }
 
-pub type RustFunctionPointer = fn(&ExecutionContext, FunctionArgs) -> Value;
+pub type RustFunctionPointer = fn(&mut ExecutionContext, FunctionArgs) -> Value;
 pub type CFunctionPointer = fn(&ExecutionContextPointer, FunctionArgsPointer) -> ValuePointer;
 
 #[derive(Copy, Clone)]
@@ -59,7 +59,7 @@ pub struct NativeFunction {
 }
 
 impl NativeFunction {
-    pub fn call(&self, context: &ExecutionContext, args: FunctionArgs) -> Value {
+    pub fn call(&self, context: &mut ExecutionContext, args: FunctionArgs) -> Value {
         // Safety:
         // assuming NativeFunction struct was created with NativeFunction::new_rs or new_c
         // then is_rust_func will be correctly assigned and the pointer will also be correctly assigned

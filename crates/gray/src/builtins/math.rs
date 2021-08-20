@@ -21,7 +21,7 @@ pub fn load_functions(functions: &mut Vec<NativeFunction>) {
     ));
 }
 
-pub fn math_abs(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
+pub fn math_abs(context: &mut ExecutionContext, mut args: FunctionArgs) -> Value {
     let result = match args.get_next(context).get_data_value() {
         DataValue::F64(value) => Value::from_f64(f64::abs(*value)),
         DataValue::I64(value) => Value::from_i64(i64::abs(*value)),
@@ -34,7 +34,7 @@ pub fn math_abs(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
     result
 }
 
-pub fn math_sin(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
+pub fn math_sin(context: &mut ExecutionContext, mut args: FunctionArgs) -> Value {
     let result = match args.get_next(context).get_data_value() {
         DataValue::F64(value) => Value::from_f64(f64::sin(*value)),
         DataValue::I64(value) => Value::from_f64(f64::sin(*value as f64)),
@@ -47,7 +47,7 @@ pub fn math_sin(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
     result
 }
 
-pub fn math_cos(context: &ExecutionContext, mut args: FunctionArgs) -> Value {
+pub fn math_cos(context: &mut ExecutionContext, mut args: FunctionArgs) -> Value {
     let result = match args.get_next(context).get_data_value() {
         DataValue::F64(value) => Value::from_f64(f64::cos(*value)),
         DataValue::I64(value) => Value::from_f64(f64::cos(*value as f64)),
