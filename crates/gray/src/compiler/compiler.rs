@@ -250,7 +250,7 @@ impl Compiler {
                 all_segments(node),
             );
             internal_constructor.emit(
-                Call::new_boxed(user_constructor_handle, Some(vec![self_register])),
+                Call::new_boxed(user_constructor_handle, Vec::new(), true),
                 all_segments(node),
             );
         }
@@ -450,7 +450,7 @@ impl Compiler {
         let handle = generator.next_variable_handle(call);
 
         if node.children.len() == 0 {
-            generator.emit(Call::new_boxed(handle, None), node.code_segment);
+            generator.emit(Call::new_boxed(handle, Vec::new(), false), node.code_segment);
             return Ok({});
         }
 
@@ -464,7 +464,7 @@ impl Compiler {
         }
 
         generator.emit(
-            Call::new_boxed(handle, Some(argument_registers.clone())),
+            Call::new_boxed(handle, argument_registers.clone(), false),
             node.code_segment,
         );
 
@@ -496,7 +496,7 @@ impl Compiler {
         }
 
         generator.emit(
-            Call::new_boxed(handle, Some(argument_registers.clone())),
+            Call::new_boxed(handle, argument_registers.clone(), false),
             node.code_segment,
         );
 
@@ -752,7 +752,7 @@ impl Compiler {
 
             self.compile_function(generator, "", &handle_str, &child.children[1], true, false)?;
             generator.emit(
-                Call::new_boxed(handle, None),
+                Call::new_boxed(handle, Vec::new(), false),
                 all_segments(&child.children[1]),
             );
 

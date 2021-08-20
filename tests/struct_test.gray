@@ -2,6 +2,7 @@ struct StructsWithMethodAndProperties {
     let A;
     let B;
     let C;
+    let InternallyConstructed = 50;
 
     constructor(a) {
         self.A = a;
@@ -21,3 +22,4 @@ let a = 55;
 let instance = StructsWithMethodAndProperties(a);
 
 assert_eq(instance.get_a(), a);
+assert_eq(instance.InternallyConstructed, 50);

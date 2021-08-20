@@ -76,20 +76,19 @@ impl Store {
 pub struct Call {
     block_id: VariableHandle,
     arguments: Vec<Register>,
+    pass_through_args: bool,
 }
 
 impl Call {
-    pub fn new_boxed(block_id: VariableHandle, args: Option<Vec<Register>>) -> Box<Call> {
-        if args.is_some() {
-            return Box::new(Call {
-                block_id,
-                arguments: args.unwrap(),
-            });
-        }
-
+    pub fn new_boxed(
+        block_id: VariableHandle,
+        args: Vec<Register>,
+        pass_through_args: bool,
+    ) -> Box<Call> {
         Box::new(Call {
             block_id,
-            arguments: Vec::new(),
+            arguments: args,
+            pass_through_args,
         })
     }
 }
@@ -298,26 +297,45 @@ impl Instruction for Call {
             }
         }
 
-        context.set_call_arguments(Some(self.arguments.clone()));
+        if self.pass_through_args {
+            context.set_call_arguments(context.get_arguments())
+        } else {
+            let mut args = Vec::new();
+
+            for arg in &self.arguments {
+                args.push(context.get_register(&arg));
+            }
+
+            context.set_call_arguments(args);
+        }
         context.set_call(self.block_id);
     }
 
     fn to_string(&self) -> String {
         let mut writer = String::new();
-        write!(&mut writer, "Call block {} Args: (", self.block_id).unwrap();
-        let mut idx = 0;
-        for a in &self.arguments {
-            write!(&mut writer, "{}", a).unwrap();
 
-            if idx < self.arguments.len() - 1 {
-                write!(&mut writer, ", ").unwrap();
+        if self.pass_through_args {
+            write!(
+                &mut writer,
+                "Call block {} Args: pass through",
+                self.block_id
+            )
+            .unwrap();
+        } else {
+            write!(&mut writer, "Call block {} Args: (", self.block_id).unwrap();
+            let mut idx = 0;
+            for a in &self.arguments {
+                write!(&mut writer, "{}", a).unwrap();
+
+                if idx < self.arguments.len() - 1 {
+                    write!(&mut writer, ", ").unwrap();
+                }
+
+                idx += 1;
             }
 
-            idx += 1;
+            write!(&mut writer, ")").unwrap();
         }
-
-        write!(&mut writer, ")").unwrap();
-
         writer
     }
 }

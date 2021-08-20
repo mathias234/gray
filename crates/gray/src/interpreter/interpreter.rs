@@ -1,3 +1,4 @@
+use crate::compiler::pretty_print_bytecode::print_blocks_as_code;
 use crate::{
     bytecode::{code_block::CodeBlock, label::Label, register::Register},
     error_printer,
@@ -51,7 +52,7 @@ pub struct ExecutionContext {
     jump_target: Option<Label>,
 
     call_block_id: Option<VariableHandle>,
-    call_arguments: Option<Vec<Register>>,
+    call_arguments: Option<Vec<Value>>,
     call_return: bool,
 
     scope_stack: Vec<Scope>,
@@ -111,6 +112,10 @@ impl ExecutionContext {
         self.block_arguments[arg].clone()
     }
 
+    pub fn get_arguments(&self) -> Vec<Value> {
+        self.block_arguments.clone()
+    }
+
     pub fn get_argument_count(&self) -> usize {
         self.block_arguments.len()
     }
@@ -122,8 +127,8 @@ impl ExecutionContext {
     pub fn set_call(&mut self, block_id: VariableHandle) {
         self.call_block_id = Some(block_id)
     }
-    pub fn set_call_arguments(&mut self, args: Option<Vec<Register>>) {
-        self.call_arguments = args;
+    pub fn set_call_arguments(&mut self, args: Vec<Value>) {
+        self.call_arguments = Some(args);
     }
     pub fn set_return(&mut self) {
         self.call_return = true;
@@ -292,38 +297,7 @@ impl<'interp> Interpreter<'interp> {
         };
 
         #[cfg(debug_assertions)]
-        {
-            println!("Compiled code");
-            for (name, block) in &self.blocks {
-                println!("\tBlock {}, Capture locals: {}", name, block.capture_locals);
-                let mut idx = 0;
-
-                let mut indent = 2;
-                for ins in block.get_instructions() {
-                    if ins.to_string() == String::from("PopScope") {
-                        indent -= 1;
-                    }
-
-                    for _ in 0..indent {
-                        print!("\t");
-                    }
-
-                    println!("// Segment ${:?}", block.code_mapping[idx]);
-
-                    for _ in 0..indent {
-                        print!("\t");
-                    }
-                    println!("[{:04}] {}", idx, ins.to_string());
-                    println!();
-                    if ins.to_string() == String::from("PushScope") {
-                        indent += 1;
-                    }
-                    idx += 1;
-                }
-
-                println!();
-            }
-        }
+        print_blocks_as_code(&self.blocks);
 
         self.active_code_block = Some(&self.blocks[&self.active_block]);
 
@@ -392,7 +366,7 @@ impl<'interp> Interpreter<'interp> {
 
                 if call_args.is_some() {
                     for call_arg in call_args.as_ref().unwrap() {
-                        block_args.push(self.execution_context.get_register(call_arg));
+                        block_args.push(call_arg.clone());
                     }
                 }
 
