@@ -26,12 +26,12 @@ pub fn load_functions(functions: &mut Vec<NativeFunction>) {
     ));
     functions.push(NativeFunction::new_rs(
         vec!["debug".to_string()], 
-        String::from("break"),
-        debug_break
+        String::from("pry"),
+        debug_pry
     ));
 }
 
-fn debug_break(context: &mut ExecutionContext, _: FunctionArgs) -> Value {
+fn debug_pry(context: &mut ExecutionContext, _: FunctionArgs) -> Value {
     context.start_debugging();
     Value::from_undefined()
 }

@@ -316,6 +316,11 @@ impl<'interp> Interpreter<'interp> {
 
             let instructions = active_block.get_instructions();
             let ins = &instructions[self.pc];
+
+            if self.execution_context.debugging {
+                Interpreter::debug_current(&mut self.execution_context);
+            }
+
             //println!("Executing [{}][{}]{}", self.active_block, self.pc, ins.to_string());
             self.execution_context.code_segment =
                 self.active_code_block.unwrap().code_mapping[self.pc];
@@ -531,6 +536,10 @@ impl<'interp> Interpreter<'interp> {
 
         //self.dump();
         self.get_last_accumulator_value()
+    }
+
+    fn debug_current(context: &mut ExecutionContext) {
+        println!("Debugging");
     }
 
     fn set_native_function(&mut self, function: NativeFunction) {
