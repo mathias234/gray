@@ -38,18 +38,22 @@ fn main() -> Result<(), GrayError> {
         }
 
         for file in files {
+            #[cfg(debug_assertions)]
             println!("Running file {:?}", file);
-
+            #[cfg(debug_assertions)]
             let now = Instant::now();
 
             let functions = declare_functions();
 
             let mut interpreter = gray::load_file(&file, functions)?;
+            #[cfg(debug_assertions)]
             println! {"Compilation took {}ms", now.elapsed().as_millis()}
 
+            #[cfg(debug_assertions)]
             let now = Instant::now();
-            println!("Starting execution");
             interpreter.run(None);
+
+            #[cfg(debug_assertions)]
             println! {"Execution took {}ms", now.elapsed().as_millis()}
         }
     }

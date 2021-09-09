@@ -29,6 +29,7 @@ pub enum Delimiter {
     Quotation,
     LineFeed,
     CarriageReturn,
+    Pound,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -295,6 +296,31 @@ impl Lexer {
                     }
                 }
 
+                if delimiter == Delimiter::Pound {
+                    loop {
+                        let char = chars.next();
+                        if char.is_none() {
+                            break;
+                        }
+                        let char = char.unwrap();
+
+                        self.position += char.len_utf8();
+                        self.pos_x += 1;
+
+                        if let Some(delimiter) = Lexer::char_to_delimiter(char) {
+                            if delimiter == Delimiter::LineFeed {
+                                self.position += char.len_utf8();
+                                self.pos_y += 1;
+                                self.pos_x = 0;
+                                break;
+                            }
+                        }
+
+                    }
+
+                    continue;
+                }
+
                 if delimiter == Delimiter::Dot && Lexer::word_to_integer(&word).is_some() {
                     // Seems like a float, as we have a full integer before then a dot
                     // Lets try and pop another token to get the fractional portion
@@ -475,6 +501,7 @@ impl Lexer {
             '\"' => Some(Delimiter::Quotation),
             '\n' => Some(Delimiter::LineFeed),
             '\r' => Some(Delimiter::CarriageReturn),
+            '#' => Some(Delimiter::Pound),
             _ => None,
         }
     }

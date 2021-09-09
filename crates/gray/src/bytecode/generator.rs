@@ -6,15 +6,12 @@ use crate::bytecode::register::Register;
 use crate::compiler::compiler::NativeFunction;
 use crate::interpreter::interpreter::VariableHandle;
 use crate::interpreter::value::Value;
-use std::collections::HashMap;
 use std::rc::Rc;
 
 pub struct Generator {
     register_index: usize,
     released_registers: Vec<Register>,
     pub block: CodeBlock,
-    variable_handles: HashMap<String, VariableHandle>,
-    last_handle: VariableHandle,
     lambda_index: usize,
 }
 
@@ -28,15 +25,13 @@ impl Generator {
             register_index: 0,
             released_registers: Vec::new(),
             block: CodeBlock::new(capture_locals),
-            variable_handles: HashMap::new(),
-            last_handle: 0,
             lambda_index: 0,
         };
 
         if capture_locals && parent_generator.is_some() {
             let parent = parent_generator.unwrap();
-            generator.variable_handles = parent.variable_handles.clone();
-            generator.last_handle = parent.last_handle;
+            generator.block.variable_handles = parent.block.variable_handles.clone();
+            generator.block.last_handle = parent.block.last_handle;
         }
 
         for func in native_functions {
@@ -83,17 +78,7 @@ impl Generator {
     }
 
     pub fn next_variable_handle(&mut self, variable: &str) -> VariableHandle {
-        if self.variable_handles.contains_key(variable) {
-            return self.variable_handles[variable];
-        }
-
-        self.variable_handles
-            .insert(variable.to_string(), self.last_handle);
-        let handle = self.last_handle;
-
-        self.last_handle += 1;
-
-        return handle;
+        return self.block.next_variable_handle(variable);
     }
 
     pub fn next_lambda_handle(&mut self) -> String {

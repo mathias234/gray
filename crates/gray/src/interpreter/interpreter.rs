@@ -92,7 +92,7 @@ impl ExecutionContext {
     }
 
     pub fn start_debugging(&mut self) {
-       self.debugging = true; 
+       self.debugging = true;
     }
 
     pub fn set_accumulator(&mut self, value: Value) {
@@ -251,6 +251,43 @@ impl ExecutionContext {
         println!(" {}", message);
         Value::from_i64(-1)
     }
+
+    pub fn dump(&self, symbols: &HashMap<String, VariableHandle>) {
+        println!("Dump of block Execution Context");
+        println!("\tBlock Arguments");
+        let mut idx = 0;
+        for reg in &self.block_arguments {
+            println!("\t\t[{:04}] {}", idx, *reg);
+            idx += 1;
+        }
+
+        println!("\tRegisters");
+        let mut idx = 0;
+        for reg in &self.registers {
+            println!("\t\t[{:04}] {}", idx, *reg);
+            idx += 1;
+        }
+
+        println!("\tVariables");
+        for scope in &self.scope_stack {
+            let mut idx = 0;
+            for variable in &scope.variables {
+                if !variable.is_undefined() {
+                    let mut my_symbol = "";
+                    for (symbol, handle) in symbols {
+                        if *handle == idx {
+                            my_symbol = symbol
+                        }
+                    }
+
+                    println!("\t\t{}({}): {}", my_symbol, idx, variable);
+                }
+                idx += 1;
+            }
+        }
+
+        println!("\t[ACCU] {}", self.accumulator)
+    }
 }
 
 pub struct StackFrame {
@@ -318,7 +355,7 @@ impl<'interp> Interpreter<'interp> {
             let ins = &instructions[self.pc];
 
             if self.execution_context.debugging {
-                Interpreter::debug_current(&mut self.execution_context);
+                Interpreter::debug_current(&mut self.execution_context, &self.active_code_block.unwrap().variable_handles);
             }
 
             //println!("Executing [{}][{}]{}", self.active_block, self.pc, ins.to_string());
@@ -350,7 +387,7 @@ impl<'interp> Interpreter<'interp> {
                 }
 
                 println!("Registers");
-                self.dump();
+                self.execution_context.dump(&self.active_code_block.unwrap().variable_handles);
 
                 panic!();
             }
@@ -538,8 +575,10 @@ impl<'interp> Interpreter<'interp> {
         self.get_last_accumulator_value()
     }
 
-    fn debug_current(context: &mut ExecutionContext) {
+    fn debug_current(context: &mut ExecutionContext, symbols: &HashMap<String, VariableHandle>) {
         println!("Debugging");
+        context.dump(symbols);
+        context.debugging = false;
     }
 
     fn set_native_function(&mut self, function: NativeFunction) {
@@ -553,24 +592,5 @@ impl<'interp> Interpreter<'interp> {
 
     pub fn get_last_accumulator_value(&self) -> Value {
         self.execution_context.accumulator.clone()
-    }
-
-    pub fn dump(&self) {
-        println!("Dump of block {}'s Execution Context", self.active_block);
-        println!("\tBlock Arguments");
-        let mut idx = 0;
-        for reg in &self.execution_context.block_arguments {
-            println!("\t\t[{:04}] {}", idx, *reg);
-            idx += 1;
-        }
-
-        println!("\tRegisters");
-        let mut idx = 0;
-        for reg in &self.execution_context.registers {
-            println!("\t\t[{:04}] {}", idx, *reg);
-            idx += 1;
-        }
-
-        println!("\t[ACCU] {}", self.execution_context.accumulator)
     }
 }
