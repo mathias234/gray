@@ -257,13 +257,13 @@ impl Compiler {
         internal_constructor.emit(Return::new_boxed(), all_segments(node));
 
         let internal_constructor_full_name =
-            format!("__Struct[{}]::__InternalConstructor__", struct_name);
+            format!("__Struct[{}]::__ObjectInitializer__", struct_name);
         self.blocks.insert(
             internal_constructor_full_name.clone(),
             internal_constructor.block,
         );
         struct_def.add_function(
-            "__InternalConstructor__".into(),
+            "__ObjectInitializer__".into(),
             internal_constructor_full_name,
         );
 

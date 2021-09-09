@@ -270,7 +270,7 @@ impl Value {
             DataValue::Object(object) => format!("{:?}", object),
             DataValue::String(string) => format!("{}", string),
             DataValue::Array(array) => format!("{}", array),
-            DataValue::FunctionPointer(function_pointer) => format!("fn {}", function_pointer),
+            DataValue::FunctionPointer(_) => format!("FunctionPointer"),
             DataValue::Range(range) => format!("{}..{}", range.from, range.to),
             DataValue::Pointer(_) => format!("Internal Pointer"),
             DataValue::Iterator(_) => format!("Iterator"),

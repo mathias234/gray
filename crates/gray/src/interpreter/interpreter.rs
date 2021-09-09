@@ -440,7 +440,7 @@ impl<'interp> Interpreter<'interp> {
                     DataValue::FunctionPointer(handle) => handle.clone(),
                     DataValue::StructDef(def) => {
                         let obj = def.create_object();
-                        let handle = obj.get(Rc::from("__InternalConstructor__".to_string()));
+                        let handle = obj.get(Rc::from("__ObjectInitializer__".to_string()));
                         if handle.is_none() {
                             self.execution_context
                                 .throw_error(&format!("Could not find constructor on {:?}", def));
@@ -454,7 +454,7 @@ impl<'interp> Interpreter<'interp> {
                             DataValue::FunctionPointer(handle) => handle.clone(),
                             v => {
                                 self.execution_context.throw_error(&format!(
-                                    "Expected value to be a function handle it is {:?}",
+                                    "Expected value to be a function or a structure definition, it was {:?}",
                                     v
                                 ));
                                 continue;
@@ -463,7 +463,7 @@ impl<'interp> Interpreter<'interp> {
                     }
                     v => {
                         self.execution_context.throw_error(&format!(
-                            "Expected value to be a function handle it is {:?}",
+                            "Expected value to be a function or a structure definition, it was {:?}",
                             v
                         ));
                         continue;
