@@ -82,4 +82,12 @@ impl CodeBlock {
 
         return handle;
     }
+
+    pub fn get_variable_handle(&self, variable: &str) -> Option<VariableHandle> {
+        if self.variable_handles.contains_key(variable) {
+            return Some(self.variable_handles[variable]);
+        }
+
+        None
+    }
 }

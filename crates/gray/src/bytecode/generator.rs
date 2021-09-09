@@ -1,12 +1,9 @@
 use crate::bytecode::code_block::{CodeBlock, CodeSegment};
 use crate::bytecode::instructions::object::NotAnInstruction;
-use crate::bytecode::instructions::other::{DeclareVariable, Instruction, LoadImmediate};
+use crate::bytecode::instructions::other::Instruction;
 use crate::bytecode::label::Label;
 use crate::bytecode::register::Register;
-use crate::compiler::compiler::NativeFunction;
 use crate::interpreter::interpreter::VariableHandle;
-use crate::interpreter::value::Value;
-use std::rc::Rc;
 
 pub struct Generator {
     register_index: usize,
@@ -17,7 +14,6 @@ pub struct Generator {
 
 impl Generator {
     pub fn new(
-        native_functions: &Vec<NativeFunction>,
         capture_locals: bool,
         parent_generator: Option<&Generator>,
     ) -> Generator {
@@ -32,18 +28,6 @@ impl Generator {
             let parent = parent_generator.unwrap();
             generator.block.variable_handles = parent.block.variable_handles.clone();
             generator.block.last_handle = parent.block.last_handle;
-        }
-
-        for func in native_functions {
-            let handle = generator.next_variable_handle(&func.full_name());
-            generator.emit(
-                LoadImmediate::new_boxed(Value::from_function(Rc::new(func.full_name()))),
-                CodeSegment::new(1, 1, 1, 1),
-            );
-            generator.emit(
-                DeclareVariable::new_boxed(handle),
-                CodeSegment::new(1, 1, 1, 1),
-            );
         }
 
         generator

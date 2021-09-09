@@ -67,7 +67,6 @@ pub fn load_file(
 
     let blocks = Compiler::compile(
         root_ast_node,
-        native_functions.clone(),
         &token_stream.0.to_string(),
     )?;
 
@@ -84,7 +83,7 @@ pub fn load_string(
 
     let root_ast_node = Parser::parse(token_stream, code)?;
 
-    let blocks = Compiler::compile(root_ast_node, native_functions.clone(), code)?;
+    let blocks = Compiler::compile(root_ast_node, code)?;
 
     let interpreter = Interpreter::new(blocks, Rc::from(code.to_string()), native_functions);
 

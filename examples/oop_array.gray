@@ -1,0 +1,29 @@
+struct Array {
+    let inner = [];
+
+    constructor() {
+
+    }
+
+    fn get(self, idx) {
+        return self.inner[idx];
+    }
+
+    fn push(self, value) {
+        array::push(self.inner, value);
+    }
+
+    fn len(self) {
+        return array::len(self.inner);
+    }
+}
+
+let arr = Array();
+arr.push(555);
+arr.push("Hello World");
+
+println("Array has {} elements", arr.len());
+
+for i in 0..arr.len() {
+    println("{}: {}", i, arr.get(i));
+}

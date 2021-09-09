@@ -346,6 +346,14 @@ impl<'interp> Interpreter<'interp> {
 
         self.active_code_block = Some(&self.blocks[&self.active_block]);
 
+        // Declare native functions
+        for (full_name, _) in &self.native_functions {
+            let var_handle =  self.active_code_block.unwrap().get_variable_handle(full_name);
+            if let Some(var_handle) = var_handle {
+                self.execution_context.declare_variable(var_handle, &Value::from_function(Rc::from(full_name.clone())));
+            }
+        }
+
         let mut len = self.active_code_block.unwrap().get_instructions().len();
 
         while self.pc < len {
@@ -506,6 +514,14 @@ impl<'interp> Interpreter<'interp> {
                     self.execution_context.scope_stack[0].variables = variables;
                 }
 
+                // Declare native functions
+                for (full_name, _) in &self.native_functions {
+                    let var_handle = block_to_call.get_variable_handle(full_name);
+                    if let Some(var_handle) = var_handle {
+                        self.execution_context.declare_variable(var_handle, &Value::from_function(Rc::from(full_name.clone())));
+                    }
+                }
+
                 let current_frame = StackFrame {
                     pc: self.pc,
                     execution_context: old_context,
@@ -516,7 +532,7 @@ impl<'interp> Interpreter<'interp> {
                 self.call_stack.push(current_frame);
 
                 self.active_block = handle.to_string();
-                self.active_code_block = Some(block_to_call);
+                self.active_code_block = self.blocks.get(&*handle);
 
                 len = self.active_code_block.unwrap().get_instructions().len();
 

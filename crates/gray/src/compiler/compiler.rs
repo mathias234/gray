@@ -38,7 +38,6 @@ pub enum CompilerError {
 
 pub struct Compiler {
     blocks: HashMap<String, CodeBlock>,
-    native_functions: Vec<NativeFunction>,
 }
 
 pub type RustFunctionPointer = fn(&mut ExecutionContext, FunctionArgs) -> Value;
@@ -131,15 +130,13 @@ impl Compiler {
 
     pub fn compile(
         root_node: ASTNode,
-        native_functions: Vec<NativeFunction>,
         code_string: &str,
     ) -> Result<HashMap<String, CodeBlock>, CompilerError> {
         let mut compiler = Compiler {
             blocks: HashMap::new(),
-            native_functions,
         };
 
-        let mut generator = Generator::new(&compiler.native_functions, false, None);
+        let mut generator = Generator::new(false, None);
         let result = compiler.compile_scope("", &mut generator, &root_node, true);
 
         if result.is_err() {
@@ -169,7 +166,7 @@ impl Compiler {
         let mut struct_def = StructDef::new();
 
         let mut internal_constructor =
-            Generator::new(&self.native_functions, false, Some(generator));
+            Generator::new(false, Some(generator));
 
         internal_constructor.emit(LoadArgument::new_boxed(0), all_segments(node));
         let self_register = internal_constructor.next_free_register();
@@ -293,12 +290,11 @@ impl Compiler {
         let mut generator;
         if !capture_locals {
             generator = Generator::new(
-                &self.native_functions,
                 capture_locals,
                 Some(parent_generator),
             );
         } else {
-            generator = Generator::new(&Vec::new(), capture_locals, Some(parent_generator));
+            generator = Generator::new(capture_locals, Some(parent_generator));
         }
 
         let mut argument_index = 0;
