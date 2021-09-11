@@ -1,10 +1,8 @@
 use crate::bytecode::code_block::{CodeBlock, CodeSegment};
-use crate::bytecode::instructions::object::NotAnInstruction;
-use crate::bytecode::instructions::other::Instruction;
+use crate::bytecode::instructions::instructions::Instruction;
 use crate::bytecode::label::Label;
 use crate::bytecode::register::Register;
 use crate::interpreter::interpreter::VariableHandle;
-
 pub struct Generator {
     register_index: usize,
     released_registers: Vec<Register>,
@@ -13,10 +11,7 @@ pub struct Generator {
 }
 
 impl Generator {
-    pub fn new(
-        capture_locals: bool,
-        parent_generator: Option<&Generator>,
-    ) -> Generator {
+    pub fn new(capture_locals: bool, parent_generator: Option<&Generator>) -> Generator {
         let mut generator = Generator {
             register_index: 0,
             released_registers: Vec::new(),
@@ -56,7 +51,7 @@ impl Generator {
     pub fn make_instruction_holder(&mut self) -> Label {
         let label = self.make_label();
 
-        self.emit(NotAnInstruction::new_boxed(), CodeSegment::new(1, 1, 1, 1));
+        self.emit(Instruction::NotAnInstruction, CodeSegment::new(1, 1, 1, 1));
 
         return label;
     }
@@ -71,16 +66,11 @@ impl Generator {
         handle
     }
 
-    pub fn emit(&mut self, instruction: Box<dyn Instruction>, segment: CodeSegment) {
+    pub fn emit(&mut self, instruction: Instruction, segment: CodeSegment) {
         self.block.add_instruction(instruction, segment);
     }
 
-    pub fn emit_at(
-        &mut self,
-        instruction: Box<dyn Instruction>,
-        label: &Label,
-        segment: CodeSegment,
-    ) {
+    pub fn emit_at(&mut self, instruction: Instruction, label: &Label, segment: CodeSegment) {
         self.block.set_instruction_at(instruction, label, segment);
     }
 }

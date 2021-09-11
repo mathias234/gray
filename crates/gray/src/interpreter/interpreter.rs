@@ -7,6 +7,7 @@ use crate::{
 
 use crate::bytecode::code_block::CodeSegment;
 use crate::compiler::compiler::NativeFunction;
+use crate::interpreter::executor;
 use crate::interpreter::function_pointer::FunctionArgs;
 use crate::interpreter::value::DataValue;
 use std::cell::Cell;
@@ -65,7 +66,7 @@ pub struct ExecutionContext {
     code_text: Rc<String>,
     code_segment: CodeSegment,
 
-    debugging: bool
+    debugging: bool,
 }
 
 impl ExecutionContext {
@@ -87,12 +88,12 @@ impl ExecutionContext {
             code_text,
             errored: Cell::from(false),
 
-            debugging: false
+            debugging: false,
         }
     }
 
     pub fn start_debugging(&mut self) {
-       self.debugging = true;
+        self.debugging = true;
     }
 
     pub fn set_accumulator(&mut self, value: Value) {
@@ -348,9 +349,15 @@ impl<'interp> Interpreter<'interp> {
 
         // Declare native functions
         for (full_name, _) in &self.native_functions {
-            let var_handle =  self.active_code_block.unwrap().get_variable_handle(full_name);
+            let var_handle = self
+                .active_code_block
+                .unwrap()
+                .get_variable_handle(full_name);
             if let Some(var_handle) = var_handle {
-                self.execution_context.declare_variable(var_handle, &Value::from_function(Rc::from(full_name.clone())));
+                self.execution_context.declare_variable(
+                    var_handle,
+                    &Value::from_function(Rc::from(full_name.clone())),
+                );
             }
         }
 
@@ -363,13 +370,16 @@ impl<'interp> Interpreter<'interp> {
             let ins = &instructions[self.pc];
 
             if self.execution_context.debugging {
-                Interpreter::debug_current(&mut self.execution_context, &self.active_code_block.unwrap().variable_handles);
+                Interpreter::debug_current(
+                    &mut self.execution_context,
+                    &self.active_code_block.unwrap().variable_handles,
+                );
             }
 
             //println!("Executing [{}][{}]{}", self.active_block, self.pc, ins.to_string());
             self.execution_context.code_segment =
                 self.active_code_block.unwrap().code_mapping[self.pc];
-            ins.execute(&mut self.execution_context);
+            executor::execute(ins, &mut self.execution_context);
 
             if self.execution_context.errored.get() {
                 // The context errored, we will then stop the execution of the interpreter
@@ -395,7 +405,8 @@ impl<'interp> Interpreter<'interp> {
                 }
 
                 println!("Registers");
-                self.execution_context.dump(&self.active_code_block.unwrap().variable_handles);
+                self.execution_context
+                    .dump(&self.active_code_block.unwrap().variable_handles);
 
                 panic!();
             }
@@ -476,8 +487,8 @@ impl<'interp> Interpreter<'interp> {
                     let native_function = self.native_functions.get(&*handle);
                     match native_function {
                         Some(func) => {
-                            let returned_value =
-                                func.call(&mut self.execution_context, FunctionArgs::new(block_args));
+                            let returned_value = func
+                                .call(&mut self.execution_context, FunctionArgs::new(block_args));
                             self.execution_context.set_accumulator(returned_value);
                             self.pc += 1;
                             continue;
@@ -518,7 +529,10 @@ impl<'interp> Interpreter<'interp> {
                 for (full_name, _) in &self.native_functions {
                     let var_handle = block_to_call.get_variable_handle(full_name);
                     if let Some(var_handle) = var_handle {
-                        self.execution_context.declare_variable(var_handle, &Value::from_function(Rc::from(full_name.clone())));
+                        self.execution_context.declare_variable(
+                            var_handle,
+                            &Value::from_function(Rc::from(full_name.clone())),
+                        );
                     }
                 }
 

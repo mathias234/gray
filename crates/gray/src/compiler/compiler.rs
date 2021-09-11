@@ -1,21 +1,7 @@
 use crate::bytecode::code_block::{CodeBlock, CodeSegment};
 use crate::bytecode::generator::Generator;
-use crate::bytecode::instructions::comparison::{
-    And, CompareEq, CompareGreaterThan, CompareGreaterThanOrEqual, CompareLessThan,
-    CompareLessThanOrEqual, CompareNotEq, Or,
-};
-use crate::bytecode::instructions::jump::{Jump, JumpNotZero, JumpZero};
-use crate::bytecode::instructions::math::{Add, Divide, Multiply, Subtract};
-use crate::bytecode::instructions::object::{
-    CreateEmptyArray, CreateEmptyObject, GetArray, GetObjectMember, PushArray, SetArray,
-    SetObjectMember,
-};
-use crate::bytecode::instructions::other::{
-    Break, Call, Continue, CreateIterator, DeclareVariable, GetVariable, IteratorEmpty,
-    IteratorGetNext, LoadArgument, LoadImmediate, LoadRegister, NegateValue, ParamsList,
-    PopBreakContinueScope, PopScope, PushBreakContinueScope, PushScope, Range, Return, SetVariable,
-    Store,
-};
+use crate::bytecode::instructions::instructions::CallArgs;
+use crate::bytecode::instructions::instructions::Instruction;
 use crate::bytecode::register::Register;
 use crate::error_printer;
 use crate::interop::execution_pointer::ExecutionContextPointer;
@@ -165,12 +151,11 @@ impl Compiler {
 
         let mut struct_def = StructDef::new();
 
-        let mut internal_constructor =
-            Generator::new(false, Some(generator));
+        let mut internal_constructor = Generator::new(false, Some(generator));
 
-        internal_constructor.emit(LoadArgument::new_boxed(0), all_segments(node));
+        internal_constructor.emit(Instruction::LoadArgument(0), all_segments(node));
         let self_register = internal_constructor.next_free_register();
-        internal_constructor.emit(Store::new_boxed(self_register), all_segments(node));
+        internal_constructor.emit(Instruction::Store(self_register), all_segments(node));
 
         let mut has_user_constructor = false;
         let mut user_constructor_full_name = None;
@@ -204,23 +189,23 @@ impl Compiler {
                 }
                 ASTType::VariableDeclaration(v) => {
                     internal_constructor.emit(
-                        LoadImmediate::new_boxed(Value::from_string(Rc::new(v.into()))),
+                        Instruction::LoadImmediate(Value::from_string(Rc::new(v.into()))),
                         all_segments(child),
                     );
                     let accessor_register = internal_constructor.next_free_register();
                     internal_constructor
-                        .emit(Store::new_boxed(accessor_register), all_segments(child));
+                        .emit(Instruction::Store(accessor_register), all_segments(child));
 
                     if child.children.len() == 0 {
                         internal_constructor.emit(
-                            LoadImmediate::new_boxed(Value::from_undefined()),
+                            Instruction::LoadImmediate(Value::from_undefined()),
                             all_segments(child),
                         );
                     } else {
                         self.compile_expression(&mut internal_constructor, &child.children[0])?;
                     }
                     internal_constructor.emit(
-                        SetObjectMember::new_boxed(self_register, accessor_register),
+                        Instruction::SetObjectMember(self_register, accessor_register),
                         all_segments(child),
                     );
                     internal_constructor.release_register(accessor_register);
@@ -234,7 +219,7 @@ impl Compiler {
         // The internal constructor will call the user defined constructor once it is done
         if has_user_constructor && user_constructor_full_name.is_some() {
             internal_constructor.emit(
-                LoadImmediate::new_boxed(Value::from_function(Rc::from(
+                Instruction::LoadImmediate(Value::from_function(Rc::from(
                     user_constructor_full_name.unwrap(),
                 ))),
                 all_segments(node),
@@ -243,18 +228,18 @@ impl Compiler {
             let user_constructor_handle =
                 internal_constructor.next_variable_handle("__Constructor__");
             internal_constructor.emit(
-                DeclareVariable::new_boxed(user_constructor_handle),
+                Instruction::DeclareVariable(user_constructor_handle),
                 all_segments(node),
             );
             internal_constructor.emit(
-                Call::new_boxed(user_constructor_handle, Vec::new(), true),
+                Instruction::Call(CallArgs::new(user_constructor_handle, Vec::new(), true)),
                 all_segments(node),
             );
         }
 
         internal_constructor.release_register(self_register);
 
-        internal_constructor.emit(Return::new_boxed(), all_segments(node));
+        internal_constructor.emit(Instruction::Return, all_segments(node));
 
         let internal_constructor_full_name =
             format!("__Struct[{}]::__ObjectInitializer__", struct_name);
@@ -268,12 +253,12 @@ impl Compiler {
         );
 
         generator.emit(
-            LoadImmediate::new_boxed(Value::from_struct_def(struct_def)),
+            Instruction::LoadImmediate(Value::from_struct_def(struct_def)),
             all_segments(node),
         );
 
         let handle = generator.next_variable_handle(&struct_name);
-        generator.emit(DeclareVariable::new_boxed(handle), all_segments(node));
+        generator.emit(Instruction::DeclareVariable(handle), all_segments(node));
 
         Ok({})
     }
@@ -289,10 +274,7 @@ impl Compiler {
     ) -> Result<String, CompilerError> {
         let mut generator;
         if !capture_locals {
-            generator = Generator::new(
-                capture_locals,
-                Some(parent_generator),
-            );
+            generator = Generator::new(capture_locals, Some(parent_generator));
         } else {
             generator = Generator::new(capture_locals, Some(parent_generator));
         }
@@ -300,10 +282,13 @@ impl Compiler {
         let mut argument_index = 0;
 
         if constructor {
-            generator.emit(LoadArgument::new_boxed(argument_index), all_segments(node));
+            generator.emit(
+                Instruction::LoadArgument(argument_index),
+                all_segments(node),
+            );
             let parameter_handle = generator.next_variable_handle("self");
             generator.emit(
-                DeclareVariable::new_boxed(parameter_handle),
+                Instruction::DeclareVariable(parameter_handle),
                 all_segments(node),
             );
 
@@ -314,19 +299,22 @@ impl Compiler {
             match &child.ast_type {
                 ASTType::Scope => self.compile_scope(namespace, &mut generator, child, true)?,
                 ASTType::Identifier(parameter) => {
-                    generator.emit(LoadArgument::new_boxed(argument_index), child.code_segment);
+                    generator.emit(
+                        Instruction::LoadArgument(argument_index),
+                        child.code_segment,
+                    );
                     let parameter_handle = generator.next_variable_handle(parameter);
                     generator.emit(
-                        DeclareVariable::new_boxed(parameter_handle),
+                        Instruction::DeclareVariable(parameter_handle),
                         child.code_segment,
                     );
                     argument_index += 1;
                 }
                 ASTType::ParamsList => {
-                    generator.emit(ParamsList::new_boxed(argument_index), child.code_segment);
+                    generator.emit(Instruction::ParamsList(argument_index), child.code_segment);
                     let parameter_handle = generator.next_variable_handle("params");
                     generator.emit(
-                        DeclareVariable::new_boxed(parameter_handle),
+                        Instruction::DeclareVariable(parameter_handle),
                         child.code_segment,
                     );
                 }
@@ -335,10 +323,10 @@ impl Compiler {
         }
 
         if constructor {
-            generator.emit(LoadArgument::new_boxed(0), all_segments(node));
+            generator.emit(Instruction::LoadArgument(0), all_segments(node));
         }
 
-        generator.emit(Return::new_boxed(), node.code_segment);
+        generator.emit(Instruction::Return, node.code_segment);
 
         let full_name;
         if !namespace.is_empty() {
@@ -359,7 +347,7 @@ impl Compiler {
         push_scope: bool,
     ) -> Result<(), CompilerError> {
         if push_scope {
-            generator.emit(PushScope::new_boxed(), node.code_segment);
+            generator.emit(Instruction::PushScope, node.code_segment);
         }
 
         // Hoist all the scope's function declarations to the top
@@ -374,12 +362,14 @@ impl Compiler {
                     }
 
                     generator.emit(
-                        LoadImmediate::new_boxed(Value::from_function(Rc::from(full_name.clone()))),
+                        Instruction::LoadImmediate(Value::from_function(Rc::from(
+                            full_name.clone(),
+                        ))),
                         all_segments(child),
                     );
 
                     let variable = generator.next_variable_handle(&full_name);
-                    generator.emit(DeclareVariable::new_boxed(variable), all_segments(child));
+                    generator.emit(Instruction::DeclareVariable(variable), all_segments(child));
                 }
 
                 _ => {}
@@ -404,10 +394,10 @@ impl Compiler {
                     self.compile_for_statement(namespace, generator, child)?;
                 }
                 ASTType::BreakExpression => {
-                    generator.emit(Break::new_boxed(), node.code_segment);
+                    generator.emit(Instruction::Break, node.code_segment);
                 }
                 ASTType::ContinueExpression => {
-                    generator.emit(Continue::new_boxed(), node.code_segment);
+                    generator.emit(Instruction::Continue, node.code_segment);
                 }
                 ASTType::ReturnExpression => {
                     self.compile_return(generator, child)?;
@@ -434,7 +424,7 @@ impl Compiler {
         }
 
         if push_scope {
-            generator.emit(PopScope::new_boxed(), node.code_segment);
+            generator.emit(Instruction::PopScope, node.code_segment);
         }
 
         Ok({})
@@ -449,7 +439,10 @@ impl Compiler {
         let handle = generator.next_variable_handle(call);
 
         if node.children.len() == 0 {
-            generator.emit(Call::new_boxed(handle, Vec::new(), false), node.code_segment);
+            generator.emit(
+                Instruction::Call(CallArgs::new(handle, Vec::new(), false)),
+                node.code_segment,
+            );
             return Ok({});
         }
 
@@ -458,12 +451,12 @@ impl Compiler {
         for child in &node.children {
             self.compile_expression(generator, child)?;
             let register = generator.next_free_register();
-            generator.emit(Store::new_boxed(register), child.code_segment);
+            generator.emit(Instruction::Store(register), child.code_segment);
             argument_registers.push(register);
         }
 
         generator.emit(
-            Call::new_boxed(handle, argument_registers.clone(), false),
+            Instruction::Call(CallArgs::new(handle, argument_registers.clone(), false)),
             node.code_segment,
         );
 
@@ -490,12 +483,12 @@ impl Compiler {
         for child in &node.children {
             self.compile_expression(generator, child)?;
             let register = generator.next_free_register();
-            generator.emit(Store::new_boxed(register), child.code_segment);
+            generator.emit(Instruction::Store(register), child.code_segment);
             argument_registers.push(register);
         }
 
         generator.emit(
-            Call::new_boxed(handle, argument_registers.clone(), false),
+            Instruction::Call(CallArgs::new(handle, argument_registers.clone(), false)),
             node.code_segment,
         );
 
@@ -514,7 +507,7 @@ impl Compiler {
     ) -> Result<(), CompilerError> {
         if node.children.len() == 0 {
             generator.emit(
-                LoadImmediate::new_boxed(Value::from_undefined()),
+                Instruction::LoadImmediate(Value::from_undefined()),
                 all_segments(node),
             );
         } else {
@@ -522,7 +515,7 @@ impl Compiler {
         }
         let variable_handle = generator.next_variable_handle(variable);
         generator.emit(
-            DeclareVariable::new_boxed(variable_handle),
+            Instruction::DeclareVariable(variable_handle),
             node.code_segment,
         );
 
@@ -562,18 +555,18 @@ impl Compiler {
         let else_block_end = generator.make_label();
 
         generator.emit_at(
-            JumpZero::new_boxed(scope_end),
+            Instruction::JumpZero(scope_end),
             &scope_start,
             node.code_segment,
         );
         generator.emit_at(
-            Jump::new_boxed(else_block_end),
+            Instruction::Jump(else_block_end),
             &else_block_start,
             node.code_segment,
         );
         if else_block_end_instruction.is_some() {
             generator.emit_at(
-                Jump::new_boxed(else_block_end),
+                Instruction::Jump(else_block_end),
                 else_block_end_instruction.as_ref().unwrap(),
                 node.code_segment,
             );
@@ -597,22 +590,22 @@ impl Compiler {
         let scope_start = generator.make_instruction_holder();
 
         self.compile_scope(namespace, generator, &node.children[1], true)?;
-        generator.emit(Jump::new_boxed(comparison_start), node.code_segment);
+        generator.emit(Instruction::Jump(comparison_start), node.code_segment);
 
         let scope_end = generator.make_label();
 
         generator.emit_at(
-            JumpZero::new_boxed(scope_end),
+            Instruction::JumpZero(scope_end),
             &scope_start,
             node.code_segment,
         );
 
         let break_label = generator.make_label();
 
-        generator.emit(PopBreakContinueScope::new_boxed(), node.code_segment);
+        generator.emit(Instruction::PopBreakContinueScope, node.code_segment);
 
         generator.emit_at(
-            PushBreakContinueScope::new_boxed(break_label, continue_label),
+            Instruction::PushBreakContinueScope(break_label, continue_label),
             &push_break_continue_holder,
             node.code_segment,
         );
@@ -628,31 +621,31 @@ impl Compiler {
     ) -> Result<(), CompilerError> {
         let push_break_continue_holder = generator.make_instruction_holder();
 
-        generator.emit(PushScope::new_boxed(), all_segments(node));
+        generator.emit(Instruction::PushScope, all_segments(node));
 
         self.compile_expression(generator, &node.children[1])?;
 
-        generator.emit(CreateIterator::new_boxed(), all_segments(&node.children[1]));
+        generator.emit(Instruction::CreateIterator, all_segments(&node.children[1]));
 
         let iterator_register = generator.next_free_register();
-        generator.emit(Store::new_boxed(iterator_register), all_segments(node));
+        generator.emit(Instruction::Store(iterator_register), all_segments(node));
 
         let for_start = generator.make_label();
 
         generator.emit(
-            LoadRegister::new_boxed(iterator_register),
+            Instruction::LoadRegister(iterator_register),
             all_segments(node),
         );
-        generator.emit(IteratorEmpty::new_boxed(), all_segments(&node.children[1]));
+        generator.emit(Instruction::IteratorEmpty, all_segments(&node.children[1]));
 
         let scope_start = generator.make_instruction_holder();
 
         generator.emit(
-            LoadRegister::new_boxed(iterator_register),
+            Instruction::LoadRegister(iterator_register),
             all_segments(node),
         );
         generator.emit(
-            IteratorGetNext::new_boxed(),
+            Instruction::IteratorGetNext,
             all_segments(&node.children[1]),
         );
 
@@ -662,34 +655,34 @@ impl Compiler {
         };
 
         generator.emit(
-            DeclareVariable::new_boxed(identifier_handle),
+            Instruction::DeclareVariable(identifier_handle),
             all_segments(&node.children[0]),
         );
 
         self.compile_scope(namespace, generator, &node.children[2], true)?;
 
-        generator.emit(Jump::new_boxed(for_start), node.code_segment);
+        generator.emit(Instruction::Jump(for_start), node.code_segment);
 
         let scope_end = generator.make_label();
 
         generator.emit_at(
-            JumpNotZero::new_boxed(scope_end),
+            Instruction::JumpNotZero(scope_end),
             &scope_start,
             node.code_segment,
         );
 
         let break_label = generator.make_label();
 
-        generator.emit(PopBreakContinueScope::new_boxed(), node.code_segment);
+        generator.emit(Instruction::PopBreakContinueScope, node.code_segment);
         generator.emit_at(
-            PushBreakContinueScope::new_boxed(break_label, for_start),
+            Instruction::PushBreakContinueScope(break_label, for_start),
             &push_break_continue_holder,
             node.code_segment,
         );
 
         generator.release_register(iterator_register);
 
-        generator.emit(PopScope::new_boxed(), all_segments(node));
+        generator.emit(Instruction::PopScope, all_segments(node));
 
         Ok({})
     }
@@ -704,8 +697,8 @@ impl Compiler {
 
         self.compile_expression(generator, &node.children[0])?;
 
-        generator.emit(PopScope::new_boxed(), node.code_segment);
-        generator.emit(Return::new_boxed(), node.code_segment);
+        generator.emit(Instruction::PopScope, node.code_segment);
+        generator.emit(Instruction::Return, node.code_segment);
 
         Ok({})
     }
@@ -718,7 +711,7 @@ impl Compiler {
         self.compile_expression(generator, &node.children[0])?;
         let expression_register = generator.next_free_register();
         generator.emit(
-            Store::new_boxed(expression_register),
+            Instruction::Store(expression_register),
             all_segments(&node.children[0]),
         );
 
@@ -730,7 +723,7 @@ impl Compiler {
             self.compile_expression(generator, expr)?;
 
             generator.emit(
-                CompareEq::new_boxed(expression_register),
+                Instruction::CompareEq(expression_register),
                 all_segments(child),
             );
 
@@ -740,27 +733,27 @@ impl Compiler {
             let handle = generator.next_variable_handle(&handle_str);
 
             generator.emit(
-                LoadImmediate::new_boxed(Value::from_function(Rc::new(handle_str.to_string()))),
+                Instruction::LoadImmediate(Value::from_function(Rc::new(handle_str.to_string()))),
                 all_segments(node),
             );
 
             generator.emit(
-                DeclareVariable::new_boxed(handle),
+                Instruction::DeclareVariable(handle),
                 all_segments(&child.children[1]),
             );
 
             self.compile_function(generator, "", &handle_str, &child.children[1], true, false)?;
             generator.emit(
-                Call::new_boxed(handle, Vec::new(), false),
+                Instruction::Call(CallArgs::new(handle, Vec::new(), false)),
                 all_segments(&child.children[1]),
             );
 
-            generator.emit(Store::new_boxed(result_register), all_segments(child));
+            generator.emit(Instruction::Store(result_register), all_segments(child));
 
             let jump_point = generator.make_label();
 
             generator.emit_at(
-                JumpZero::new_boxed(jump_point),
+                Instruction::JumpZero(jump_point),
                 &jz_holder,
                 all_segments(child),
             );
@@ -768,7 +761,10 @@ impl Compiler {
 
         generator.release_register(expression_register);
 
-        generator.emit(LoadRegister::new_boxed(result_register), all_segments(node));
+        generator.emit(
+            Instruction::LoadRegister(result_register),
+            all_segments(node),
+        );
         generator.release_register(result_register);
 
         Ok({})
@@ -791,14 +787,14 @@ impl Compiler {
             ASTType::Negate => {
                 self.compile_sub_expression(generator, &node.children[0])?;
 
-                generator.emit(NegateValue::new_boxed(), all_segments(node));
+                generator.emit(Instruction::NegateValue, all_segments(node));
 
                 Ok({})
             }
             ASTType::Subscript => {
                 let (index, array) = self.compile_subscript(generator, node)?;
-                generator.emit(LoadRegister::new_boxed(index), all_segments(node));
-                generator.emit(GetArray::new_boxed(array), all_segments(node));
+                generator.emit(Instruction::LoadRegister(index), all_segments(node));
+                generator.emit(Instruction::GetArray(array), all_segments(node));
 
                 generator.release_register(index);
                 generator.release_register(array);
@@ -809,10 +805,13 @@ impl Compiler {
                     self.compile_object_access(generator, node)?;
 
                 if is_final_value {
-                    generator.emit(LoadRegister::new_boxed(object_register), all_segments(node));
+                    generator.emit(
+                        Instruction::LoadRegister(object_register),
+                        all_segments(node),
+                    );
                 } else {
                     generator.emit(
-                        GetObjectMember::new_boxed(object_register, accessor_register),
+                        Instruction::GetObjectMember(object_register, accessor_register),
                         all_segments(node),
                     );
                     generator.release_register(accessor_register);
@@ -825,7 +824,9 @@ impl Compiler {
             ASTType::LambdaFunction => {
                 let handle_str = generator.next_lambda_handle();
                 generator.emit(
-                    LoadImmediate::new_boxed(Value::from_function(Rc::new(handle_str.to_string()))),
+                    Instruction::LoadImmediate(Value::from_function(Rc::new(
+                        handle_str.to_string(),
+                    ))),
                     all_segments(node),
                 );
 
@@ -850,7 +851,7 @@ impl Compiler {
             self.compile_sub_expression(generator, rhs)?;
             let rhs_register = generator.next_free_register();
             generator.emit(
-                Store::new_boxed(rhs_register),
+                Instruction::Store(rhs_register),
                 node.children[2].code_segment,
             );
 
@@ -862,78 +863,85 @@ impl Compiler {
                 ASTType::ExpressionOp(op) => match op {
                     ExpressionOp::Add => {
                         self.compile_sub_expression(generator, child)?;
-                        generator.emit(Add::new_boxed(rhs_register), node.children[1].code_segment);
+                        generator.emit(
+                            Instruction::Add(rhs_register),
+                            node.children[1].code_segment,
+                        );
                     }
                     ExpressionOp::Subtract => {
                         self.compile_sub_expression(generator, child)?;
                         generator.emit(
-                            Subtract::new_boxed(rhs_register),
+                            Instruction::Subtract(rhs_register),
                             node.children[1].code_segment,
                         );
                     }
                     ExpressionOp::Multiply => {
                         self.compile_sub_expression(generator, child)?;
                         generator.emit(
-                            Multiply::new_boxed(rhs_register),
+                            Instruction::Multiply(rhs_register),
                             node.children[1].code_segment,
                         );
                     }
                     ExpressionOp::Divide => {
                         self.compile_sub_expression(generator, child)?;
                         generator.emit(
-                            Divide::new_boxed(rhs_register),
+                            Instruction::Divide(rhs_register),
                             node.children[1].code_segment,
                         );
                     }
                     ExpressionOp::Equal => {
                         self.compile_sub_expression(generator, child)?;
                         generator.emit(
-                            CompareEq::new_boxed(rhs_register),
+                            Instruction::CompareEq(rhs_register),
                             node.children[1].code_segment,
                         );
                     }
                     ExpressionOp::NotEqual => {
                         self.compile_sub_expression(generator, child)?;
                         generator.emit(
-                            CompareNotEq::new_boxed(rhs_register),
+                            Instruction::CompareNotEq(rhs_register),
                             node.children[1].code_segment,
                         );
                     }
                     ExpressionOp::LessThan => {
                         self.compile_sub_expression(generator, child)?;
                         generator.emit(
-                            CompareLessThan::new_boxed(rhs_register),
+                            Instruction::CompareLessThan(rhs_register),
                             node.children[1].code_segment,
                         );
                     }
                     ExpressionOp::GreaterThan => {
                         self.compile_sub_expression(generator, child)?;
                         generator.emit(
-                            CompareGreaterThan::new_boxed(rhs_register),
+                            Instruction::CompareGreaterThan(rhs_register),
                             node.children[1].code_segment,
                         );
                     }
                     ExpressionOp::LessThanOrEqual => {
                         self.compile_sub_expression(generator, child)?;
                         generator.emit(
-                            CompareLessThanOrEqual::new_boxed(rhs_register),
+                            Instruction::CompareLessThanOrEqual(rhs_register),
                             node.children[1].code_segment,
                         );
                     }
                     ExpressionOp::GreaterThanOrEqual => {
                         self.compile_sub_expression(generator, child)?;
                         generator.emit(
-                            CompareGreaterThanOrEqual::new_boxed(rhs_register),
+                            Instruction::CompareGreaterThanOrEqual(rhs_register),
                             node.children[1].code_segment,
                         );
                     }
                     ExpressionOp::And => {
                         self.compile_sub_expression(generator, child)?;
-                        generator.emit(And::new_boxed(rhs_register), node.children[1].code_segment);
+                        generator.emit(
+                            Instruction::And(rhs_register),
+                            node.children[1].code_segment,
+                        );
                     }
                     ExpressionOp::Or => {
                         self.compile_sub_expression(generator, child)?;
-                        generator.emit(Or::new_boxed(rhs_register), node.children[1].code_segment);
+                        generator
+                            .emit(Instruction::Or(rhs_register), node.children[1].code_segment);
                     }
                     ExpressionOp::AddAssign => {
                         self.compile_sub_expression(generator, child)?;
@@ -983,7 +991,7 @@ impl Compiler {
                         self.compile_sub_expression(generator, child)?;
                         let lhs_register = generator.next_free_register();
 
-                        generator.emit(Range::new_boxed(rhs_register), all_segments(node));
+                        generator.emit(Instruction::Range(rhs_register), all_segments(node));
 
                         generator.release_register(lhs_register);
                     }
@@ -1004,19 +1012,19 @@ impl Compiler {
     ) -> Result<(Register, Register), CompilerError> {
         self.compile_expression(generator, &node.children[0])?;
         let index = generator.next_free_register();
-        generator.emit(Store::new_boxed(index), all_segments(&node.children[0]));
+        generator.emit(Instruction::Store(index), all_segments(&node.children[0]));
 
         let accessed = &node.children[1];
 
         return match &accessed.ast_type {
             ASTType::Subscript => {
                 let (idx, arr) = self.compile_subscript(generator, accessed)?;
-                generator.emit(LoadRegister::new_boxed(idx), all_segments(accessed));
-                generator.emit(GetArray::new_boxed(arr), all_segments(accessed));
+                generator.emit(Instruction::LoadRegister(idx), all_segments(accessed));
+                generator.emit(Instruction::GetArray(arr), all_segments(accessed));
                 generator.release_register(arr);
                 generator.release_register(idx);
                 let array = generator.next_free_register();
-                generator.emit(Store::new_boxed(array), all_segments(accessed));
+                generator.emit(Instruction::Store(array), all_segments(accessed));
 
                 Ok((index, array))
             }
@@ -1030,7 +1038,7 @@ impl Compiler {
                     obj = object_register;
                 } else {
                     generator.emit(
-                        GetObjectMember::new_boxed(object_register, accessor_register),
+                        Instruction::GetObjectMember(object_register, accessor_register),
                         all_segments(node),
                     );
 
@@ -1038,17 +1046,17 @@ impl Compiler {
                     generator.release_register(accessor_register);
 
                     obj = generator.next_free_register();
-                    generator.emit(Store::new_boxed(obj), all_segments(node));
+                    generator.emit(Instruction::Store(obj), all_segments(node));
                 }
 
                 Ok((index, obj))
             }
             ASTType::Identifier(id) => {
                 let handle = generator.next_variable_handle(id);
-                generator.emit(GetVariable::new_boxed(handle), all_segments(accessed));
+                generator.emit(Instruction::GetVariable(handle), all_segments(accessed));
 
                 let array = generator.next_free_register();
-                generator.emit(Store::new_boxed(array), all_segments(accessed));
+                generator.emit(Instruction::Store(array), all_segments(accessed));
 
                 Ok((index, array))
             }
@@ -1056,7 +1064,7 @@ impl Compiler {
                 self.compile_function_call(&id, generator, accessed)?;
 
                 let array = generator.next_free_register();
-                generator.emit(Store::new_boxed(array), all_segments(accessed));
+                generator.emit(Instruction::Store(array), all_segments(accessed));
 
                 Ok((index, array))
             }
@@ -1075,8 +1083,8 @@ impl Compiler {
         match &object.ast_type {
             ASTType::Identifier(id) => {
                 let handle = generator.next_variable_handle(id);
-                generator.emit(GetVariable::new_boxed(handle), all_segments(object));
-                generator.emit(Store::new_boxed(object_register), all_segments(object));
+                generator.emit(Instruction::GetVariable(handle), all_segments(object));
+                generator.emit(Instruction::Store(object_register), all_segments(object));
             }
             ASTType::ObjectAccess => {
                 let (obj, acc, is_final_value) = self.compile_object_access(generator, object)?;
@@ -1086,26 +1094,26 @@ impl Compiler {
 
                     object_register = obj;
                 } else {
-                    generator.emit(GetObjectMember::new_boxed(obj, acc), all_segments(object));
+                    generator.emit(Instruction::GetObjectMember(obj, acc), all_segments(object));
 
                     generator.release_register(obj);
                     generator.release_register(acc);
                 }
 
-                generator.emit(Store::new_boxed(object_register), all_segments(object));
+                generator.emit(Instruction::Store(object_register), all_segments(object));
             }
             ASTType::Subscript => {
                 let (index, obj) = self.compile_subscript(generator, object)?;
 
-                generator.emit(LoadRegister::new_boxed(index), all_segments(object));
-                generator.emit(GetArray::new_boxed(obj), all_segments(object));
+                generator.emit(Instruction::LoadRegister(index), all_segments(object));
+                generator.emit(Instruction::GetArray(obj), all_segments(object));
 
-                generator.emit(Store::new_boxed(object_register), all_segments(object));
+                generator.emit(Instruction::Store(object_register), all_segments(object));
             }
             ASTType::FunctionCall(id) => {
                 self.compile_function_call(&id, generator, object)?;
 
-                generator.emit(Store::new_boxed(object_register), all_segments(object));
+                generator.emit(Instruction::Store(object_register), all_segments(object));
             }
             _ => return Err(CompilerError::UnexpectedASTNode(object.clone())),
         }
@@ -1115,25 +1123,31 @@ impl Compiler {
         match &accessor.ast_type {
             ASTType::Identifier(id) => {
                 generator.emit(
-                    LoadImmediate::new_boxed(Value::from_string(Rc::new(id.clone()))),
+                    Instruction::LoadImmediate(Value::from_string(Rc::new(id.clone()))),
                     all_segments(accessor),
                 );
-                generator.emit(Store::new_boxed(accessor_register), all_segments(accessor));
+                generator.emit(
+                    Instruction::Store(accessor_register),
+                    all_segments(accessor),
+                );
             }
             ASTType::MemberFunctionCall(id) => {
                 generator.emit(
-                    LoadImmediate::new_boxed(Value::from_string(Rc::new(id.clone()))),
+                    Instruction::LoadImmediate(Value::from_string(Rc::new(id.clone()))),
                     all_segments(accessor),
                 );
-                generator.emit(Store::new_boxed(accessor_register), all_segments(accessor));
                 generator.emit(
-                    GetObjectMember::new_boxed(object_register, accessor_register),
+                    Instruction::Store(accessor_register),
+                    all_segments(accessor),
+                );
+                generator.emit(
+                    Instruction::GetObjectMember(object_register, accessor_register),
                     all_segments(accessor),
                 );
 
                 let handle = generator.next_variable_handle("__TempMemberFunctionCall");
 
-                generator.emit(DeclareVariable::new_boxed(handle), all_segments(accessor));
+                generator.emit(Instruction::DeclareVariable(handle), all_segments(accessor));
 
                 generator.release_register(accessor_register);
                 let final_value = generator.next_free_register();
@@ -1145,7 +1159,7 @@ impl Compiler {
                     accessor,
                 )?;
 
-                generator.emit(Store::new_boxed(final_value), all_segments(accessor));
+                generator.emit(Instruction::Store(final_value), all_segments(accessor));
 
                 return Ok((final_value, Register::new(usize::MAX), true));
             }
@@ -1164,7 +1178,7 @@ impl Compiler {
         match &node.ast_type {
             ASTType::Identifier(i) => {
                 let variable_handle = generator.next_variable_handle(i);
-                generator.emit(SetVariable::new_boxed(variable_handle), node.code_segment);
+                generator.emit(Instruction::SetVariable(variable_handle), node.code_segment);
             }
             ASTType::ObjectAccess => {
                 let (object_register, accessor_register, is_final_value) =
@@ -1175,9 +1189,9 @@ impl Compiler {
                         node.clone(),
                     ));
                 } else {
-                    generator.emit(LoadRegister::new_boxed(rhs_register), node.code_segment);
+                    generator.emit(Instruction::LoadRegister(rhs_register), node.code_segment);
                     generator.emit(
-                        SetObjectMember::new_boxed(object_register, accessor_register),
+                        Instruction::SetObjectMember(object_register, accessor_register),
                         all_segments(node),
                     );
 
@@ -1188,8 +1202,11 @@ impl Compiler {
             ASTType::Subscript => {
                 let (index, array) = self.compile_subscript(generator, node)?;
 
-                generator.emit(LoadRegister::new_boxed(index), all_segments(node));
-                generator.emit(SetArray::new_boxed(array, rhs_register), all_segments(node));
+                generator.emit(Instruction::LoadRegister(index), all_segments(node));
+                generator.emit(
+                    Instruction::SetArray(array, rhs_register),
+                    all_segments(node),
+                );
             }
             _ => return Err(CompilerError::ExpectedIdentifier(node.clone())),
         };
@@ -1206,29 +1223,29 @@ impl Compiler {
     ) -> Result<(), CompilerError> {
         match op {
             ExpressionOp::Assign => {
-                generator.emit(LoadRegister::new_boxed(rhs_register), node.code_segment);
+                generator.emit(Instruction::LoadRegister(rhs_register), node.code_segment);
                 self.compile_assign(generator, node, rhs_register)?;
             }
             ExpressionOp::AddAssign => {
-                generator.emit(Add::new_boxed(rhs_register), node.code_segment);
+                generator.emit(Instruction::Add(rhs_register), node.code_segment);
                 let rhs_register = generator.next_free_register();
                 self.compile_assign(generator, node, rhs_register)?;
                 generator.release_register(rhs_register);
             }
             ExpressionOp::SubtractAssign => {
-                generator.emit(Subtract::new_boxed(rhs_register), node.code_segment);
+                generator.emit(Instruction::Subtract(rhs_register), node.code_segment);
                 let rhs_register = generator.next_free_register();
                 self.compile_assign(generator, node, rhs_register)?;
                 generator.release_register(rhs_register);
             }
             ExpressionOp::MultiplyAssign => {
-                generator.emit(Multiply::new_boxed(rhs_register), node.code_segment);
+                generator.emit(Instruction::Multiply(rhs_register), node.code_segment);
                 let rhs_register = generator.next_free_register();
                 self.compile_assign(generator, node, rhs_register)?;
                 generator.release_register(rhs_register);
             }
             ExpressionOp::DivideAssign => {
-                generator.emit(Divide::new_boxed(rhs_register), node.code_segment);
+                generator.emit(Instruction::Divide(rhs_register), node.code_segment);
                 let rhs_register = generator.next_free_register();
                 self.compile_assign(generator, node, rhs_register)?;
                 generator.release_register(rhs_register);
@@ -1243,16 +1260,16 @@ impl Compiler {
         generator: &mut Generator,
         node: &ASTNode,
     ) -> Result<(), CompilerError> {
-        generator.emit(CreateEmptyArray::new_boxed(), node.code_segment);
+        generator.emit(Instruction::CreateEmptyArray, node.code_segment);
         let array_register = generator.next_free_register();
-        generator.emit(Store::new_boxed(array_register), node.code_segment);
+        generator.emit(Instruction::Store(array_register), node.code_segment);
 
         for child in &node.children {
             self.compile_expression(generator, child)?;
-            generator.emit(PushArray::new_boxed(array_register), node.code_segment);
+            generator.emit(Instruction::PushArray(array_register), node.code_segment);
         }
 
-        generator.emit(LoadRegister::new_boxed(array_register), node.code_segment);
+        generator.emit(Instruction::LoadRegister(array_register), node.code_segment);
 
         generator.release_register(array_register);
 
@@ -1264,9 +1281,9 @@ impl Compiler {
         generator: &mut Generator,
         node: &ASTNode,
     ) -> Result<(), CompilerError> {
-        generator.emit(CreateEmptyObject::new_boxed(), node.code_segment);
+        generator.emit(Instruction::CreateEmptyObject, node.code_segment);
         let object_register = generator.next_free_register();
-        generator.emit(Store::new_boxed(object_register), node.code_segment);
+        generator.emit(Instruction::Store(object_register), node.code_segment);
 
         for member in &node.children {
             match &member.ast_type {
@@ -1275,14 +1292,14 @@ impl Compiler {
 
                     let accessor_register = generator.next_free_register();
                     generator.emit(
-                        LoadImmediate::new_boxed(Value::from_string(Rc::new(name.clone()))),
+                        Instruction::LoadImmediate(Value::from_string(Rc::new(name.clone()))),
                         accessor.code_segment,
                     );
-                    generator.emit(Store::new_boxed(accessor_register), accessor.code_segment);
+                    generator.emit(Instruction::Store(accessor_register), accessor.code_segment);
 
                     self.compile_expression(generator, &member.children[0])?;
                     generator.emit(
-                        SetObjectMember::new_boxed(object_register.clone(), accessor_register),
+                        Instruction::SetObjectMember(object_register.clone(), accessor_register),
                         member.code_segment,
                     );
 
@@ -1293,7 +1310,10 @@ impl Compiler {
         }
 
         // Set the object into the accumulator
-        generator.emit(LoadRegister::new_boxed(object_register), node.code_segment);
+        generator.emit(
+            Instruction::LoadRegister(object_register),
+            node.code_segment,
+        );
 
         generator.release_register(object_register);
 
@@ -1307,20 +1327,20 @@ impl Compiler {
     ) -> Result<(), CompilerError> {
         match &node.ast_type {
             ASTType::StringValue(value) => Ok(generator.emit(
-                LoadImmediate::new_boxed(Value::from_string(Rc::new(value.clone()))),
+                Instruction::LoadImmediate(Value::from_string(Rc::new(value.clone()))),
                 node.code_segment,
             )),
             ASTType::IntegerValue(value) => Ok(generator.emit(
-                LoadImmediate::new_boxed(Value::from_i64(*value)),
+                Instruction::LoadImmediate(Value::from_i64(*value)),
                 node.code_segment,
             )),
             ASTType::FloatValue(value) => Ok(generator.emit(
-                LoadImmediate::new_boxed(Value::from_f64(*value)),
+                Instruction::LoadImmediate(Value::from_f64(*value)),
                 node.code_segment,
             )),
             ASTType::Identifier(identifier) => {
                 let variable_handle = generator.next_variable_handle(identifier);
-                Ok(generator.emit(GetVariable::new_boxed(variable_handle), node.code_segment))
+                Ok(generator.emit(Instruction::GetVariable(variable_handle), node.code_segment))
             }
             _ => Err(CompilerError::UnexpectedASTNode(node.clone())),
         }?;

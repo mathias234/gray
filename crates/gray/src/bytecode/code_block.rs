@@ -1,7 +1,7 @@
-use std::collections::HashMap;
-use crate::interpreter::interpreter::VariableHandle;
-use crate::bytecode::instructions::other::Instruction;
+use crate::bytecode::instructions::instructions::Instruction;
 use crate::bytecode::label::Label;
+use crate::interpreter::interpreter::VariableHandle;
+use std::collections::HashMap;
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct CodeSegment {
@@ -32,7 +32,7 @@ impl std::fmt::Debug for CodeSegment {
 }
 
 pub struct CodeBlock {
-    instructions: Vec<Box<dyn Instruction>>,
+    pub instructions: Vec<Instruction>,
     pub code_mapping: Vec<CodeSegment>, // Maps instruction to a physical location in the original code
     pub capture_locals: bool,
     pub variable_handles: HashMap<String, VariableHandle>,
@@ -46,18 +46,18 @@ impl CodeBlock {
             code_mapping: Vec::new(),
             capture_locals,
             variable_handles: HashMap::new(),
-            last_handle: 0
+            last_handle: 0,
         }
     }
 
-    pub fn add_instruction(&mut self, instruction: Box<dyn Instruction>, segment: CodeSegment) {
+    pub fn add_instruction(&mut self, instruction: Instruction, segment: CodeSegment) {
         self.code_mapping.push(segment);
         self.instructions.push(instruction);
     }
 
     pub fn set_instruction_at(
         &mut self,
-        instruction: Box<dyn Instruction>,
+        instruction: Instruction,
         label: &Label,
         segment: CodeSegment,
     ) {
@@ -65,7 +65,12 @@ impl CodeBlock {
         self.instructions[label.position] = instruction;
     }
 
-    pub fn get_instructions(&self) -> &Vec<Box<dyn Instruction>> {
+    pub fn remove_at(&mut self, position: usize) {
+        self.code_mapping.remove(position);
+        self.instructions.remove(position);
+    }
+
+    pub fn get_instructions(&self) -> &Vec<Instruction> {
         &self.instructions
     }
 
