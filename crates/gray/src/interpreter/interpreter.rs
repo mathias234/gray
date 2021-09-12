@@ -47,7 +47,7 @@ impl BreakContinueScope {
 
 #[derive(Clone)]
 pub struct ExecutionContext {
-    accumulator: Value,
+    accumulator: Option<Value>,
     registers: Vec<Value>,
     block_arguments: Vec<Value>,
     jump_target: Option<Label>,
@@ -72,7 +72,7 @@ pub struct ExecutionContext {
 impl ExecutionContext {
     pub fn new(code_text: Rc<String>) -> ExecutionContext {
         ExecutionContext {
-            accumulator: Value::from_i64(0),
+            accumulator: None,
             registers: Vec::new(),
             block_arguments: Vec::new(),
             jump_target: None,
@@ -97,10 +97,14 @@ impl ExecutionContext {
     }
 
     pub fn set_accumulator(&mut self, value: Value) {
-        self.accumulator = value;
+        self.accumulator = Some(value);
     }
-    pub fn get_accumulator(&self) -> Value {
-        self.accumulator.clone()
+    pub fn get_accumulator(&mut self) -> Value {
+        if let Some(v) = self.accumulator.take() {
+            return v;
+        }
+
+        Value::from_i64(0)
     }
 
     pub fn set_register(&mut self, register: &Register, value: Value) {
@@ -287,7 +291,10 @@ impl ExecutionContext {
             }
         }
 
-        println!("\t[ACCU] {}", self.accumulator)
+        println!(
+            "\t[ACCU] {}",
+            self.accumulator.clone().unwrap_or(Value::from_i64(0))
+        )
     }
 }
 
@@ -621,6 +628,9 @@ impl<'interp> Interpreter<'interp> {
     }
 
     pub fn get_last_accumulator_value(&self) -> Value {
-        self.execution_context.accumulator.clone()
+        self.execution_context
+            .accumulator
+            .clone()
+            .unwrap_or(Value::from_i64(0))
     }
 }

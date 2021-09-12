@@ -1,5 +1,25 @@
-let a = 5;
+struct StructsWithMethodAndProperties {
+    let A;
+    let B;
+    let C;
+    let InternallyConstructed = 50;
 
-for i in 0..50000 {
-    a += 1;
+    constructor(a) {
+        self.A = a;
+        self.B = self.A * 2;
+        self.C = self.B * 2;
+
+        return self;
+    }
+
+    fn get_a(self) {
+        return self.A;
+    }
 }
+
+
+let a = 55;
+let instance = StructsWithMethodAndProperties(a);
+
+assert_eq(instance.get_a(), a);
+assert_eq(instance.InternallyConstructed, 50);

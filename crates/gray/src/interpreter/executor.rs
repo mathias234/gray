@@ -91,7 +91,8 @@ fn execute_params_list(start: usize, context: &mut ExecutionContext) {
 }
 
 fn execute_store(register: &Register, context: &mut ExecutionContext) {
-    context.set_register(register, context.get_accumulator());
+    let accumulator = context.get_accumulator();
+    context.set_register(register, accumulator);
 }
 
 fn execute_call(call_args: &CallArgs, context: &mut ExecutionContext) {
@@ -124,11 +125,13 @@ fn execute_return(context: &mut ExecutionContext) {
 }
 
 fn execute_declare_variable(variable: VariableHandle, context: &mut ExecutionContext) {
-    context.declare_variable(variable, &context.get_accumulator());
+    let value = context.get_accumulator();
+    context.declare_variable(variable, &value);
 }
 
 fn execute_set_variable(variable: VariableHandle, context: &mut ExecutionContext) {
-    context.set_variable(variable, &context.get_accumulator());
+    let value = context.get_accumulator();
+    context.set_variable(variable, &value);
 }
 
 fn execute_get_variable(variable: VariableHandle, context: &mut ExecutionContext) {
